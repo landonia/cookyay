@@ -1,0 +1,144 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  size-limit:
+    name: Bundle size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: Warn if combined bundle approaches 17 kB
+        run: |
+          IIFE_GZ=$(gzip -9 -c packages/cookyay/dist/index.iife.js | wc -c | tr -d ' ')
+          BOOT_GZ=$(gzip -9 -c packages/cookyay/dist/bootstrap.js | wc -c | tr -d ' ')
+          TOTAL_GZ=$((IIFE_GZ + BOOT_GZ))
+          WARN_BYTES=$((17 * 1024))
+          echo "Combined gzipped size: ${TOTAL_GZ} bytes (IIFE: ${IIFE_GZ}, bootstrap: ${BOOT_GZ})"
+          if [ "${TOTAL_GZ}" -gt "${WARN_BYTES}" ]; then
+            echo "::warning title=Bundle size::Combined cookyay deliverables are ${TOTAL_GZ} bytes gzipped — approaching the 20 kB hard limit (warn at 17 kB)"
+          fi
+
+      - name: Assert bundle size ≤ 20 kB (hard gate)
+        run: pnpm size
+
+  publint-attw:
+    name: Package quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: publint — cookyay
+        run: pnpm exec publint packages/cookyay
+
+      - name: publint — @cookyay/scanner
+        run: pnpm exec publint packages/scanner
+
+      - name: attw — cookyay
+        # CJSResolvesToESM ignored: ESM-only is intentional per architecture
+        run: pnpm exec attw --pack packages/cookyay --ignore-rules cjs-resolves-to-esm
+
+      - name: attw — @cookyay/scanner
+        # CJSResolvesToESM ignored: ESM-only is intentional per architecture
+        run: pnpm exec attw --pack packages/scanner --ignore-rules cjs-resolves-to-esm
+
+  e2e:
+    name: E2E — Chromium
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: Get Playwright version
+        id: pw-ver
+        run: |
+          echo "version=$(node -e "console.log(require('./packages/scanner/package.json').devDependencies['@playwright/test'])")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @cookyay/scanner exec playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        run: pnpm --filter @cookyay/scanner exec playwright test
+
+  accessibility:
+    name: Accessibility — axe + keyboard + equal-prominence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm -r build
+
+      - name: Get Playwright version
+        id: pw-ver-a11y
+        run: |
+          echo "version=$(node -e "console.log(require('./packages/scanner/package.json').devDependencies['@playwright/test'])")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-ver-a11y.outputs.version }}
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @cookyay/scanner exec playwright install chromium --with-deps
+
+      - name: Run accessibility checks
+        run: pnpm --filter @cookyay/scanner exec playwright test e2e/accessibility.spec.ts

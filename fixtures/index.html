@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cookyay fixture site</title>
+
+    <!--
+      Bootstrap snippet must be first in <head>.
+      In production this is an inline <script>; here we load the compiled build.
+      E2E tests that need to test consent-before-paint must inline it instead.
+    -->
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Cookyay — hermetic fixture site</h1>
+    <p>
+      This site is used exclusively for E2E tests and scanner integration tests. It contains no
+      real third-party scripts or external network requests.
+    </p>
+
+    <noscript>
+      <p>
+        <strong>JavaScript is disabled.</strong> This fixture site requires JavaScript to test
+        cookie consent behaviours. Please enable JavaScript and reload.
+      </p>
+    </noscript>
+
+    <h2>Blocking test pages</h2>
+    <nav>
+      <a href="/fixtures/blocking/inline-script.html">Inline script</a>
+      <a href="/fixtures/blocking/src-script.html">External src script</a>
+      <a href="/fixtures/blocking/iframe.html">Blocked iframe</a>
+      <a href="/fixtures/blocking/undeclared.html">Undeclared category</a>
+      <a href="/fixtures/blocking/all.html">All cases (combined)</a>
+    </nav>
+
+    <h2>Other pages</h2>
+    <nav>
+      <a href="/fixtures/noscript.html">Noscript fallback</a>
+    </nav>
+
+    <h2>Status</h2>
+    <div id="consent-status" class="status-box status-blocked">Consent: not yet recorded</div>
+
+    <script type="module">
+      // Deliberately loaded as ESM module — exercises the ESM build
+      import { init, getConsent, onConsent } from '/packages/cookyay/dist/index.js'
+
+      init({
+        policyVersion: 'fixture-v1',
+        debug: true,
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'Synthetic GA4', cookies: ['_ga', '_ga_FIXTURE'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [
+              { name: 'Synthetic Meta Pixel', cookies: ['_fbp'] },
+              { name: 'Synthetic YouTube', cookies: ['VISITOR_INFO1_LIVE', 'YSC'] },
+            ],
+          },
+        },
+      })
+
+      const statusEl = document.getElementById('consent-status')
+      document.addEventListener('cookyay:consent', (e) => {
+        const cats = e.detail.categories
+        statusEl.textContent =
+          'Consent recorded — analytics: ' + cats.analytics + ', marketing: ' + cats.marketing
+        statusEl.className = 'status-box status-granted'
+      })
+    </script>
+  </body>
+</html>

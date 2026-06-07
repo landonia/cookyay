@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: noscript fallback</title>
+    <!--
+      No cookyay scripts loaded — this page exercises the noscript path.
+      E2E tests can verify that no consent banner is injected when JS is disabled,
+      and that noscript content is accessible.
+    -->
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Noscript fallback</h1>
+
+    <p>This page tests the noscript fallback. No Cookyay scripts are loaded here.</p>
+
+    <!-- Noscript fallback: shown only when JS is disabled. Tells the visitor what they're missing. -->
+    <noscript>
+      <div class="status-box status-blocked" id="noscript-notice" role="note">
+        <strong>JavaScript is disabled.</strong> This site uses JavaScript to manage cookie consent
+        and to block analytics and marketing scripts until you give consent. With JavaScript
+        disabled, no tracking scripts will load — your privacy is protected, but some site features
+        may not work correctly.
+      </div>
+    </noscript>
+
+    <!--
+      Inert scripts — present in the HTML but only activated by the blocking engine.
+      With no JS, they never execute (type="text/plain" keeps them inert natively).
+      With JS disabled, the noscript notice above is shown instead.
+    -->
+    <script type="text/plain" data-category="analytics" id="inert-analytics">
+      window.__noscriptAnalyticsRan = true
+    </script>
+
+    <script type="text/plain" data-category="marketing" src="/fixtures/stubs/pixel.js" id="inert-pixel"></script>
+
+    <iframe
+      data-src="/fixtures/stubs/ytplayer.html"
+      data-category="marketing"
+      id="inert-yt"
+      width="560"
+      height="315"
+      title="Synthetic YouTube video embed"
+    ></iframe>
+
+    <p id="js-check">
+      <strong>JavaScript is enabled.</strong> On this page, no Cookyay scripts are loaded, so the
+      scripts above remain permanently inert (type="text/plain" is honoured by the browser
+      natively). The noscript notice above is hidden.
+    </p>
+  </body>
+</html>

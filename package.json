@@ -1,0 +1,39 @@
+{
+  "name": "cookyay-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.4.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "size": "size-limit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "fixture:serve": "node fixtures/serve.mjs",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm -r build && changeset publish"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.0",
+    "@changesets/cli": "^2.31.0",
+    "@eslint/js": "^9.0.0",
+    "@size-limit/file": "^11.0.0",
+    "eslint": "^9.0.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.0.0",
+    "publint": "^0.3.0",
+    "size-limit": "^11.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}

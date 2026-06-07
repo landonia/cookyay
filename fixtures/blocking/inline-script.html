@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: blocked inline script</title>
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Blocking case: inline script</h1>
+    <p>
+      An analytics script is declared inline with
+      <code>type="text/plain" data-category="analytics"</code>. It must not execute until the
+      analytics category is consented.
+    </p>
+
+    <noscript>
+      <p><strong>JavaScript required.</strong> Please enable JavaScript to test script blocking.</p>
+    </noscript>
+
+    <!--
+      Blocked inline analytics script.
+      Before consent: stays inert (type="text/plain"), window.__analyticsInlineRan is undefined.
+      After consent:  re-injected as a real script, window.__analyticsInlineRan === true.
+    -->
+    <script type="text/plain" data-category="analytics" id="blocked-inline">
+      window.__analyticsInlineRan = true
+      // Set the synthetic GA4 cookie fingerprint
+      var expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString()
+      document.cookie = '_ga=GA1.2.inline.' + Date.now() + '; expires=' + expires + '; path=/; SameSite=Lax'
+    </script>
+
+    <div id="inline-status" class="status-box status-blocked">
+      Inline analytics script: blocked (waiting for consent)
+    </div>
+
+    <h2>Consent actions</h2>
+    <p>Use the banner below, or trigger programmatically via the browser console.</p>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      init({
+        policyVersion: 'fixture-v1',
+        debug: true,
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'Synthetic GA4', cookies: ['_ga', '_ga_FIXTURE'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [{ name: 'Synthetic Meta Pixel', cookies: ['_fbp'] }],
+          },
+        },
+      })
+
+      onConsent('analytics', (granted) => {
+        const el = document.getElementById('inline-status')
+        if (granted) {
+          // Give the setTimeout(fn, 0) injection a tick to fire
+          setTimeout(() => {
+            el.textContent =
+              'Inline analytics script: ' +
+              (window.__analyticsInlineRan ? 'executed ✓' : 'NOT executed (unexpected)')
+            el.className =
+              'status-box ' + (window.__analyticsInlineRan ? 'status-granted' : 'status-blocked')
+          }, 50)
+        } else {
+          el.textContent = 'Inline analytics script: blocked (consent denied)'
+          el.className = 'status-box status-blocked'
+        }
+      })
+    </script>
+  </body>
+</html>

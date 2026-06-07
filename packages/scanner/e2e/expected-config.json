@@ -1,0 +1,68 @@
+{
+  "policyVersion": "REPLACE_ME",
+  "categories": {
+    "analytics": {
+      "label": "Analytics",
+      "services": [
+        {
+          "name": "/fixtures/stubs/ga4.js",
+          "cookies": [],
+          "_meta": {
+            "confidence": "low",
+            "matchedBy": "declared-category",
+            "serviceId": "script:/fixtures/stubs/ga4.js",
+            "pages": [
+              "FIXTURE_BASE/fixtures/blocking/all.html"
+            ]
+          }
+        }
+      ]
+    },
+    "marketing": {
+      "label": "Marketing",
+      "services": [
+        {
+          "name": "/fixtures/stubs/pixel.js",
+          "cookies": [],
+          "_meta": {
+            "confidence": "low",
+            "matchedBy": "declared-category",
+            "serviceId": "script:/fixtures/stubs/pixel.js",
+            "pages": [
+              "FIXTURE_BASE/fixtures/blocking/all.html"
+            ]
+          }
+        },
+        {
+          "name": "/fixtures/stubs/ytplayer.html",
+          "cookies": [],
+          "_meta": {
+            "confidence": "low",
+            "matchedBy": "declared-category",
+            "serviceId": "iframe:/fixtures/stubs/ytplayer.html",
+            "pages": [
+              "FIXTURE_BASE/fixtures/blocking/all.html"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "_unclassified": [
+    {
+      "kind": "script",
+      "name": "/packages/cookyay/dist/bootstrap.js",
+      "pages": [
+        "FIXTURE_BASE/fixtures/blocking/all.html"
+      ],
+      "_note": "Could not automatically classify this artifact. Review it and move it to the appropriate category in the config above, or add a script/iframe declaration to your HTML with data-category=\"<category>\"."
+    }
+  ],
+  "_noscriptWarnings": [],
+  "_scanMeta": {
+    "scannedAt": "NORMALIZED",
+    "targetUrl": "FIXTURE_BASE/fixtures/blocking/all.html",
+    "pagesVisited": 1,
+    "classifierVersion": "1.0.0"
+  }
+}

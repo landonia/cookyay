@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12",
+  "description": "Synthetic cookie names and request URL patterns for ~20 common services. Used by scanner tests and E2E tests to stay in sync on what 'GA4 detected' means.",
+  "services": [
+    {
+      "id": "ga4",
+      "name": "Google Analytics 4",
+      "category": "analytics",
+      "cookies": ["_ga", "_ga_*"],
+      "localStorage": [],
+      "requestPatterns": [
+        "*.google-analytics.com/g/collect",
+        "analytics.google.com/g/collect",
+        "googletagmanager.com/gtag/js"
+      ],
+      "stubScript": "/fixtures/stubs/ga4.js",
+      "stubCookies": ["_ga", "_ga_FIXTURE"]
+    },
+    {
+      "id": "ua",
+      "name": "Google Universal Analytics (GA3)",
+      "category": "analytics",
+      "cookies": ["_ga", "_gid", "_gat", "_gat_*"],
+      "localStorage": [],
+      "requestPatterns": [
+        "*.google-analytics.com/collect",
+        "www.google-analytics.com/r/collect"
+      ],
+      "stubScript": null,
+      "stubCookies": ["_ga", "_gid"]
+    },
+    {
+      "id": "gtm",
+      "name": "Google Tag Manager",
+      "category": "analytics",
+      "cookies": ["_ga"],
+      "localStorage": [],
+      "requestPatterns": [
+        "googletagmanager.com/gtm.js",
+        "*.googletagmanager.com/gtag/js"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "meta-pixel",
+      "name": "Meta (Facebook) Pixel",
+      "category": "marketing",
+      "cookies": ["_fbp", "_fbc"],
+      "localStorage": [],
+      "requestPatterns": [
+        "connect.facebook.net/*/fbevents.js",
+        "facebook.com/tr",
+        "*.facebook.com/tr"
+      ],
+      "stubScript": "/fixtures/stubs/pixel.js",
+      "stubCookies": ["_fbp"]
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "category": "marketing",
+      "cookies": ["VISITOR_INFO1_LIVE", "YSC", "PREF"],
+      "localStorage": [],
+      "requestPatterns": [
+        "youtube.com/embed/*",
+        "youtube-nocookie.com/embed/*",
+        "*.ytimg.com/*"
+      ],
+      "stubScript": null,
+      "stubCookies": [],
+      "stubIframeSrc": "/fixtures/stubs/ytplayer.html"
+    },
+    {
+      "id": "linkedin-insight",
+      "name": "LinkedIn Insight Tag",
+      "category": "marketing",
+      "cookies": ["lidc", "lissc", "li_gc", "AnalyticsSyncHistory"],
+      "localStorage": [],
+      "requestPatterns": [
+        "snap.licdn.com/li.lms-analytics/insight.min.js",
+        "*.linkedin.com/li/track"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "hotjar",
+      "name": "Hotjar",
+      "category": "analytics",
+      "cookies": ["_hjid", "_hjFirstSeen", "_hjIncludedInPageviewSample", "_hjSession*"],
+      "localStorage": ["_hjSessionId"],
+      "requestPatterns": [
+        "static.hotjar.com/c/hotjar-*.js",
+        "*.hotjar.com/api/v2/client/sites/*/visitor-data/"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "intercom",
+      "name": "Intercom",
+      "category": "functional",
+      "cookies": ["intercom-id-*", "intercom-session-*", "intercom-device-id-*"],
+      "localStorage": [],
+      "requestPatterns": [
+        "widget.intercom.io/widget/*",
+        "*.intercom.io/messenger/*"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "hubspot",
+      "name": "HubSpot Analytics",
+      "category": "analytics",
+      "cookies": ["hubspotutk", "__hstc", "__hssc", "__hssrc"],
+      "localStorage": [],
+      "requestPatterns": [
+        "*.hs-analytics.net/*.js",
+        "*.hubspot.com/conversations-visitor/*",
+        "js.hs-scripts.com/*.js"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "zendesk",
+      "name": "Zendesk Chat",
+      "category": "functional",
+      "cookies": ["__zlcmid", "ZD-buid", "ZD-suid"],
+      "localStorage": [],
+      "requestPatterns": [
+        "static.zdassets.com/ekr/snippet.js",
+        "*.zopim.com/*"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "crisp",
+      "name": "Crisp Chat",
+      "category": "functional",
+      "cookies": ["crisp-client/session/*"],
+      "localStorage": ["crisp-client/session/*"],
+      "requestPatterns": [
+        "client.crisp.chat/l.js",
+        "*.crisp.chat/*"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "drift",
+      "name": "Drift",
+      "category": "functional",
+      "cookies": ["driftt_aid"],
+      "localStorage": [],
+      "requestPatterns": [
+        "js.driftt.com/include/*.js",
+        "*.drift.com/*"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "segment",
+      "name": "Segment",
+      "category": "analytics",
+      "cookies": ["ajs_*"],
+      "localStorage": ["ajs_user_id", "ajs_anonymous_id"],
+      "requestPatterns": [
+        "cdn.segment.com/analytics.js/*",
+        "*.segment.io/v1/*"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "amplitude",
+      "name": "Amplitude",
+      "category": "analytics",
+      "cookies": ["amplitude_id_*"],
+      "localStorage": ["amplitude_id_*", "amplitude_unsent_*"],
+      "requestPatterns": [
+        "cdn.amplitude.com/libs/amplitude-*.js",
+        "api.amplitude.com/2/httpapi"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "mixpanel",
+      "name": "Mixpanel",
+      "category": "analytics",
+      "cookies": ["mp_*"],
+      "localStorage": [],
+      "requestPatterns": [
+        "cdn.mxpnl.com/libs/mixpanel-*.js",
+        "api.mixpanel.com/track"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "twitter-pixel",
+      "name": "X (Twitter) Pixel",
+      "category": "marketing",
+      "cookies": ["muc_ads", "_twitter_sess"],
+      "localStorage": [],
+      "requestPatterns": [
+        "static.ads-twitter.com/uwt.js",
+        "analytics.twitter.com/i/adsct",
+        "t.co/i/adsct"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "clarity",
+      "name": "Microsoft Clarity",
+      "category": "analytics",
+      "cookies": ["_clck", "_clsk", "CLID"],
+      "localStorage": [],
+      "requestPatterns": [
+        "clarity.ms/tag/*",
+        "*.clarity.ms/collect"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "cloudflare-insights",
+      "name": "Cloudflare Web Analytics",
+      "category": "analytics",
+      "cookies": ["_cflb"],
+      "localStorage": [],
+      "requestPatterns": [
+        "static.cloudflareinsights.com/beacon.min.js",
+        "cloudflareinsights.com/cdn-cgi/rum"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "vimeo",
+      "name": "Vimeo",
+      "category": "marketing",
+      "cookies": ["player", "vuid"],
+      "localStorage": [],
+      "requestPatterns": [
+        "player.vimeo.com/video/*",
+        "*.vimeocdn.com/*"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    },
+    {
+      "id": "tiktok-pixel",
+      "name": "TikTok Pixel",
+      "category": "marketing",
+      "cookies": ["_tt_enable_cookie", "_ttp"],
+      "localStorage": [],
+      "requestPatterns": [
+        "analytics.tiktok.com/i18n/pixel/events.js",
+        "*.tiktok.com/i18n/pixel/*"
+      ],
+      "stubScript": null,
+      "stubCookies": []
+    }
+  ]
+}

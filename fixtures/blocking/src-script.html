@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: blocked external src script</title>
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Blocking case: external src script</h1>
+    <p>
+      An analytics (GA4 stub) and a marketing (Meta Pixel stub) script are declared with
+      <code>src</code> and <code>type="text/plain"</code>. They must not load until their
+      category is consented.
+    </p>
+
+    <noscript>
+      <p><strong>JavaScript required.</strong> Please enable JavaScript to test script blocking.</p>
+    </noscript>
+
+    <!--
+      Blocked analytics src script.
+      Before consent: browser never fetches /fixtures/stubs/ga4.js.
+      After analytics consent: re-injected as a real script, window.__ga4Ran === true.
+    -->
+    <script
+      type="text/plain"
+      data-category="analytics"
+      src="/fixtures/stubs/ga4.js"
+      id="blocked-ga4"
+    ></script>
+
+    <!--
+      Blocked marketing src script.
+      Before consent: browser never fetches /fixtures/stubs/pixel.js.
+      After marketing consent: re-injected, window.__pixelRan === true.
+    -->
+    <script
+      type="text/plain"
+      data-category="marketing"
+      src="/fixtures/stubs/pixel.js"
+      id="blocked-pixel"
+    ></script>
+
+    <div id="ga4-status" class="status-box status-blocked">GA4 stub: blocked</div>
+    <div id="pixel-status" class="status-box status-blocked">Meta Pixel stub: blocked</div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      init({
+        policyVersion: 'fixture-v1',
+        debug: true,
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'Synthetic GA4', cookies: ['_ga', '_ga_FIXTURE'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [{ name: 'Synthetic Meta Pixel', cookies: ['_fbp'] }],
+          },
+        },
+      })
+
+      onConsent('analytics', (granted) => {
+        const el = document.getElementById('ga4-status')
+        if (granted) {
+          setTimeout(() => {
+            el.textContent =
+              'GA4 stub: ' + (window.__ga4Ran ? 'executed ✓' : 'NOT executed (unexpected)')
+            el.className =
+              'status-box ' + (window.__ga4Ran ? 'status-granted' : 'status-blocked')
+          }, 150)
+        } else {
+          el.textContent = 'GA4 stub: blocked'
+          el.className = 'status-box status-blocked'
+        }
+      })
+
+      onConsent('marketing', (granted) => {
+        const el = document.getElementById('pixel-status')
+        if (granted) {
+          setTimeout(() => {
+            el.textContent =
+              'Meta Pixel stub: ' + (window.__pixelRan ? 'executed ✓' : 'NOT executed (unexpected)')
+            el.className =
+              'status-box ' + (window.__pixelRan ? 'status-granted' : 'status-blocked')
+          }, 150)
+        } else {
+          el.textContent = 'Meta Pixel stub: blocked'
+          el.className = 'status-box status-blocked'
+        }
+      })
+    </script>
+  </body>
+</html>

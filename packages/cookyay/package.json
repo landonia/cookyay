@@ -1,0 +1,42 @@
+{
+  "name": "cookyay",
+  "version": "0.1.0",
+  "description": "Free, self-hosted cookie consent — zero-dependency banner library",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@vitest/browser": "3.2.6",
+    "eslint": "^9.0.0",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.60.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "cookyay combined (IIFE + bootstrap)",
+    "path": [
+      "packages/cookyay/dist/index.iife.js",
+      "packages/cookyay/dist/bootstrap.js"
+    ],
+    "limit": "20 kB",
+    "gzip": true
+  },
+  {
+    "name": "cookyay bootstrap",
+    "path": "packages/cookyay/dist/bootstrap.js",
+    "limit": "1 kB",
+    "gzip": true
+  }
+]

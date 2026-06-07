@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: all blocking cases</title>
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>All blocking cases (combined)</h1>
+    <p>
+      This single page exercises every declarative blocking pattern in one place. Used by E2E
+      tests that need to verify all cases without navigation.
+    </p>
+
+    <noscript>
+      <p>
+        <strong>JavaScript required.</strong> Enable JavaScript to test cookie consent blocking.
+      </p>
+    </noscript>
+
+    <h2>1. Blocked inline script (analytics)</h2>
+    <p>
+      <code>type="text/plain" data-category="analytics"</code> — inline content, no
+      <code>src</code>.
+    </p>
+    <script type="text/plain" data-category="analytics" id="blocked-inline">
+      window.__analyticsInlineRan = true
+      var expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString()
+      document.cookie = '_ga=GA1.2.inline.' + Date.now() + '; expires=' + expires + '; path=/; SameSite=Lax'
+    </script>
+    <div id="inline-status" class="status-box status-blocked">Inline analytics: blocked</div>
+
+    <h2>2. Blocked external src script — analytics (GA4 stub)</h2>
+    <p>
+      <code>type="text/plain" data-category="analytics" src="/fixtures/stubs/ga4.js"</code>
+    </p>
+    <script
+      type="text/plain"
+      data-category="analytics"
+      src="/fixtures/stubs/ga4.js"
+      id="blocked-ga4"
+    ></script>
+    <div id="ga4-status" class="status-box status-blocked">GA4 stub: blocked</div>
+
+    <h2>3. Blocked external src script — marketing (Meta Pixel stub)</h2>
+    <p>
+      <code>type="text/plain" data-category="marketing" src="/fixtures/stubs/pixel.js"</code>
+    </p>
+    <script
+      type="text/plain"
+      data-category="marketing"
+      src="/fixtures/stubs/pixel.js"
+      id="blocked-pixel"
+    ></script>
+    <div id="pixel-status" class="status-box status-blocked">Meta Pixel stub: blocked</div>
+
+    <h2>4. Blocked iframe — marketing (YouTube-style)</h2>
+    <p>
+      <code>data-src="…" data-category="marketing"</code> — no <code>src</code>, so no network
+      request fires.
+    </p>
+    <iframe
+      data-src="/fixtures/stubs/ytplayer.html"
+      data-category="marketing"
+      id="blocked-yt"
+      width="560"
+      height="315"
+      title="Synthetic YouTube video embed"
+      allowfullscreen
+    ></iframe>
+    <div id="iframe-status" class="status-box status-blocked">YouTube-style iframe: blocked</div>
+
+    <h2>5. Undeclared-category script (stays blocked forever)</h2>
+    <p>
+      <code>data-category="advertising"</code> — not in the known set; stays blocked and emits a
+      console.warn.
+    </p>
+    <script type="text/plain" data-category="advertising" id="undeclared-script">
+      window.__undeclaredRan = true
+    </script>
+    <div id="undeclared-status" class="status-box status-blocked">
+      Undeclared script: blocked (expected)
+    </div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      init({
+        policyVersion: 'fixture-v1',
+        debug: true,
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'Synthetic GA4', cookies: ['_ga', '_ga_FIXTURE'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [
+              { name: 'Synthetic Meta Pixel', cookies: ['_fbp'] },
+              { name: 'Synthetic YouTube', cookies: ['VISITOR_INFO1_LIVE', 'YSC'] },
+            ],
+          },
+        },
+      })
+
+      onConsent('analytics', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          document.getElementById('inline-status').textContent =
+            'Inline analytics: ' + (window.__analyticsInlineRan ? 'executed ✓' : 'NOT executed')
+          document.getElementById('inline-status').className =
+            'status-box ' + (window.__analyticsInlineRan ? 'status-granted' : 'status-blocked')
+
+          document.getElementById('ga4-status').textContent =
+            'GA4 stub: ' + (window.__ga4Ran ? 'executed ✓' : 'NOT executed')
+          document.getElementById('ga4-status').className =
+            'status-box ' + (window.__ga4Ran ? 'status-granted' : 'status-blocked')
+        }, 150)
+      })
+
+      onConsent('marketing', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          document.getElementById('pixel-status').textContent =
+            'Meta Pixel stub: ' + (window.__pixelRan ? 'executed ✓' : 'NOT executed')
+          document.getElementById('pixel-status').className =
+            'status-box ' + (window.__pixelRan ? 'status-granted' : 'status-blocked')
+
+          const iframe = document.getElementById('blocked-yt')
+          const hasSrc = iframe && iframe.getAttribute('src')
+          document.getElementById('iframe-status').textContent =
+            'YouTube-style iframe: ' + (hasSrc ? 'loaded ✓' : 'still blocked')
+          document.getElementById('iframe-status').className =
+            'status-box ' + (hasSrc ? 'status-granted' : 'status-blocked')
+        }, 150)
+      })
+
+      // Confirm undeclared script never runs (even after full consent)
+      setTimeout(() => {
+        const el = document.getElementById('undeclared-status')
+        if (window.__undeclaredRan) {
+          el.textContent = 'Undeclared script: executed (BUG)'
+          el.className = 'status-box status-blocked'
+        } else {
+          el.textContent = 'Undeclared script: still blocked ✓ (correct)'
+          el.className = 'status-box status-granted'
+        }
+      }, 600)
+    </script>
+  </body>
+</html>

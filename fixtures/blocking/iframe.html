@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: blocked iframe</title>
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Blocking case: blocked iframe (YouTube-style)</h1>
+    <p>
+      A marketing-category iframe uses <code>data-src</code> instead of <code>src</code>. The
+      browser never loads the embed URL until marketing consent is granted, at which point
+      <code>data-src</code> is promoted to <code>src</code>.
+    </p>
+
+    <noscript>
+      <p>
+        <strong>JavaScript required.</strong> Please enable JavaScript to view embedded content.
+      </p>
+    </noscript>
+
+    <!--
+      Blocked YouTube-style iframe.
+      - data-src holds the embed URL; real src is absent so no network request fires.
+      - data-category="marketing" tells the blocker which consent gate to wait for.
+      - width/height are preserved for the placeholder div dimensions.
+      Before consent: iframe is hidden; a placeholder div of equal dimensions is shown.
+      After marketing consent: data-src → src, iframe becomes visible.
+    -->
+    <iframe
+      data-src="/fixtures/stubs/ytplayer.html"
+      data-category="marketing"
+      id="blocked-yt"
+      width="560"
+      height="315"
+      title="Synthetic YouTube video embed"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen
+    ></iframe>
+
+    <div id="iframe-status" class="status-box status-blocked">
+      YouTube-style embed: blocked (marketing consent required)
+    </div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      init({
+        policyVersion: 'fixture-v1',
+        debug: true,
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'Synthetic GA4', cookies: ['_ga', '_ga_FIXTURE'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [
+              { name: 'Synthetic Meta Pixel', cookies: ['_fbp'] },
+              { name: 'Synthetic YouTube', cookies: ['VISITOR_INFO1_LIVE', 'YSC'] },
+            ],
+          },
+        },
+        strings: { 'aria-category-toggle': 'Toggle {label} cookies' },
+      })
+
+      onConsent('marketing', (granted) => {
+        const el = document.getElementById('iframe-status')
+        if (granted) {
+          setTimeout(() => {
+            const iframe = document.getElementById('blocked-yt')
+            const hasSrc = iframe && iframe.getAttribute('src')
+            el.textContent = 'YouTube-style embed: ' + (hasSrc ? 'loaded ✓' : 'still blocked (unexpected)')
+            el.className = 'status-box ' + (hasSrc ? 'status-granted' : 'status-blocked')
+          }, 100)
+        } else {
+          el.textContent = 'YouTube-style embed: blocked (marketing consent required)'
+          el.className = 'status-box status-blocked'
+        }
+      })
+    </script>
+  </body>
+</html>

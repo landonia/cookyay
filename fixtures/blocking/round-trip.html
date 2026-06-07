@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: scanner round-trip</title>
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Scanner round-trip fixture</h1>
+    <p>
+      This page is used by the scanner E2E round-trip test (task 016, criterion 5).
+      It declares the same blocked scripts and iframe as all.html, but reads its
+      <code>Cookyay.init()</code> config from <code>window.__cookyayConfig</code>
+      (injected by the test via Playwright's <code>addInitScript</code> before
+      navigation). This proves the emitted config is "ready-to-use" — that its
+      extra <code>_meta</code> fields do not break <code>validateConfig</code> and
+      the blocking engine correctly identifies the analytics/marketing categories.
+    </p>
+
+    <h2>1. Blocked external src script — analytics (GA4 stub)</h2>
+    <script
+      type="text/plain"
+      data-category="analytics"
+      src="/fixtures/stubs/ga4.js"
+      id="blocked-ga4"
+    ></script>
+    <div id="ga4-status" class="status-box status-blocked">GA4 stub: blocked</div>
+
+    <h2>2. Blocked external src script — marketing (Meta Pixel stub)</h2>
+    <script
+      type="text/plain"
+      data-category="marketing"
+      src="/fixtures/stubs/pixel.js"
+      id="blocked-pixel"
+    ></script>
+    <div id="pixel-status" class="status-box status-blocked">Meta Pixel stub: blocked</div>
+
+    <h2>3. Blocked iframe — marketing (YouTube-style)</h2>
+    <iframe
+      data-src="/fixtures/stubs/ytplayer.html"
+      data-category="marketing"
+      id="blocked-yt"
+      width="560"
+      height="315"
+      title="Synthetic YouTube video embed"
+      allowfullscreen
+    ></iframe>
+    <div id="iframe-status" class="status-box status-blocked">YouTube-style iframe: blocked</div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      // The test injects window.__cookyayConfig via addInitScript before navigation.
+      // Fall back to a minimal inline config for manual browser testing.
+      const config = window.__cookyayConfig ?? {
+        policyVersion: 'round-trip-fallback',
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'GA4 fallback', cookies: ['_ga', '_ga_FIXTURE'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [
+              { name: 'Pixel fallback', cookies: ['_fbp'] },
+              { name: 'YouTube fallback', cookies: ['VISITOR_INFO1_LIVE'] },
+            ],
+          },
+        },
+      }
+
+      init(config)
+
+      onConsent('analytics', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          document.getElementById('ga4-status').textContent =
+            'GA4 stub: ' + (window.__ga4Ran ? 'executed ✓' : 'NOT executed')
+          document.getElementById('ga4-status').className =
+            'status-box ' + (window.__ga4Ran ? 'status-granted' : 'status-blocked')
+        }, 150)
+      })
+
+      onConsent('marketing', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          document.getElementById('pixel-status').textContent =
+            'Meta Pixel stub: ' + (window.__pixelRan ? 'executed ✓' : 'NOT executed')
+          document.getElementById('pixel-status').className =
+            'status-box ' + (window.__pixelRan ? 'status-granted' : 'status-blocked')
+
+          const iframe = document.getElementById('blocked-yt')
+          const hasSrc = iframe && iframe.getAttribute('src')
+          document.getElementById('iframe-status').textContent =
+            'YouTube-style iframe: ' + (hasSrc ? 'loaded ✓' : 'still blocked')
+          document.getElementById('iframe-status').className =
+            'status-box ' + (hasSrc ? 'status-granted' : 'status-blocked')
+        }, 150)
+      })
+    </script>
+  </body>
+</html>

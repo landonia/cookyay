@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: undeclared-category script</title>
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Blocking case: undeclared category</h1>
+    <p>
+      A script has <code>data-category="advertising"</code> which is not one of the four known
+      categories (<code>necessary</code>, <code>functional</code>, <code>analytics</code>,
+      <code>marketing</code>). The blocker must keep it inert and emit a structured
+      <code>console.warn</code> — fail-closed.
+    </p>
+
+    <noscript>
+      <p><strong>JavaScript required.</strong></p>
+    </noscript>
+
+    <!--
+      Undeclared-category script: data-category value is not in the known set.
+      Expected behaviour:
+        - script stays blocked forever (no grant() call will match "advertising")
+        - Cookyay emits: [Cookyay] script references unknown category "advertising" — staying blocked
+        - window.__undeclaredRan is never set to true
+    -->
+    <script type="text/plain" data-category="advertising" id="undeclared-script">
+      window.__undeclaredRan = true
+    </script>
+
+    <div id="undeclared-status" class="status-box status-blocked">
+      Undeclared-category script: permanently blocked (expected)
+    </div>
+
+    <p>Open the browser console to see the structured warning emitted by the blocker.</p>
+
+    <script type="module">
+      import { init } from '/packages/cookyay/dist/index.js'
+
+      // Only declare known categories — "advertising" is intentionally absent
+      init({
+        policyVersion: 'fixture-v1',
+        debug: true,
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'Synthetic GA4', cookies: ['_ga', '_ga_FIXTURE'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [{ name: 'Synthetic Meta Pixel', cookies: ['_fbp'] }],
+          },
+        },
+      })
+
+      // After a short delay, confirm the undeclared script never ran
+      setTimeout(() => {
+        const el = document.getElementById('undeclared-status')
+        if (window.__undeclaredRan) {
+          el.textContent = 'Undeclared-category script: executed (BUG — should be blocked)'
+          el.className = 'status-box status-blocked'
+        } else {
+          el.textContent = 'Undeclared-category script: still blocked ✓ (correct behaviour)'
+          el.className = 'status-box status-granted'
+        }
+      }, 500)
+    </script>
+  </body>
+</html>
