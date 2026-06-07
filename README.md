@@ -37,16 +37,17 @@ pnpm add cookyay
 
 ## CDN usage (jsDelivr)
 
-Pin to a minor version — never use `@latest`, which can receive breaking changes
-between major versions.
+When using SRI, pin to an **exact** version — the integrity hash is computed
+from the file's bytes, so a floating tag (`@0.1`, `@latest`) would break the
+moment a new release lands on that tag.
 
 ### IIFE script tag
 
 ```html
 <!-- In <head>, AFTER the inline bootstrap snippet (see below) -->
 <script
-  src="https://cdn.jsdelivr.net/npm/cookyay@0.1/dist/index.iife.js"
-  integrity="sha384-REPLACE_WITH_SRI_FROM_JSDELIVR"
+  src="https://cdn.jsdelivr.net/npm/cookyay@0.1.0/dist/index.iife.js"
+  integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
   crossorigin="anonymous"
   defer
 ></script>
@@ -98,10 +99,10 @@ Google Consent Mode v2 defaults and arms the script intercept.
        instead (see "Declare scripts to block" below). -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
 
-  <!-- 3. The Cookyay UI bundle (deferred) — pin to minor, always include SRI -->
+  <!-- 3. The Cookyay UI bundle (deferred) — pin exact version, always include SRI -->
   <script
-    src="https://cdn.jsdelivr.net/npm/cookyay@0.1/dist/index.iife.js"
-    integrity="sha384-REPLACE_WITH_SRI_FROM_JSDELIVR"
+    src="https://cdn.jsdelivr.net/npm/cookyay@0.1.0/dist/index.iife.js"
+    integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
     crossorigin="anonymous"
     defer
   ></script>
