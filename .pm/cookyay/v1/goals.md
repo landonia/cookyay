@@ -1,6 +1,6 @@
 ---
 version: v1
-status: planning
+status: shipped
 created: 2026-06-06
 ---
 
