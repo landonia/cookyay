@@ -10,6 +10,8 @@ Free, self-hosted cookie consent — zero-dependency banner library.
 > GDPR and CCPA. Whether your specific deployment is compliant is a legal question
 > outside the scope of this library.
 
+📖 **[Full documentation →](https://landonia.github.io/cookyay/)**
+
 ---
 
 ## Features
@@ -46,7 +48,7 @@ moment a new release lands on that tag.
 ```html
 <!-- In <head>, AFTER the inline bootstrap snippet (see below) -->
 <script
-  src="https://cdn.jsdelivr.net/npm/cookyay@0.1.0/dist/index.iife.js"
+  src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
   integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
   crossorigin="anonymous"
   defer
@@ -56,7 +58,7 @@ moment a new release lands on that tag.
 Get the SRI hash for a specific version from the jsDelivr API:
 
 ```
-https://data.jsdelivr.com/v1/packages/npm/cookyay@0.1.0/integrity
+https://data.jsdelivr.com/v1/packages/npm/cookyay@0.1.1/integrity
 ```
 
 Or visit [jsdelivr.com/package/npm/cookyay](https://www.jsdelivr.com/package/npm/cookyay)
@@ -81,27 +83,38 @@ path is convenient for prototyping.
 
 ## Quick start
 
-### 1. Add the inline bootstrap snippet to `<head>` (synchronous, < 1 KB)
+Cookyay uses a **two-part install**. The order is critical — getting it wrong is the
+number-one breakage point.
 
-This snippet must run **before** any analytics/GTM script tags. It fires
-Google Consent Mode v2 defaults and arms the script intercept.
+> ⚠️ **Load-order breakage warning**
+> The inline bootstrap snippet (Part 1) MUST be the very first `<script>` in `<head>`,
+> before any Google Analytics, GTM, or other analytics snippets. If those scripts load
+> first, Google Consent Mode v2 defaults are never registered — a silent GDPR violation
+> that is invisible in the browser.
+
+### Part 1 — Inline bootstrap snippet (synchronous, < 1 KB)
+
+This snippet must run **before** any analytics/GTM script tags. It fires Google Consent
+Mode v2 defaults (all denied), detects the GPC signal, and arms the script intercept so
+blocked scripts stay inert until consent is given.
+
+Copy the minified snippet verbatim. It is the compiled build of `dist/bootstrap.js` from
+the `cookyay` package. If you need to inject it programmatically from a build tool, read
+`dist/bootstrap.js` — not `INLINE_SNIPPET_JS`, which is a simpler all-denied-only snippet
+that does **not** read the `cookyay_consent` cookie (returning visitors would re-see denied
+Consent Mode signals until the deferred UI bundle loads).
 
 ```html
 <head>
-  <!-- 1. Cookyay bootstrap — must be first -->
-  <script>
-    <!-- paste contents of dist/bootstrap.js here, or load it inline via your build tool -->
-  </script>
+  <!-- PART 1: Cookyay bootstrap — MUST be first in <head> -->
+  <script>"use strict";(()=>{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&&(a.functionality_storage="granted",a.security_storage="granted"),e.f&&(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&&(a.analytics_storage="granted"),e.m&&(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&&(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();</script>
 
-  <!-- 2. Your analytics/GTM script tags go HERE, after the bootstrap -->
-  <!-- GTM/gtag.js is loaded from Google's own CDN; SRI is not applicable to
-       dynamically-versioned Google-hosted scripts. Block them via data-category
-       instead (see "Declare scripts to block" below). -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
+  <!-- Your analytics/GTM snippet goes HERE, after the bootstrap -->
+  <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script> -->
 
-  <!-- 3. The Cookyay UI bundle (deferred) — pin exact version, always include SRI -->
+  <!-- PART 2: Cookyay UI bundle — deferred, pin exact version + SRI -->
   <script
-    src="https://cdn.jsdelivr.net/npm/cookyay@0.1.0/dist/index.iife.js"
+    src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
     integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
     crossorigin="anonymous"
     defer
@@ -109,7 +122,12 @@ Google Consent Mode v2 defaults and arms the script intercept.
 </head>
 ```
 
-### 2. Initialise Cookyay
+> ⚠️ **Remove `<noscript>` fallback tags** — Many third-party snippets include
+> `<noscript><img src="..."></noscript>` fallback tags. These bypass script blocking
+> entirely and fire pixels even when JavaScript is off. Remove all such tags from
+> your markup.
+
+### Part 2 — Initialise Cookyay
 
 ```html
 <script defer>
@@ -133,16 +151,33 @@ Google Consent Mode v2 defaults and arms the script intercept.
 </script>
 ```
 
-### 3. Declare scripts to block
+### Declare scripts to block
+
+Replace `type="text/javascript"` → `type="text/plain"` and add `data-category`. For iframes,
+replace `src` with `data-src`.
 
 ```html
-<!-- Blocked until analytics consent is given -->
+<!-- External script, blocked until analytics consent -->
 <script
   type="text/plain"
   data-category="analytics"
   src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"
 ></script>
+
+<!-- Blocked iframe — swap src for data-src -->
+<iframe
+  data-src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
+  data-category="marketing"
+  width="560" height="315"
+  title="YouTube embed"
+  allowfullscreen
+></iframe>
 ```
+
+You now have a working consent banner + script blocking + Google Consent Mode v2 + GPC
+detection. See the [full docs](https://landonia.github.io/cookyay/) for config reference,
+string overrides, scanner usage, GTM integration, withdrawal/re-prompt, SSR reading, and
+compliance limitations.
 
 ---
 
@@ -188,6 +223,37 @@ SRI hashes whenever you update:
 # Generate SRI hash for a local file
 openssl dgst -sha384 -binary dist/index.iife.js | openssl base64 -A | sed 's/^/sha384-/'
 ```
+
+---
+
+## Compliance limitations
+
+Cookyay stores the consent record **client-side only** (a `cookyay_consent` cookie +
+localStorage). This is sufficient for the visitor's experience, but:
+
+> **For full GDPR Art. 7 accountability, forward consent events to your own backend.**
+> Client-side storage alone does not satisfy proof-of-consent obligations if you are
+> audited.
+
+Listen to the `cookyay:consent` event and POST the record to your backend:
+
+```js
+document.addEventListener('cookyay:consent', (e) => {
+  // e.detail: { schemaVersion, policyVersion, timestamp, categories }
+  const { schemaVersion, policyVersion, timestamp, categories } = e.detail
+  fetch('/api/consent-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schemaVersion, policyVersion, timestamp, categories }),
+  }).catch(() => {})
+})
+```
+
+A native webhook is planned for v2. The consent record schema is webhook-ready today
+(timestamp, banner version, policy version, per-category choices, GPC flag).
+
+See the [full compliance limitations section](https://landonia.github.io/cookyay/#compliance)
+in the docs for what Cookyay does and does not cover.
 
 ---
 

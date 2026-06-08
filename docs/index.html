@@ -1,0 +1,1098 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cookyay — Free, self-hosted cookie consent</title>
+    <meta name="description" content="Zero-dependency cookie consent library. Banner + script blocking + Google Consent Mode v2 + GPC. Self-hosted, no subscriptions." />
+
+    <!--
+      ══════════════════════════════════════════════════════════════
+      STEP 1 OF 2 — COOKYAY BOOTSTRAP (inline, synchronous, <1 KB)
+      This MUST be the first script in <head>, before any analytics
+      or GTM snippet. It fires Consent Mode v2 defaults (all denied)
+      and arms the script intercept so no tracker runs pre-consent.
+      ══════════════════════════════════════════════════════════════
+    -->
+    <script>"use strict";(()=>{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&&(a.functionality_storage="granted",a.security_storage="granted"),e.f&&(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&&(a.analytics_storage="granted"),e.m&&(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&&(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();</script>
+
+    <!--
+      STEP 2 OF 2 — COOKYAY UI BUNDLE (deferred)
+      Loads the banner, preferences modal, GPC toast, and re-open link.
+      The `defer` attribute ensures it does not block HTML parsing.
+      Always pin to an exact version + SRI hash for supply-chain safety.
+    -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
+      integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
+      crossorigin="anonymous"
+      defer
+    ></script>
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <nav class="site-nav" aria-label="Site navigation">
+      <a href="#" class="logo">Cookyay</a>
+      <a href="#quickstart">Quickstart</a>
+      <a href="#config-reference">Config</a>
+      <a href="#string-overrides">i18n</a>
+      <a href="#script-blocking">Blocking</a>
+      <a href="#scanner">Scanner</a>
+      <a href="#gtm">GTM</a>
+      <a href="#gpc">GPC</a>
+      <a href="#withdrawal">Withdrawal</a>
+      <a href="#ssr">SSR</a>
+      <a href="#compliance">Compliance</a>
+      <a href="compare.html">vs CookieYes</a>
+      <a href="https://github.com/landonia/cookyay" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+
+    <div class="page-wrap">
+
+      <!-- ── Hero ── -->
+      <header class="hero">
+        <h1>Cookyay</h1>
+        <p>Free, self-hosted cookie consent — zero-dependency banner library.</p>
+        <div class="badges">
+          <a href="https://www.npmjs.com/package/cookyay" target="_blank" rel="noopener">
+            <img src="https://img.shields.io/npm/v/cookyay" alt="npm version" />
+          </a>
+          <img src="https://img.shields.io/badge/gzip-%3C20kB-brightgreen" alt="Bundle size" />
+          <img src="https://img.shields.io/badge/License-Apache--2.0-blue.svg" alt="Apache-2.0" />
+        </div>
+        <p style="margin-top:1rem">
+          <strong>Not legal advice.</strong> Cookyay helps implement consent UX patterns described
+          by GDPR and CCPA. Whether your specific deployment is compliant is a legal question
+          outside the scope of this library.
+        </p>
+      </header>
+
+      <!-- ── Demo ── -->
+      <section id="demo" aria-labelledby="demo-heading">
+        <h2 id="demo-heading">Live demo</h2>
+        <p>
+          This page dogfoods Cookyay itself — the banner you see (or have already dismissed) is
+          the real library loaded from jsDelivr. Click <strong>Cookie settings</strong> in the
+          bottom-left to re-open the preferences modal.
+        </p>
+        <div class="demo-box">
+          <p>Cookyay is active on this page. If you haven't interacted yet, the consent banner
+             will appear. Use the "Cookie settings" link injected into the bottom-left corner to
+             re-open preferences at any time.</p>
+        </div>
+      </section>
+
+      <!-- ── Table of contents ── -->
+      <nav class="toc" aria-label="Table of contents">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#quickstart">Quickstart (15 min)</a></li>
+          <li><a href="#install">Install / CDN</a></li>
+          <li><a href="#script-blocking">Declare scripts to block</a></li>
+          <li><a href="#config-reference">Config reference</a></li>
+          <li><a href="#string-overrides">String overrides / i18n</a></li>
+          <li><a href="#scanner">CLI scanner</a></li>
+          <li><a href="#gtm">GTM integration</a></li>
+          <li><a href="#gpc">GPC behavior</a></li>
+          <li><a href="#withdrawal">Withdrawal &amp; re-prompt</a></li>
+          <li><a href="#ssr">SSR cookie reading</a></li>
+          <li><a href="#compliance">Compliance limitations</a></li>
+        </ol>
+      </nav>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           1. QUICKSTART
+           ══════════════════════════════════════════════════════ -->
+      <section id="quickstart" aria-labelledby="quickstart-heading">
+        <h2 id="quickstart-heading">Quickstart — working banner in &lt;15 minutes</h2>
+
+        <p>
+          Cookyay uses a <strong>two-part install</strong>. Both parts are required and their
+          order is critical — getting this wrong is the #1 breakage point.
+        </p>
+
+        <div class="callout callout-warn">
+          <strong>⚠ Load-order breakage warning</strong>
+          The inline bootstrap snippet (<strong>Part 1</strong>) MUST appear as the very first
+          <code>&lt;script&gt;</code> in <code>&lt;head&gt;</code>, before any Google Analytics,
+          GTM, or other analytics snippets. If those scripts load first, Google Consent Mode v2
+          defaults are never registered — a silent GDPR violation that is invisible in the browser.
+        </div>
+
+        <h3>Part 1 — Inline bootstrap snippet (synchronous, &lt;1 KB)</h3>
+        <p>
+          Copy this verbatim as the <strong>first script in <code>&lt;head&gt;</code></strong>.
+          It fires Consent Mode v2 defaults (all denied), detects the GPC signal, and arms the
+          script intercept so blocked scripts stay inert until consent is given.
+        </p>
+        <p>
+          The verbatim snippet above is the compiled build of <code>packages/cookyay/src/bootstrap.ts</code>
+          (<code>dist/bootstrap.js</code>). It reads the <code>cookyay_consent</code> cookie so
+          returning visitors have their stored consent grants restored to Consent Mode
+          <em>before</em> any paint. If you need to inject it programmatically from a build tool,
+          read <code>dist/bootstrap.js</code> from the npm package — not
+          <code>INLINE_SNIPPET_JS</code>, which is a simpler all-denied-only snippet that does
+          not read the consent cookie.
+        </p>
+
+        <pre><code>&lt;head&gt;
+  &lt;!-- PART 1: Cookyay bootstrap — MUST be first in &lt;head&gt; --&gt;
+  &lt;script&gt;"use strict";(()=&gt;{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&amp;&amp;(a.functionality_storage="granted",a.security_storage="granted"),e.f&amp;&amp;(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&amp;&amp;(a.analytics_storage="granted"),e.m&amp;&amp;(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&amp;&amp;(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();&lt;/script&gt;
+
+  &lt;!-- Your GA4 / GTM snippet goes HERE, after the bootstrap --&gt;
+  &lt;!-- &lt;script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"&gt;&lt;/script&gt; --&gt;
+
+  &lt;!-- PART 2: Cookyay UI bundle — deferred, exact version + SRI --&gt;
+  &lt;script
+    src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
+    integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
+    crossorigin="anonymous"
+    defer
+  &gt;&lt;/script&gt;
+&lt;/head&gt;</code></pre>
+
+        <div class="callout callout-note">
+          <strong>Why two parts?</strong>
+          Part 1 (the bootstrap) is synchronous and tiny (&lt;1 KB). It must block HTML parsing
+          for a moment to fire Consent Mode defaults <em>before</em> any Google tag has a chance
+          to fire. Part 2 (the UI bundle) is deferred — it loads the banner UI without blocking
+          page paint.
+        </div>
+
+        <h3>Initialise Cookyay</h3>
+        <p>Add this after the closing <code>&lt;/body&gt;</code> tag, or in a deferred script:</p>
+
+        <pre><code>&lt;script defer&gt;
+  document.addEventListener('DOMContentLoaded', function () {
+    Cookyay.init({
+      policyVersion: '2025-01-01',   // bump when your cookie usage changes
+      categories: {
+        necessary: {},               // always on — no toggle shown
+        functional: {
+          services: [{ name: 'Intercom', cookies: ['intercom-*'] }],
+        },
+        analytics: {
+          services: [{ name: 'Google Analytics 4', cookies: ['_ga', '_gid'] }],
+        },
+        marketing: {
+          services: [{ name: 'Meta Pixel', cookies: ['_fbp'] }],
+        },
+      },
+    })
+  })
+&lt;/script&gt;</code></pre>
+
+        <h3>Declare scripts to block</h3>
+        <p>
+          Replace <code>type="text/javascript"</code> with <code>type="text/plain"</code>
+          and add <code>data-category="&lt;category&gt;"</code>. The bootstrap intercepts these
+          on page load and prevents them from executing until the visitor consents.
+        </p>
+
+        <pre><code>&lt;!-- Blocked until analytics consent is given --&gt;
+&lt;script
+  type="text/plain"
+  data-category="analytics"
+  src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"
+&gt;&lt;/script&gt;
+
+&lt;!-- Blocked iframe — swap data-src for src --&gt;
+&lt;iframe
+  data-src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+  data-category="marketing"
+  width="560" height="315"
+  title="YouTube video"
+  allowfullscreen
+&gt;&lt;/iframe&gt;</code></pre>
+
+        <div class="callout callout-warn">
+          <strong>⚠ Remove <code>&lt;noscript&gt;</code> fallback tags</strong>
+          Many third-party snippets (Google Analytics, Meta Pixel) include
+          <code>&lt;noscript&gt;&lt;img src="..."&gt;&lt;/noscript&gt;</code> fallback tags.
+          These bypass script blocking entirely and fire pixels even when JavaScript is
+          off or blocked. Remove all such tags — they are not GDPR-safe.
+        </div>
+
+        <p>That's it. You now have:</p>
+        <ul>
+          <li>A consent banner (Accept all / Reject all / Manage preferences)</li>
+          <li>Granular category toggles in the preferences modal</li>
+          <li>Google Consent Mode v2 defaults + updates wired automatically</li>
+          <li>GPC signal detection with a visible acknowledgment toast</li>
+          <li>A persistent "Cookie settings" link for withdrawal</li>
+        </ul>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           2. INSTALL / CDN
+           ══════════════════════════════════════════════════════ -->
+      <section id="install" aria-labelledby="install-heading">
+        <h2 id="install-heading">Install / CDN</h2>
+
+        <h3>npm / pnpm</h3>
+        <pre><code>npm install cookyay
+# or
+pnpm add cookyay</code></pre>
+
+        <p>Then import and use as ESM:</p>
+        <pre><code>import { init, getConsent, onConsent } from 'cookyay'
+
+// To embed the bootstrap snippet server-side, read dist/bootstrap.js from the package
+// (not INLINE_SNIPPET_JS — that is a simpler all-denied-only snippet without cookie read)
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+const bootstrapSnippet = readFileSync(
+  resolve(import.meta.dirname, 'node_modules/cookyay/dist/bootstrap.js'), 'utf8'
+)</code></pre>
+
+        <h3>jsDelivr CDN (IIFE)</h3>
+        <p>
+          Pin to an <strong>exact version</strong> with an SRI hash. A floating
+          <code>@latest</code> tag bypasses integrity checks and is a supply-chain risk.
+        </p>
+        <pre><code>&lt;script
+  src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
+  integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
+  crossorigin="anonymous"
+  defer
+&gt;&lt;/script&gt;</code></pre>
+
+        <p>
+          Get the SRI hash for a different version from the jsDelivr integrity API:<br />
+          <code>https://data.jsdelivr.com/v1/packages/npm/cookyay@VERSION/integrity</code>
+        </p>
+
+        <h3>jsDelivr /+esm (module)</h3>
+        <p>
+          Convenient for prototyping. Note: jsDelivr does not provide stable SRI for the
+          <code>/+esm</code> endpoint — use the IIFE path for production.
+        </p>
+        <pre><code>&lt;script type="module"&gt;
+  import Cookyay from 'https://cdn.jsdelivr.net/npm/cookyay@0.1/+esm'
+  Cookyay.init({ policyVersion: '2025-01-01', categories: { necessary: {} } })
+&lt;/script&gt;</code></pre>
+
+        <h3>Self-hosted SRI</h3>
+        <p>If you copy artifacts to your own CDN, regenerate SRI hashes after each update:</p>
+        <pre><code>openssl dgst -sha384 -binary dist/index.iife.js | openssl base64 -A | sed 's/^/sha384-/'</code></pre>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           3. SCRIPT BLOCKING
+           ══════════════════════════════════════════════════════ -->
+      <section id="script-blocking" aria-labelledby="blocking-heading">
+        <h2 id="blocking-heading">Declarative script blocking</h2>
+
+        <p>
+          Cookyay uses a <strong>declarative</strong> blocking model. You annotate each
+          script or iframe that should be blocked, and Cookyay handles the rest.
+          Auto-detection is deferred to v2.
+        </p>
+
+        <h3>Scripts (<code>&lt;script&gt;</code>)</h3>
+        <p>
+          Change <code>type="text/javascript"</code> → <code>type="text/plain"</code>
+          and add <code>data-category</code>. Works for both inline scripts and
+          <code>src</code> scripts.
+        </p>
+        <pre><code>&lt;!-- External script, blocked until analytics consent --&gt;
+&lt;script type="text/plain" data-category="analytics"
+        src="/scripts/ga4.js"&gt;&lt;/script&gt;
+
+&lt;!-- Inline script, blocked until marketing consent --&gt;
+&lt;script type="text/plain" data-category="marketing"&gt;
+  fbq('init', '123456')
+  fbq('track', 'PageView')
+&lt;/script&gt;</code></pre>
+
+        <h3>Iframes (<code>&lt;iframe&gt;</code>)</h3>
+        <p>
+          Replace <code>src</code> with <code>data-src</code> and add
+          <code>data-category</code>. Cookyay swaps <code>data-src</code> → <code>src</code>
+          on consent, causing the iframe to load.
+        </p>
+        <pre><code>&lt;iframe
+  data-src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
+  data-category="marketing"
+  width="560" height="315"
+  title="YouTube embed"
+  allowfullscreen
+&gt;&lt;/iframe&gt;</code></pre>
+
+        <div class="callout callout-note">
+          <strong>YouTube note</strong>
+          <code>youtube-nocookie.com</code> still writes localStorage and sends data to Google.
+          Full iframe blocking via <code>data-src</code> swap is required for GDPR compliance.
+        </div>
+
+        <h3>Category values</h3>
+        <table>
+          <thead>
+            <tr><th>Value</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>necessary</code></td><td>Always unblocked — do not use for analytics/marketing</td></tr>
+            <tr><td><code>functional</code></td><td>Live chat, session replay, user preferences</td></tr>
+            <tr><td><code>analytics</code></td><td>Page analytics (GA4, Plausible, etc.)</td></tr>
+            <tr><td><code>marketing</code></td><td>Ad tracking, retargeting pixels, video embeds</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Re-execution on consent</h3>
+        <p>
+          When consent is granted, Cookyay clones the blocked <code>&lt;script&gt;</code> element
+          and re-inserts it — mutating <code>type</code> does not re-execute scripts in any
+          browser. The re-inserted script runs with full DOM access (since
+          <code>document.readyState</code> is <code>'complete'</code> at that point).
+        </p>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           4. CONFIG REFERENCE
+           ══════════════════════════════════════════════════════ -->
+      <section id="config-reference" aria-labelledby="config-heading">
+        <h2 id="config-heading">Config reference</h2>
+
+        <p>Pass a single config object to <code>Cookyay.init(config)</code>.</p>
+
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>policyVersion</code></td>
+              <td><code>string</code></td>
+              <td><em>required</em></td>
+              <td>
+                Bump when your cookie usage changes materially. Stored visitors whose saved
+                version differs will see the banner again. Example: <code>'2025-01-01'</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>categories</code></td>
+              <td><code>Record&lt;CategoryId, CategoryConfig&gt;</code></td>
+              <td><code>{}</code></td>
+              <td>
+                Per-category label and services declarations. See
+                <a href="#category-config">CategoryConfig</a> below.
+              </td>
+            </tr>
+            <tr>
+              <td><code>strings</code></td>
+              <td><code>Partial&lt;StringTable&gt;</code></td>
+              <td>English defaults</td>
+              <td>
+                Override any user-visible or ARIA string. See
+                <a href="#string-overrides">String overrides</a>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>theme</code></td>
+              <td><code>ThemeOptions</code></td>
+              <td><em>none</em></td>
+              <td>
+                Visual overrides: <code>primaryColor</code>, <code>backgroundColor</code>,
+                <code>textColor</code>, <code>borderRadius</code>, <code>fontFamily</code>,
+                <code>zIndex</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>modal</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>
+                <code>true</code> renders the first-layer banner as a focus-trapped modal
+                (blocks interaction). Default is a non-blocking dialog. Note: consent walls
+                are prohibited under GDPR unless you offer a genuine no-tracking alternative.
+              </td>
+            </tr>
+            <tr>
+              <td><code>cookie</code></td>
+              <td><code>CookieOptions</code></td>
+              <td><em>none</em></td>
+              <td>
+                <code>domain</code> (restrict the consent cookie to a specific domain),
+                <code>expiryDays</code> (default: 365).
+              </td>
+            </tr>
+            <tr>
+              <td><code>debug</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>
+                Enable verbose <code>console.log</code> output at init time. Useful for
+                diagnosing misconfiguration. Turn off in production.
+              </td>
+            </tr>
+            <tr>
+              <td><code>autoOpenLink</code></td>
+              <td><code>boolean</code></td>
+              <td><code>true</code></td>
+              <td>
+                Auto-injects a persistent "Cookie settings" link in the bottom-left corner
+                so visitors can change their preferences at any time. Set <code>false</code>
+                to suppress and wire your own opener via
+                <code>data-cookyay-open</code> or <code>Cookyay.openPreferences()</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>clearOnWithdraw</code></td>
+              <td><code>(revoked: CategoryId[]) =&gt; void</code></td>
+              <td><em>none</em></td>
+              <td>
+                Callback fired when consent is withdrawn for one or more categories. Use it
+                to expire your own first-party cookies. Third-party script state cannot be
+                cleared programmatically — a page reload is required.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 id="category-config">CategoryConfig</h3>
+        <pre><code>{
+  label?: string          // override the category label in the preferences modal
+  services?: Array&lt;{
+    name: string          // shown in the preferences modal
+    cookies?: string[]    // cookie names this service may write
+    localStorage?: string[] // localStorage keys
+  }&gt;
+}</code></pre>
+
+        <h3>Programmatic API</h3>
+        <pre><code>// Read current consent
+Cookyay.getConsent()
+// → { necessary: true, functional: false, analytics: false, marketing: false }
+
+// Subscribe to consent changes for a category
+const unsubscribe = Cookyay.onConsent('analytics', (granted) =&gt; {
+  if (granted) loadAnalytics()
+})
+unsubscribe() // remove listener
+
+// Open the preferences modal programmatically
+Cookyay.openPreferences()
+
+// Custom element opener (no JS required)
+&lt;button data-cookyay-open&gt;Cookie settings&lt;/button&gt;</code></pre>
+
+        <h3>Custom events</h3>
+        <p>
+          Cookyay dispatches events on <code>document</code> for zero-coupling integrations
+          (GTM triggers, other scripts):
+        </p>
+        <pre><code>document.addEventListener('cookyay:consent', (e) =&gt; {
+  const { schemaVersion, policyVersion, timestamp, categories } = e.detail
+  // schemaVersion: number — schema version for future-proofing
+  // policyVersion: string — matches the policyVersion from your Cookyay.init() config
+  // timestamp: ISO-8601 string — when consent was recorded
+  // categories: { necessary, functional, analytics, marketing } — per-category booleans
+  if (categories.analytics) initMyAnalytics()
+})
+
+document.addEventListener('cookyay:change', (e) =&gt; {
+  // fired when consent changes after initial grant — same four-field detail as cookyay:consent
+  const { schemaVersion, policyVersion, timestamp, categories } = e.detail
+  if (!categories.marketing) tearDownMarketingPixels()
+})</code></pre>
+
+        <h3>Console warnings on misconfiguration</h3>
+        <p>
+          Cookyay emits <code>console.warn</code> (not <code>console.error</code>) for common
+          mistakes so they're visible during development without breaking CI:
+        </p>
+        <ul>
+          <li>
+            Missing <code>policyVersion</code>: <code>[cookyay] policyVersion is required…</code>
+          </li>
+          <li>
+            Unknown category key: <code>[cookyay] categories["xyz"] is not a known category…</code>
+          </li>
+          <li>
+            Empty category (no services): <code>[cookyay] categories["analytics"] has no declared services…</code>
+          </li>
+        </ul>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           5. STRING OVERRIDES / i18n
+           ══════════════════════════════════════════════════════ -->
+      <section id="string-overrides" aria-labelledby="strings-heading">
+        <h2 id="strings-heading">String overrides / i18n</h2>
+
+        <p>
+          Cookyay v1 ships with English defaults. Every user-visible and ARIA string is
+          overridable via the <code>strings</code> config key. This is the intended
+          localisation mechanism — supply translated strings for your locale.
+        </p>
+
+        <pre><code>Cookyay.init({
+  policyVersion: '2025-01-01',
+  strings: {
+    // Banner first layer
+    bannerTitle: 'Nous utilisons des cookies',
+    bannerDescription: 'Ce site utilise des cookies pour améliorer votre expérience.',
+    acceptAllLabel: 'Tout accepter',
+    rejectAllLabel: 'Tout refuser',
+    managePreferencesLabel: 'Gérer mes préférences',
+
+    // Preferences modal
+    preferencesTitle: 'Préférences de cookies',
+    savePreferencesLabel: 'Enregistrer',
+    closeLabel: 'Fermer',
+
+    // GPC toast
+    gpcNoticeText: 'Votre préférence de confidentialité (Global Privacy Control) a été détectée et appliquée.',
+
+    // Withdrawal prompt
+    withdrawalPromptText: 'Vos préférences ont été enregistrées. Les scripts déjà exécutés continueront jusqu\'au rechargement de la page.',
+    reloadLabel: 'Recharger',
+
+    // Persistent re-open link
+    reopenLabel: 'Paramètres des cookies',
+
+    // ARIA labels (accessibility — do not omit these for translated sites)
+    'aria-banner': 'Bannière de consentement aux cookies',
+    'aria-preferences-modal': 'Préférences de cookies',
+    'aria-close': 'Fermer',
+    'aria-accept-all': 'Accepter tous les cookies',
+    'aria-reject-all': 'Refuser tous les cookies',
+    'aria-manage-preferences': 'Gérer les préférences de cookies',
+    'aria-save-preferences': 'Enregistrer les préférences de cookies',
+    'aria-category-toggle': 'Activer/désactiver les cookies {label}',
+  },
+})</code></pre>
+
+        <p>
+          You only need to supply the keys you want to override. Omitted keys fall back to
+          their English defaults. The <code>'{label}'</code> placeholder in
+          <code>aria-category-toggle</code> is replaced with the category label at render time.
+        </p>
+
+        <h3>Full string table (English defaults)</h3>
+        <table>
+          <thead>
+            <tr><th>Key</th><th>Default value</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>bannerTitle</code></td><td>We use cookies</td></tr>
+            <tr><td><code>bannerDescription</code></td><td>This site uses cookies and similar technologies to improve your experience.</td></tr>
+            <tr><td><code>acceptAllLabel</code></td><td>Accept all</td></tr>
+            <tr><td><code>rejectAllLabel</code></td><td>Reject all</td></tr>
+            <tr><td><code>managePreferencesLabel</code></td><td>Manage preferences</td></tr>
+            <tr><td><code>preferencesTitle</code></td><td>Cookie preferences</td></tr>
+            <tr><td><code>savePreferencesLabel</code></td><td>Save preferences</td></tr>
+            <tr><td><code>closeLabel</code></td><td>Close</td></tr>
+            <tr><td><code>gpcNoticeText</code></td><td>Your privacy preference (Global Privacy Control) was detected and applied.</td></tr>
+            <tr><td><code>withdrawalPromptText</code></td><td>Your preferences have been saved. Scripts that already ran this session keep running until you reload the page.</td></tr>
+            <tr><td><code>reloadLabel</code></td><td>Reload page</td></tr>
+            <tr><td><code>reopenLabel</code></td><td>Cookie settings</td></tr>
+            <tr><td><code>aria-banner</code></td><td>Cookie consent banner</td></tr>
+            <tr><td><code>aria-preferences-modal</code></td><td>Cookie preferences</td></tr>
+            <tr><td><code>aria-close</code></td><td>Close</td></tr>
+            <tr><td><code>aria-accept-all</code></td><td>Accept all cookies</td></tr>
+            <tr><td><code>aria-reject-all</code></td><td>Reject all cookies</td></tr>
+            <tr><td><code>aria-manage-preferences</code></td><td>Manage cookie preferences</td></tr>
+            <tr><td><code>aria-save-preferences</code></td><td>Save cookie preferences</td></tr>
+            <tr><td><code>aria-category-toggle</code></td><td>Toggle {label} cookies</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           6. SCANNER
+           ══════════════════════════════════════════════════════ -->
+      <section id="scanner" aria-labelledby="scanner-heading">
+        <h2 id="scanner-heading">CLI scanner</h2>
+
+        <p>
+          The <code>@cookyay/scanner</code> package crawls your site with a headless Chromium
+          browser, detects cookies and third-party requests, classifies known services against
+          the Open Cookie Database, and emits a ready-to-use <code>cookyay.config.json</code>.
+        </p>
+
+        <h3>Usage</h3>
+        <pre><code># Scan a site and write cookyay.config.json
+npx @cookyay/scanner scan https://yoursite.com
+
+# Or install globally
+npm install -g @cookyay/scanner
+cookyay-scanner scan https://yoursite.com</code></pre>
+
+        <h3>Output format</h3>
+        <p>The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>:</p>
+        <pre><code>{
+  "policyVersion": "REPLACE-WITH-YOUR-DATE",
+  "categories": {
+    "necessary": {},
+    "analytics": {
+      "services": [
+        {
+          "name": "Google Analytics 4",
+          "cookies": ["_ga", "_gid"],
+          "_meta": { "confidence": "high", "matchedBy": "cookie" }
+        }
+      ]
+    },
+    "marketing": { "services": [ /* ... */ ] }
+  },
+  "_unclassified": [
+    {
+      "_warning": "Review these manually",
+      "name": "unknown-tracker.com"
+    }
+  ],
+  "_noscriptWarnings": [
+    {
+      "_warning": "Remove this &lt;noscript&gt; tag — it fires a pixel even when JS is blocked.",
+      "html": "&lt;noscript&gt;&lt;img src='...'&gt;&lt;/noscript&gt;"
+    }
+  ]
+}</code></pre>
+
+        <p>
+          <strong>Confidence levels:</strong>
+          <code>high</code> = exact cookie name matched against the database,
+          <code>medium</code> = host matched only,
+          <code>low</code> = declared category (from page markup).
+        </p>
+
+        <div class="callout callout-warn">
+          <strong>⚠ Always review <code>_unclassified</code></strong>
+          Artifacts in <code>_unclassified</code> were detected but not recognised by the
+          scanner. Review them manually and assign to the appropriate category before shipping.
+          Never silently drop them.
+        </div>
+
+        <div class="callout callout-warn">
+          <strong>⚠ Act on <code>_noscriptWarnings</code></strong>
+          Any <code>&lt;noscript&gt;</code> tag detected inside third-party embeds bypasses
+          script blocking entirely. Remove these from your markup — there is no programmatic
+          fix.
+        </div>
+
+        <h3>Set <code>policyVersion</code></h3>
+        <p>
+          The scanner cannot know when your cookie usage changes. Replace the placeholder
+          <code>"REPLACE-WITH-YOUR-DATE"</code> with an ISO date string (e.g.
+          <code>"2025-01-01"</code>) and bump it whenever you add or reclassify cookies.
+        </p>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           7. GTM INTEGRATION
+           ══════════════════════════════════════════════════════ -->
+      <section id="gtm" aria-labelledby="gtm-heading">
+        <h2 id="gtm-heading">GTM integration</h2>
+
+        <p>
+          Cookyay's UI bundle fires <code>gtag('consent','update',{...})</code> directly from
+          page-level JavaScript — outside GTM's dataLayer queue — so it does <em>not</em> have
+          the common "update too late" race condition that affects GTM Custom HTML tags.
+        </p>
+
+        <p>
+          For most GTM sites, no extra configuration is needed beyond placing the bootstrap
+          snippet before the GTM container snippet in <code>&lt;head&gt;</code>:
+        </p>
+
+        <pre><code>&lt;head&gt;
+  &lt;!-- 1. Cookyay bootstrap — MUST be first --&gt;
+  &lt;script&gt;/* inline bootstrap here */&lt;/script&gt;
+
+  &lt;!-- 2. GTM container snippet — after Cookyay bootstrap --&gt;
+  &lt;script&gt;(function(w,d,s,l,i){...})(window,document,'script','dataLayer','GTM-XXXX');&lt;/script&gt;
+&lt;/head&gt;</code></pre>
+
+        <h3>Consent Mode v2 signal map</h3>
+        <table>
+          <thead>
+            <tr><th>Banner category</th><th>Consent Mode v2 signals</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>necessary</code></td><td><code>functionality_storage</code> + <code>security_storage</code> (always granted)</td></tr>
+            <tr><td><code>functional</code></td><td><code>personalization_storage</code></td></tr>
+            <tr><td><code>analytics</code></td><td><code>analytics_storage</code></td></tr>
+            <tr><td><code>marketing</code></td><td><code>ad_storage</code> + <code>ad_user_data</code> + <code>ad_personalization</code></td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          For advanced GTM scenarios, diagnostics, and the
+          <code>updateConsentState()</code> Sandbox API workaround, see the full
+          <a href="gtm-workaround.md">GTM integration guide</a>.
+        </p>
+
+        <div class="callout callout-note">
+          <strong>GTM tag template</strong>
+          A first-party GTM <code>.tpl</code> tag template using GTM's
+          <code>updateConsentState()</code> Sandbox API is planned for v2. It eliminates
+          the residual dataLayer-queue window for fully GTM-managed pages.
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           8. GPC BEHAVIOR
+           ══════════════════════════════════════════════════════ -->
+      <section id="gpc" aria-labelledby="gpc-heading">
+        <h2 id="gpc-heading">GPC behavior (Global Privacy Control)</h2>
+
+        <p>
+          Cookyay automatically detects the
+          <a href="https://globalprivacycontrol.org/" target="_blank" rel="noopener">Global Privacy Control (GPC)</a>
+          signal (<code>navigator.globalPrivacyControl === true</code>) and treats it as an
+          opt-out from <code>functional</code>, <code>analytics</code>, and
+          <code>marketing</code> categories.
+        </p>
+
+        <h3>What happens when GPC is detected</h3>
+        <ol>
+          <li>The bootstrap snippet reads <code>navigator.globalPrivacyControl</code> synchronously.</li>
+          <li>Consent Mode v2 signals are fired with all non-necessary categories denied.</li>
+          <li>The consent banner is suppressed — the visitor's browser has already expressed their preference.</li>
+          <li>
+            A small toast message is shown confirming the signal was honored:
+            <em>"Your privacy preference (Global Privacy Control) was detected and applied."</em>
+          </li>
+        </ol>
+
+        <div class="callout callout-note">
+          <strong>Why show a toast?</strong>
+          As of January 1, 2026, California's CCPA regulations require explicit on-page
+          confirmation when a GPC signal is honored. The toast satisfies this requirement.
+          Override the message via the <code>strings.gpcNoticeText</code> config key.
+        </div>
+
+        <h3>GPC overrides stored consent</h3>
+        <p>
+          If a visitor previously accepted marketing cookies and later enables GPC in their
+          browser, Cookyay detects the live GPC signal on each page load and overrides the
+          stored consent. Stored consent does not override a live GPC signal — this is required
+          for CCPA opt-out purposes.
+        </p>
+
+        <h3>Testing GPC locally</h3>
+        <p>In Chromium-based browsers, set the flag in the DevTools console:</p>
+        <pre><code>// In DevTools console — simulates GPC signal
+Object.defineProperty(navigator, 'globalPrivacyControl', { value: true })
+location.reload()</code></pre>
+        <p>
+          Or use the
+          <a href="https://chromewebstore.google.com/detail/global-privacy-control-gp/njhijllicanbaodbjfbhpgfnjndbcgai" target="_blank" rel="noopener">
+            Global Privacy Control extension
+          </a> for Chrome/Edge.
+        </p>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           9. WITHDRAWAL & RE-PROMPT
+           ══════════════════════════════════════════════════════ -->
+      <section id="withdrawal" aria-labelledby="withdrawal-heading">
+        <h2 id="withdrawal-heading">Withdrawal &amp; re-prompt</h2>
+
+        <h3>Withdrawal (revoking consent)</h3>
+        <p>
+          Visitors can change their consent choices at any time via the
+          <strong>"Cookie settings"</strong> link auto-injected in the bottom-left corner,
+          or any element with <code>data-cookyay-open</code> attribute, or via
+          <code>Cookyay.openPreferences()</code>.
+        </p>
+
+        <p>
+          When a visitor revokes a previously-granted category:
+        </p>
+        <ol>
+          <li>The new consent record is written to the <code>cookyay_consent</code> cookie and localStorage.</li>
+          <li>A <code>cookyay:change</code> event is dispatched on <code>document</code>.</li>
+          <li>Your <code>clearOnWithdraw</code> callback is called with the list of revoked category IDs.</li>
+          <li>
+            A "reload required" prompt is shown:
+            <em>"Your preferences have been saved. Scripts that already ran this session
+            keep running until you reload the page."</em>
+          </li>
+        </ol>
+
+        <div class="callout callout-note">
+          <strong>Why a reload prompt?</strong>
+          Once a marketing or analytics script has executed (e.g. Meta Pixel has initialized),
+          its in-memory state cannot be erased without a full page reload. The reload prompt is
+          honest — it tells visitors their change will take effect after reload rather than
+          silently failing to clean up. This matches GDPR Article 7(3)'s "as easy as giving
+          consent" requirement while being truthful about technical constraints.
+        </div>
+
+        <h3>Clearing your own cookies on withdrawal</h3>
+        <p>Use the <code>clearOnWithdraw</code> callback to expire first-party cookies:</p>
+        <pre><code>Cookyay.init({
+  policyVersion: '2025-01-01',
+  clearOnWithdraw(revoked) {
+    if (revoked.includes('analytics')) {
+      // Expire GA4 cookies you set on your own domain
+      document.cookie = '_ga=; Max-Age=0; Path=/'
+      document.cookie = '_gid=; Max-Age=0; Path=/'
+    }
+  },
+})</code></pre>
+
+        <div class="callout callout-warn">
+          <strong>⚠ Third-party script state</strong>
+          Third-party scripts (Google Analytics, Meta Pixel, etc.) write cookies and
+          localStorage entries directly. Cookyay can clear first-party cookies via
+          <code>clearOnWithdraw</code> but cannot clean up storage written by third-party
+          code. A page reload is the only reliable remedy.
+        </div>
+
+        <h3>Policy-version re-prompt</h3>
+        <p>
+          When you add new cookie categories or materially change data processing, bump
+          the <code>policyVersion</code> in your config:
+        </p>
+        <pre><code>Cookyay.init({ policyVersion: '2025-06-01' /* was '2025-01-01' */ })</code></pre>
+        <p>
+          On the next page load, visitors whose stored consent was recorded under a different
+          <code>policyVersion</code> will see the banner again. Their previous choices are
+          discarded and they must consent fresh. This is required by GDPR when purposes change
+          materially.
+        </p>
+
+        <h3>Consent expiry re-prompt</h3>
+        <p>
+          Consent expires after 365 days by default (configurable via
+          <code>cookie.expiryDays</code>). When the cookie expires the visitor will see the
+          banner again on their next visit.
+        </p>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           10. SSR COOKIE READING
+           ══════════════════════════════════════════════════════ -->
+      <section id="ssr" aria-labelledby="ssr-heading">
+        <h2 id="ssr-heading">SSR cookie reading</h2>
+
+        <p>
+          Cookyay's consent record is stored in a <code>SameSite=Lax</code> cookie named
+          <code>cookyay_consent</code>. This cookie is sent to your server on every request,
+          which means you can read it server-side to conditionally render markup, skip
+          injecting analytics scripts, or implement server-driven consent checks.
+        </p>
+
+        <h3>Cookie format</h3>
+        <p>
+          The cookie value is a URL-encoded JSON object with short keys for compactness:
+        </p>
+        <pre><code>{
+  "sv": 1,              // schema version
+  "t": 1735689600,      // consent timestamp (Unix epoch seconds)
+  "pv": "2025-01-01",   // policy version
+  "bv": "0.1.0",        // banner version
+  "c": {                // per-category boolean choices
+    "n": true,          // necessary
+    "f": false,         // functional
+    "a": true,          // analytics
+    "m": false          // marketing
+  },
+  "gpc": false          // whether GPC was the source of this record
+}</code></pre>
+
+        <h3>Reading in Node.js / server-rendered apps</h3>
+        <pre><code>// Express / any Node.js framework
+function readCookyayConsent(cookieHeader) {
+  const match = cookieHeader?.match(/(?:^|;\s*)cookyay_consent=([^;]+)/)
+  if (!match) return null
+  try {
+    return JSON.parse(decodeURIComponent(match[1]))
+  } catch {
+    return null
+  }
+}
+
+// Usage
+const consent = readCookyayConsent(req.headers.cookie)
+if (consent?.c?.a) {
+  // visitor has consented to analytics — safe to inject GA4
+}</code></pre>
+
+        <pre><code>// Next.js App Router
+import { cookies } from 'next/headers'
+
+const rawCookie = cookies().get('cookyay_consent')?.value
+const consent = rawCookie ? JSON.parse(decodeURIComponent(rawCookie)) : null
+const analyticsConsented = consent?.c?.a === true</code></pre>
+
+        <div class="callout callout-note">
+          <strong>Always validate the schema version</strong>
+          Check <code>sv === 1</code> before trusting the record. Future versions of Cookyay
+          may bump <code>sv</code>; the library re-prompts automatically for unknown versions,
+          but your server code should handle unknown versions gracefully (treat as no consent).
+        </div>
+
+        <h3>CLS prevention</h3>
+        <p>
+          Reading the cookie on the server and conditionally including/excluding analytics
+          script tags prevents Cumulative Layout Shift (CLS) caused by scripts dynamically
+          appending DOM elements after load. The bootstrap snippet handles this for the
+          client-side path; SSR reading handles it for the initial HTML delivery.
+        </p>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           11. COMPLIANCE LIMITATIONS
+           ══════════════════════════════════════════════════════ -->
+      <section id="compliance" aria-labelledby="compliance-heading">
+        <h2 id="compliance-heading">Compliance limitations</h2>
+
+        <div class="callout callout-danger">
+          <strong>Not legal advice</strong>
+          This section describes what Cookyay does and does not do technically. Whether your
+          specific deployment is legally compliant is a question for qualified legal counsel,
+          not this library.
+        </div>
+
+        <h3>Client-side consent record — accountability limitation</h3>
+
+        <p>
+          Cookyay stores the consent record in the <strong>visitor's browser only</strong>
+          (a <code>cookyay_consent</code> cookie + a mirrored localStorage entry). This is
+          sufficient for the visitor's experience, but it has a critical limitation for
+          controllers under GDPR:
+        </p>
+
+        <div class="callout callout-warn">
+          <strong>For full GDPR Art. 7 accountability, forward consent events to your own
+          backend.</strong> Client-side storage alone does not satisfy proof-of-consent
+          obligations if you are audited. A regulator asking "show me the consent record for
+          user X on date Y" cannot be answered from a browser-local record alone.
+        </div>
+
+        <p>
+          To build a server-side consent log, listen to the <code>cookyay:consent</code>
+          custom event and POST the record to your backend:
+        </p>
+        <pre><code>document.addEventListener('cookyay:consent', (e) =&gt; {
+  // e.detail fields: schemaVersion, policyVersion, timestamp, categories
+  const { schemaVersion, policyVersion, timestamp, categories } = e.detail
+  fetch('/api/consent-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ schemaVersion, policyVersion, timestamp, categories }),
+  }).catch(() =&gt; {}) // best-effort; do not block UX on failure
+})</code></pre>
+
+        <p>
+          A native webhook is planned for v2. In v1, the event detail schema is
+          webhook-ready: it includes ISO-8601 timestamp, policy version, per-category choices,
+          and the schema version for future-proofing.
+        </p>
+
+        <h3>What Cookyay does</h3>
+        <ul>
+          <li>Opt-in consent banner for all visitors (no geo-detection)</li>
+          <li>Declarative script and iframe blocking until consent</li>
+          <li>Google Consent Mode v2 default + update signals</li>
+          <li>GPC signal detection and honoring with visible confirmation</li>
+          <li>Consent withdrawal mechanism with "reload required" prompt</li>
+          <li>Policy-version re-prompt when cookie usage changes</li>
+          <li>Keyboard-navigable, screen-reader accessible banner</li>
+          <li>Consent record stored locally with timestamp and policy version</li>
+        </ul>
+
+        <h3>What Cookyay does not do</h3>
+        <ul>
+          <li>
+            <strong>No server-side consent log</strong> — client-side only (v1). For GDPR Art.
+            7(1) proof-of-consent, forward events to your own backend (see above).
+          </li>
+          <li>
+            <strong>No IAB TCF certification</strong> — Cookyay is not a certified CMP under
+            IAB TCF. Sites requiring TCF should use a certified provider.
+          </li>
+          <li>
+            <strong>No geo-detection</strong> — the strictest-everywhere posture shows the
+            opt-in banner to all visitors regardless of location.
+          </li>
+          <li>
+            <strong>No built-in translations</strong> — English defaults with full string
+            override support. Supply your own translated strings via the
+            <code>strings</code> config.
+          </li>
+          <li>
+            <strong>No retroactive third-party cleanup</strong> — cookies and storage written
+            by already-executed third-party scripts cannot be erased without a page reload.
+          </li>
+          <li>
+            <strong>No guarantee of compliance</strong> — this library implements standard
+            consent UX patterns; whether your deployment meets legal requirements depends on
+            your specific situation, jurisdiction, and how you configure and deploy the library.
+          </li>
+        </ul>
+
+        <h3>"Do Not Sell or Share" link (CCPA)</h3>
+        <p>
+          CCPA requires a persistent "Do Not Sell or Share My Personal Information" link on
+          every page. Cookyay's auto-injected "Cookie settings" link fulfills the withdrawal
+          mechanism but is <strong>not</strong> the same as a CCPA-required "Do Not Sell"
+          link. To satisfy CCPA, add an explicit link in your site footer and wire it to
+          <code>Cookyay.openPreferences()</code>:
+        </p>
+        <pre><code>&lt;footer&gt;
+  &lt;a href="#" onclick="Cookyay.openPreferences(); return false;"&gt;
+    Do Not Sell or Share My Personal Information
+  &lt;/a&gt;
+&lt;/footer&gt;</code></pre>
+      </section>
+
+    </div><!-- /.page-wrap -->
+
+    <footer class="site-footer">
+      <p>
+        <a href="https://github.com/landonia/cookyay" target="_blank" rel="noopener">GitHub</a> ·
+        <a href="https://www.npmjs.com/package/cookyay" target="_blank" rel="noopener">npm</a> ·
+        <a href="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js" target="_blank" rel="noopener">jsDelivr</a> ·
+        Apache-2.0
+      </p>
+      <p>
+        <strong>Not legal advice.</strong> Cookyay helps implement consent UX patterns. Whether your
+        specific deployment is compliant is a legal question outside the scope of this library.
+      </p>
+    </footer>
+
+    <!-- Initialise Cookyay for this docs page (dogfooding) -->
+    <script defer>
+      document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Cookyay === 'undefined') return
+        Cookyay.init({
+          policyVersion: '2026-01-01',
+          debug: false,
+          categories: {
+            necessary: {},
+            analytics: {
+              label: 'Analytics',
+              services: [
+                { name: 'Example analytics service', cookies: ['_example_ga'] },
+              ],
+            },
+          },
+          strings: {
+            bannerDescription:
+              'This docs site uses cookies to demonstrate the Cookyay library. ' +
+              'No real analytics are collected — this is a live dogfood demo.',
+          },
+        })
+      })
+    </script>
+
+  </body>
+</html>
