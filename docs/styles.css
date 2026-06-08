@@ -74,7 +74,9 @@ body {
 .hero p { margin: 0; color: var(--muted); font-size: 1.1rem; }
 
 .badges { margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.badges img { height: 20px; width: auto; }
+/* display:block removes the inline baseline gap that otherwise makes the
+   <a>-wrapped npm badge taller than the bare <img> badges and misaligns them. */
+.badges img { display: block; height: 20px; width: auto; }
 
 /* ── Section headings ── */
 h2 {
