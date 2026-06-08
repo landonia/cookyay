@@ -14,7 +14,7 @@
     <script>"use strict";(()=>{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&&(a.functionality_storage="granted",a.security_storage="granted"),e.f&&(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&&(a.analytics_storage="granted"),e.m&&(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&&(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();</script>
 
     <script
-      src="https://cdn.jsdelivr.net/npm/cookyay@0.1.0/dist/index.iife.js"
+      src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
       integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
       crossorigin="anonymous"
       defer

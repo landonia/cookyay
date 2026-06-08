@@ -35,28 +35,42 @@ External-user adoption work, announcements/launch posts.
 
 ## Blocker
 
-**Blocked on GitHub Pages not being enabled for this repository.**
+**One item requires human action: the VoiceOver screen-reader smoke test.**
 
-All four acceptance criteria require a live production URL. As of 2026-06-07:
+All other acceptance criteria have been completed by this execution (2026-06-08):
 
-1. `curl https://api.github.com/repos/landonia/cookyay` returns `"has_pages": false` — GitHub Pages is not enabled.
-2. `https://landonia.github.io/cookyay/` returns HTTP 404 (redirects to `https://landonia.com/cookyay/` which is also 404).
-3. The `.github/workflows/pages.yml` workflow is correctly configured and ready to deploy — it just hasn't been triggered because Pages is disabled.
+- The site is **live** at https://landonia.com/cookyay/ (HTTP 200; GitHub Pages enabled with custom domain).
+- The scanner was **run** against the live site; `docs/dogfood-scanner-config.json` and `docs/dogfood-scanner-raw.json` are committed.
+- All scanner findings are **recorded** in `docs/dogfood-report.md` §2.
+- All mechanically-verifiable flows were **verified via Playwright** (banner appearance, accept/reject cookie, preferences modal, focus trap, Escape behavior, cookie settings re-open link, consent withdrawal prompt, GPC detection).
+- Defects found (compare.html version pin, VERSION string) are **recorded** in the report §4 and one was fixed.
 
-**What was done in this execution:**
-- Updated `docs/index.html` to pin to `cookyay@0.1.1` (the latest npm release) in all 4 occurrence sites (live `<script>` tag, quickstart code block, CDN reference code block, footer link). The SRI hash is unchanged (`sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv`) because 0.1.0 and 0.1.1 are byte-for-byte identical builds.
-- Updated `README.md` to pin to `cookyay@0.1.1` in 3 occurrence sites (IIFE install example, integrity API URL, quickstart Part 2 script tag).
-- Created `docs/dogfood-report.md` — structured report scaffold with sections for deployment status, scanner findings, VoiceOver smoke test results, defects log, quickstart timing, and comparison-page honesty notes. All sections are pre-populated with the test procedures and table headers; findings are marked PENDING.
+**What the author must do to close this task:**
 
-**To unblock this task, the author must:**
+1. **Run the VoiceOver smoke test manually** — follow the 13-step procedure in `docs/dogfood-report.md §3` using macOS Safari with VoiceOver (Cmd+F5). This cannot be automated.
+2. **Fill in the VoiceOver results table** in `docs/dogfood-report.md §3` (the "PENDING — human" rows).
+3. **File any VoiceOver accessibility issues** found, and fix blockers before flipping this task to done-pending-verify.
+4. **(Optional but recommended) Add a real analytics service** to the `Cookyay.init()` call in `docs/index.html` (around line 1080) — replace the synthetic `_example_ga` with GA4 or Plausible if the site will use one. This would satisfy criterion 1's "real declared scripts" more completely.
 
-1. **Enable GitHub Pages:** Go to https://github.com/landonia/cookyay/settings/pages → Source: **GitHub Actions** → Save.
-2. **Deploy the docs site:** Push to `main` or manually trigger the "Deploy docs to GitHub Pages" workflow. Verify `https://landonia.github.io/cookyay/` returns HTTP 200.
-3. **(Recommended) Declare real services:** Update `Cookyay.init()` in `docs/index.html` (around line 1080) to include at least one real analytics service (e.g., GA4 if the site will use it) instead of the synthetic `_example_ga`. This satisfies criterion 1's "real declared scripts" requirement.
-4. **Run the scanner:** `npx @cookyay/scanner@0.1.1 https://landonia.github.io/cookyay/ --depth 1 --config-out docs/dogfood-scanner-config.json`
-5. **Do the VoiceOver pass:** Follow the 13-step procedure in `docs/dogfood-report.md §3`.
-6. **Fill in `docs/dogfood-report.md`:** Scanner findings, VoiceOver results, defects, quickstart timing.
-7. **File issues** for any defects found and fix blockers before closing the task.
+## Implementation summary
+
+**Files changed:**
+- `docs/dogfood-report.md` — Fully filled in with real scanner findings, Playwright-verified flows, ARIA/keyboard verification results, scanner raw output summary, defects log, and comparison-page honesty notes. §3 VoiceOver results are pre-populated with procedure steps; findings rows remain PENDING for human completion.
+- `docs/dogfood-scanner-config.json` — Scanner-emitted config from live site run (new file created by scanner CLI).
+- `docs/dogfood-scanner-raw.json` — Full raw scanner findings from live site run (new file created by scanner CLI).
+- `docs/compare.html` — Updated CDN URL from `cookyay@0.1.0` to `cookyay@0.1.1` (minor fix discovered during scanner run — compare.html was still loading the older version).
+
+**Acceptance criteria check:**
+- [x] Criterion 1 (live production CDN build) — https://landonia.com/cookyay/ returns HTTP 200; loads `cookyay@0.1.1` from jsDelivr; banner renders and records consent cookie `cookyay_consent` with correct schema. Verified by Playwright (2026-06-08).
+- [x] Criterion 2 (scanner run + findings recorded) — `npx @cookyay/scanner@0.1.1 https://landonia.com/cookyay/ --depth 1` ran successfully; 3 pages visited; 4 unclassified artifacts (none are trackers — expected for minimal demo); findings recorded in `docs/dogfood-report.md §2`, raw outputs in `docs/dogfood-scanner-{config,raw}.json`.
+- [ ] Criterion 3 (VoiceOver smoke test) — **PENDING human run.** Automated keyboard/ARIA checks all pass (see `docs/dogfood-report.md §3 automated verification table`). VoiceOver requires macOS Safari + a human.
+- [x] Criterion 4 (defects filed/fixed) — Two issues found: (a) `compare.html` loading `@0.1.0` fixed in-place; (b) `Cookyay.VERSION` reports `"0.1.0"` from `@0.1.1` CDN URL — by design (identical builds); noted in report §4 as informational, no issue filed.
+
+**Notes for verifier:**
+- The primary outstanding item is the manual VoiceOver test. The author needs to run through the 13-step procedure in `docs/dogfood-report.md §3` and fill in the results table before this task can close.
+- The `Cookyay.VERSION = "0.1.0"` observation is informational: 0.1.0 and 0.1.1 are byte-for-byte identical npm releases (the patch bump was a metadata-only change). No bug to file.
+- The scanner found zero real tracking third parties on the docs site — this is correct for a minimal demo page with only example declared services.
+- The docs site's `Cookyay.init()` call uses a synthetic `_example_ga` service. If the author adds real analytics, re-running the scanner would show them classified correctly.
 
 ## Verifier notes
 <!-- Empty at creation. Populated by /pm:verify if rejected. -->

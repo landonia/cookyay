@@ -1,0 +1,46 @@
+{
+  "policyVersion": "REPLACE_ME",
+  "categories": {},
+  "_unclassified": [
+    {
+      "kind": "request-host",
+      "name": "cdn.jsdelivr.net",
+      "pages": [
+        "https://landonia.com/cookyay/",
+        "https://landonia.com/cookyay/compare.html"
+      ],
+      "_note": "Could not automatically classify this artifact. Review it and move it to the appropriate category in the config above, or add a script/iframe declaration to your HTML with data-category=\"<category>\"."
+    },
+    {
+      "kind": "request-host",
+      "name": "img.shields.io",
+      "pages": [
+        "https://landonia.com/cookyay/"
+      ],
+      "_note": "Could not automatically classify this artifact. Review it and move it to the appropriate category in the config above, or add a script/iframe declaration to your HTML with data-category=\"<category>\"."
+    },
+    {
+      "kind": "script",
+      "name": "https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js",
+      "pages": [
+        "https://landonia.com/cookyay/"
+      ],
+      "_note": "Could not automatically classify this artifact. Review it and move it to the appropriate category in the config above, or add a script/iframe declaration to your HTML with data-category=\"<category>\"."
+    },
+    {
+      "kind": "script",
+      "name": "https://cdn.jsdelivr.net/npm/cookyay@0.1.0/dist/index.iife.js",
+      "pages": [
+        "https://landonia.com/cookyay/compare.html"
+      ],
+      "_note": "Could not automatically classify this artifact. Review it and move it to the appropriate category in the config above, or add a script/iframe declaration to your HTML with data-category=\"<category>\"."
+    }
+  ],
+  "_noscriptWarnings": [],
+  "_scanMeta": {
+    "scannedAt": "2026-06-08T01:07:49.227Z",
+    "targetUrl": "https://landonia.com/cookyay/",
+    "pagesVisited": 3,
+    "classifierVersion": "1.0.0"
+  }
+}
