@@ -262,3 +262,63 @@ test('GPC visitor: second visit does not re-show GPC toast', async ({ page }) =>
   await expect(page.locator('#cookyay-gpc-toast')).not.toBeVisible()
   await expect(page.locator('#cookyay-banner')).not.toBeVisible()
 })
+
+// Task 021 — regression: explicit post-GPC choices must persist across reloads
+// Repro: Brave (GPC default on) — saving Cookie settings was forgotten on reload
+// because the record was written with gpc:false, so _runGpc() overwrote it.
+test('GPC visitor: explicit preference choices persist after reload (task 021)', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'globalPrivacyControl', {
+      value: true,
+      configurable: true,
+      writable: false,
+    })
+  })
+
+  // First visit — GPC applied, toast shown, banner suppressed
+  await page.goto(ALL_PAGE)
+  await expect(page.locator('#cookyay-gpc-toast')).toBeVisible()
+  await expect(page.locator('#cookyay-banner')).not.toBeVisible()
+
+  // User opens Cookie settings via the re-open link (always injected, even when banner suppressed)
+  await expect(page.locator('#cookyay-reopen')).toBeVisible()
+  await page.click('#cookyay-reopen')
+  await expect(page.locator('#cookyay-preferences')).toBeVisible()
+
+  const analyticsSwitch = page.locator('[data-cookyay-switch="analytics"]')
+  // GPC-applied record has analytics=false; turn it on explicitly
+  await expect(analyticsSwitch).toHaveAttribute('aria-checked', 'false')
+  await analyticsSwitch.click()
+  await expect(analyticsSwitch).toHaveAttribute('aria-checked', 'true')
+  await page.click('[data-cookyay-save]')
+
+  // Verify cookie was written with gpc:true (GPC-acknowledged)
+  const cookiesAfterSave = await page.context().cookies()
+  const cookieAfterSave = cookiesAfterSave.find((c) => c.name === 'cookyay_consent')
+  expect(cookieAfterSave).toBeDefined()
+  const payloadAfterSave = JSON.parse(decodeURIComponent(cookieAfterSave!.value)) as {
+    c: { a: boolean }
+    gpc: boolean
+  }
+  expect(payloadAfterSave.gpc).toBe(true)      // GPC-acknowledged
+  expect(payloadAfterSave.c.a).toBe(true)       // analytics granted
+
+  // Reload — the explicit choices must survive
+  await page.goto(ALL_PAGE)
+
+  // Toast must NOT re-appear (record already gpc:true)
+  await expect(page.locator('#cookyay-gpc-toast')).not.toBeVisible()
+  // Banner must stay suppressed
+  await expect(page.locator('#cookyay-banner')).not.toBeVisible()
+
+  // Cookie must still reflect analytics=true
+  const cookiesAfterReload = await page.context().cookies()
+  const cookieAfterReload = cookiesAfterReload.find((c) => c.name === 'cookyay_consent')
+  expect(cookieAfterReload).toBeDefined()
+  const payloadAfterReload = JSON.parse(decodeURIComponent(cookieAfterReload!.value)) as {
+    c: { a: boolean }
+    gpc: boolean
+  }
+  expect(payloadAfterReload.gpc).toBe(true)
+  expect(payloadAfterReload.c.a).toBe(true)    // analytics choice preserved
+})

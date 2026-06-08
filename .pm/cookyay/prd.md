@@ -105,6 +105,27 @@ blocking + Consent Mode + scanner end-to-end.
 **Change:** ...
 -->
 
+### 2026-06-07 — GPC override must not stomp explicit post-GPC user choices
+**Why:** Dogfooding (task 020) in Brave — which enables Global Privacy Control by
+default — found that preferences saved via the Cookie settings modal are forgotten
+on every reload. Explicit choices write a record with `gpc:false`
+(`api.ts:_recordConsent` default param), so on the next page load `_runGpc()`
+misreads the record as a stale pre-GPC grant, overwrites it with all-denied, and
+re-shows the toast. For GPC-default browsers this makes saved preferences
+permanently unpersistable.
+**Change:** §3.3 GPC semantics refined: a live GPC signal overrides only consent
+records written *without knowledge of* the GPC signal. Any record written while
+GPC is live is marked GPC-acknowledged (`gpc:true`), so explicit user choices made
+after the GPC opt-out was applied persist across reloads and suppress repeat
+toasts. This is CCPA-consistent: §7025(c)(2) permits a consumer's explicit
+subsequent consent to override the GPC signal. Pre-GPC stale grants are still
+overridden (task 009 AC2 unchanged); the toast still shows exactly once.
+Implementation: `_recordConsent` sets the record's gpc flag when GPC is live at
+write time (`gpc || window.__COOKYAY?.gpc`).
+**Impact on pending work:** Task 009 (done) needs a fix + regression tests
+(unit + Playwright: save-prefs-under-GPC → reload → choices persist, no repeat
+toast). Task 020 dogfood acceptance should add a GPC-browser persistence check.
+
 ### 2026-06-06 — Fold v1 research resolutions into the PRD
 **Why:** The /pm:research phase (7 personas) surfaced 17 open questions; all were
 answered by the author on 2026-06-06. Several answers change stated PRD scope or

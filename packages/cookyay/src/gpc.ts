@@ -6,10 +6,16 @@
 // with different AT announcement behaviours.
 //
 // Policy: if navigator.globalPrivacyControl === true (captured by bootstrap),
-//   - override any stale stored grants (live GPC beats stored consent, CCPA §1798.135)
+//   - override any stored record that was NOT written with knowledge of GPC
+//     (gpc:false records — pre-GPC stale grants, CCPA §1798.135)
 //   - write a denied record with gpc:true
 //   - suppress the banner (mountBanner() finds the written record, returns early)
 //   - show a dismissible toast exactly once (suppressed if stored record already has gpc:true)
+//
+// Explicit post-GPC choices (PRD §3.3, CCPA §7025(c)(2)):
+//   When a user saves preferences while GPC is live, _recordConsent() marks that record
+//   gpc:true (see api.ts — effectiveGpc). On subsequent loads, alreadyGpc === true so
+//   _runGpc() leaves the record intact and skips the toast. Stored choices persist.
 
 import { _getConfig, _getStrings, _recordConsent, _registerGpcUI } from './api.js'
 import { readConsent } from './consent/index.js'

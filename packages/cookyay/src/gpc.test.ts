@@ -4,6 +4,8 @@
  * AC1: GPC active + no stored consent → non-necessary denied, gpc:true record
  *      written, banner suppressed, toast shown
  * AC2: GPC active + stale stored grant → live GPC overrides, record updated
+ * AC2x (task 021): GPC active + user saves explicit choices → record marked
+ *      gpc:true, choices persist on reload, no repeat toast
  * AC3: GPC active + stored record already gpc:true → no toast re-shown
  * AC4: Toast a11y — role=status, aria-live=polite, keyboard-dismissible,
  *      all strings config-overridable
@@ -11,7 +13,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { _resetGpc } from './gpc.js'
-import { _resetApi, init } from './api.js'
+import { _resetApi, _recordConsent, init } from './api.js'
 import { _resetBanner } from './banner.js'
 import {
   buildConsentRecord,
@@ -261,6 +263,113 @@ describe('AC4: Toast accessibility', () => {
     initWithGpc(true, { strings: { closeLabel: 'Dismiss' } })
     const closeBtn = getToast()!.querySelector<HTMLButtonElement>('button')!
     expect(closeBtn.getAttribute('aria-label')).toBe('Dismiss')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// AC2x (task 021): Explicit post-GPC choices are preserved
+// ---------------------------------------------------------------------------
+//
+// Repro: GPC applied → user opens Cookie settings, grants analytics → saves.
+// Previously, the saved record had gpc:false (default param), so on the next
+// load _runGpc() treated it as a stale pre-GPC grant and overwrote it.
+// Fix: _recordConsent() ORs gpc || gpcLive, so any write while GPC is live
+// produces a gpc:true record that _runGpc() leaves intact.
+
+describe('AC2x: Explicit post-GPC consent choices persist across reloads', () => {
+  it('_recordConsent written while GPC live produces a gpc:true record', () => {
+    setGpc(true)
+    initWithGpc(true)
+
+    // Simulate user saving preferences after seeing the GPC toast
+    _resetGpc()
+    _resetBanner()
+    _resetApi()
+
+    setGpc(true)
+    init(BASE_CONFIG)
+    // User explicitly grants analytics via Cookie settings
+    _recordConsent({ necessary: true, functional: false, analytics: true, marketing: false })
+
+    const record = readConsent('v1')!
+    expect(record.gpc).toBe(true)
+    expect(record.categories.analytics).toBe(true)
+  })
+
+  it('explicit choices survive a simulated reload (no override, no repeat toast)', () => {
+    // Step 1: first visit — GPC applied, record written gpc:true all-denied
+    initWithGpc(true)
+    expect(getToast()).not.toBeNull()
+
+    // Step 2: user saves custom preferences while GPC is still live
+    _recordConsent({ necessary: true, functional: false, analytics: true, marketing: false })
+    const savedRecord = readConsent('v1')!
+    expect(savedRecord.gpc).toBe(true)           // gpc flag propagated
+    expect(savedRecord.categories.analytics).toBe(true)
+
+    // Step 3: simulate reload — reset module state but keep cookie/storage intact
+    _resetGpc()
+    _resetBanner()
+    _resetApi()
+    document.body.innerHTML = ''
+    document.head.querySelectorAll('style').forEach((s) => s.remove())
+
+    // Step 4: re-init with GPC still active
+    setGpc(true)
+    init(BASE_CONFIG)
+
+    // Record must NOT be overridden — analytics choice survives
+    const reloadRecord = readConsent('v1')!
+    expect(reloadRecord.gpc).toBe(true)
+    expect(reloadRecord.categories.analytics).toBe(true)
+
+    // Toast must NOT re-appear (already gpc:true)
+    expect(getToast()).toBeNull()
+
+    // Banner must stay suppressed
+    expect(getBanner()).toBeNull()
+  })
+
+  it('pre-GPC stale grant is still overridden (AC2 unchanged)', () => {
+    // A record written WITHOUT GPC active (gpc:false) gets overridden
+    writeConsent(
+      buildConsentRecord(
+        { necessary: true, functional: true, analytics: true, marketing: true },
+        'v1',
+        '0.1.0',
+        false, // no GPC awareness
+      ),
+      {},
+    )
+    initWithGpc(true)
+    const record = readConsent('v1')!
+    expect(record.gpc).toBe(true)
+    expect(record.categories.analytics).toBe(false)
+  })
+
+  it('explicit denial while GPC live is also preserved (user can confirm all-denied explicitly)', () => {
+    initWithGpc(true)
+
+    // User explicitly saves all-denied (e.g. confirms their preference)
+    _recordConsent({ necessary: true, functional: false, analytics: false, marketing: false })
+    const savedRecord = readConsent('v1')!
+    expect(savedRecord.gpc).toBe(true)
+    expect(savedRecord.categories.analytics).toBe(false)
+
+    // Simulate reload
+    _resetGpc()
+    _resetBanner()
+    _resetApi()
+    document.body.innerHTML = ''
+    document.head.querySelectorAll('style').forEach((s) => s.remove())
+
+    setGpc(true)
+    init(BASE_CONFIG)
+
+    expect(getToast()).toBeNull()     // no repeat toast
+    expect(getBanner()).toBeNull()    // banner suppressed
+    const reloadRecord = readConsent('v1')!
+    expect(reloadRecord.categories.analytics).toBe(false)
   })
 })
 

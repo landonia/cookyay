@@ -288,11 +288,21 @@ export function _recordConsent(
 
   const prev = _getCurrentRecord()
 
-  const record = buildConsentRecord(categories, _config.policyVersion, VERSION, gpc)
+  // If GPC is live at write time, mark the record GPC-acknowledged (gpc:true) regardless
+  // of whether the caller supplied the flag. This ensures explicit choices made *after*
+  // the GPC opt-out was applied are preserved on reload — _runGpc() sees gpc:true,
+  // treats the record as already reflecting the signal, and skips the override.
+  // CCPA §7025(c)(2): explicit subsequent consent by the consumer may override GPC.
+  const gpcLive =
+    typeof window !== 'undefined' &&
+    !!(window as typeof window & { __COOKYAY?: { gpc: boolean } }).__COOKYAY?.gpc
+  const effectiveGpc = gpc || gpcLive
+
+  const record = buildConsentRecord(categories, _config.policyVersion, VERSION, effectiveGpc)
   writeConsent(record, _config.cookie ?? {})
 
   _seenThisSession = true
-  _debug('consent recorded', { categories, gpc })
+  _debug('consent recorded', { categories, gpc: effectiveGpc })
 
   // Always fire cookyay:consent (initial + updates)
   dispatchConsentEvent(record)
