@@ -48,8 +48,8 @@ moment a new release lands on that tag.
 ```html
 <!-- In <head>, AFTER the inline bootstrap snippet (see below) -->
 <script
-  src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
-  integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
+  src="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js"
+  integrity="sha384-Q0WzaNKbd9Subp+xcy3lB6Km0asRWKdpAiiZJ9IZ1e8EjjAiTG/hUY/Efpj0LmkJ"
   crossorigin="anonymous"
   defer
 ></script>
@@ -58,7 +58,7 @@ moment a new release lands on that tag.
 Get the SRI hash for a specific version from the jsDelivr API:
 
 ```
-https://data.jsdelivr.com/v1/packages/npm/cookyay@0.1.1/integrity
+https://data.jsdelivr.com/v1/packages/npm/cookyay@0.1.2/integrity
 ```
 
 Or visit [jsdelivr.com/package/npm/cookyay](https://www.jsdelivr.com/package/npm/cookyay)
@@ -114,8 +114,8 @@ Consent Mode signals until the deferred UI bundle loads).
 
   <!-- PART 2: Cookyay UI bundle — deferred, pin exact version + SRI -->
   <script
-    src="https://cdn.jsdelivr.net/npm/cookyay@0.1.1/dist/index.iife.js"
-    integrity="sha384-N+QKf1l1ObmRy4UzdajIdsJuSFcEYaFLCTGDEnXTGaEmtrN/q2LJkv0uNvXtBlAv"
+    src="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js"
+    integrity="sha384-Q0WzaNKbd9Subp+xcy3lB6Km0asRWKdpAiiZJ9IZ1e8EjjAiTG/hUY/Efpj0LmkJ"
     crossorigin="anonymous"
     defer
   ></script>
