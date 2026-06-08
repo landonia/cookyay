@@ -8,6 +8,7 @@
     "url": "git+https://github.com/landonia/cookyay.git",
     "directory": "packages/scanner"
   },
+  "homepage": "https://cookyay.com",
   "type": "module",
   "engines": {
     "node": ">=20"

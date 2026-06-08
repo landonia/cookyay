@@ -29,7 +29,13 @@
       defer
     ></script>
 
+    <!-- Self-hosted syntax highlighting (Prism 1.29.0 — core + markup/js/bash).
+         Vendored, not CDN-loaded: the docs site practices the project's own
+         self-hosting ethos. prism.css before styles.css so the page's own
+         pre/code box styling wins; Prism only colours the tokens. -->
+    <link rel="stylesheet" href="vendor/prism/prism.css" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="vendor/prism/prism.js" defer></script>
   </head>
   <body>
 
@@ -138,7 +144,7 @@
           not read the consent cookie.
         </p>
 
-        <pre><code>&lt;head&gt;
+        <pre><code class="language-markup">&lt;head&gt;
   &lt;!-- PART 1: Cookyay bootstrap — MUST be first in &lt;head&gt; --&gt;
   &lt;script&gt;"use strict";(()=&gt;{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&amp;&amp;(a.functionality_storage="granted",a.security_storage="granted"),e.f&amp;&amp;(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&amp;&amp;(a.analytics_storage="granted"),e.m&amp;&amp;(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&amp;&amp;(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();&lt;/script&gt;
 
@@ -165,7 +171,7 @@
         <h3>Initialise Cookyay</h3>
         <p>Add this after the closing <code>&lt;/body&gt;</code> tag, or in a deferred script:</p>
 
-        <pre><code>&lt;script defer&gt;
+        <pre><code class="language-markup">&lt;script defer&gt;
   document.addEventListener('DOMContentLoaded', function () {
     Cookyay.init({
       policyVersion: '2025-01-01',   // bump when your cookie usage changes
@@ -192,7 +198,7 @@
           on page load and prevents them from executing until the visitor consents.
         </p>
 
-        <pre><code>&lt;!-- Blocked until analytics consent is given --&gt;
+        <pre><code class="language-markup">&lt;!-- Blocked until analytics consent is given --&gt;
 &lt;script
   type="text/plain"
   data-category="analytics"
@@ -234,12 +240,12 @@
         <h2 id="install-heading">Install / CDN</h2>
 
         <h3>npm / pnpm</h3>
-        <pre><code>npm install cookyay
+        <pre><code class="language-bash">npm install cookyay
 # or
 pnpm add cookyay</code></pre>
 
         <p>Then import and use as ESM:</p>
-        <pre><code>import { init, getConsent, onConsent } from 'cookyay'
+        <pre><code class="language-javascript">import { init, getConsent, onConsent } from 'cookyay'
 
 // To embed the bootstrap snippet server-side, read dist/bootstrap.js from the package
 // (not INLINE_SNIPPET_JS — that is a simpler all-denied-only snippet without cookie read)
@@ -254,7 +260,7 @@ const bootstrapSnippet = readFileSync(
           Pin to an <strong>exact version</strong> with an SRI hash. A floating
           <code>@latest</code> tag bypasses integrity checks and is a supply-chain risk.
         </p>
-        <pre><code>&lt;script
+        <pre><code class="language-markup">&lt;script
   src="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js"
   integrity="sha384-Q0WzaNKbd9Subp+xcy3lB6Km0asRWKdpAiiZJ9IZ1e8EjjAiTG/hUY/Efpj0LmkJ"
   crossorigin="anonymous"
@@ -271,14 +277,14 @@ const bootstrapSnippet = readFileSync(
           Convenient for prototyping. Note: jsDelivr does not provide stable SRI for the
           <code>/+esm</code> endpoint — use the IIFE path for production.
         </p>
-        <pre><code>&lt;script type="module"&gt;
+        <pre><code class="language-markup">&lt;script type="module"&gt;
   import Cookyay from 'https://cdn.jsdelivr.net/npm/cookyay@0.1/+esm'
   Cookyay.init({ policyVersion: '2025-01-01', categories: { necessary: {} } })
 &lt;/script&gt;</code></pre>
 
         <h3>Self-hosted SRI</h3>
         <p>If you copy artifacts to your own CDN, regenerate SRI hashes after each update:</p>
-        <pre><code>openssl dgst -sha384 -binary dist/index.iife.js | openssl base64 -A | sed 's/^/sha384-/'</code></pre>
+        <pre><code class="language-bash">openssl dgst -sha384 -binary dist/index.iife.js | openssl base64 -A | sed 's/^/sha384-/'</code></pre>
       </section>
 
 
@@ -300,7 +306,7 @@ const bootstrapSnippet = readFileSync(
           and add <code>data-category</code>. Works for both inline scripts and
           <code>src</code> scripts.
         </p>
-        <pre><code>&lt;!-- External script, blocked until analytics consent --&gt;
+        <pre><code class="language-markup">&lt;!-- External script, blocked until analytics consent --&gt;
 &lt;script type="text/plain" data-category="analytics"
         src="/scripts/ga4.js"&gt;&lt;/script&gt;
 
@@ -316,7 +322,7 @@ const bootstrapSnippet = readFileSync(
           <code>data-category</code>. Cookyay swaps <code>data-src</code> → <code>src</code>
           on consent, causing the iframe to load.
         </p>
-        <pre><code>&lt;iframe
+        <pre><code class="language-markup">&lt;iframe
   data-src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
   data-category="marketing"
   width="560" height="315"
@@ -456,7 +462,7 @@ const bootstrapSnippet = readFileSync(
         </table>
 
         <h3 id="category-config">CategoryConfig</h3>
-        <pre><code>{
+        <pre><code class="language-javascript">{
   label?: string          // override the category label in the preferences modal
   services?: Array&lt;{
     name: string          // shown in the preferences modal
@@ -466,7 +472,7 @@ const bootstrapSnippet = readFileSync(
 }</code></pre>
 
         <h3>Programmatic API</h3>
-        <pre><code>// Read current consent
+        <pre><code class="language-javascript">// Read current consent
 Cookyay.getConsent()
 // → { necessary: true, functional: false, analytics: false, marketing: false }
 
@@ -487,7 +493,7 @@ Cookyay.openPreferences()
           Cookyay dispatches events on <code>document</code> for zero-coupling integrations
           (GTM triggers, other scripts):
         </p>
-        <pre><code>document.addEventListener('cookyay:consent', (e) =&gt; {
+        <pre><code class="language-javascript">document.addEventListener('cookyay:consent', (e) =&gt; {
   const { schemaVersion, policyVersion, timestamp, categories } = e.detail
   // schemaVersion: number — schema version for future-proofing
   // policyVersion: string — matches the policyVersion from your Cookyay.init() config
@@ -533,7 +539,7 @@ document.addEventListener('cookyay:change', (e) =&gt; {
           localisation mechanism — supply translated strings for your locale.
         </p>
 
-        <pre><code>Cookyay.init({
+        <pre><code class="language-javascript">Cookyay.init({
   policyVersion: '2025-01-01',
   strings: {
     // Banner first layer
@@ -620,7 +626,7 @@ document.addEventListener('cookyay:change', (e) =&gt; {
         </p>
 
         <h3>Usage</h3>
-        <pre><code># Scan a site and write cookyay.config.json
+        <pre><code class="language-bash"># Scan a site and write cookyay.config.json
 npx @cookyay/scanner scan https://yoursite.com
 
 # Or install globally
@@ -629,7 +635,7 @@ cookyay-scanner scan https://yoursite.com</code></pre>
 
         <h3>Output format</h3>
         <p>The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>:</p>
-        <pre><code>{
+        <pre><code class="language-javascript">{
   "policyVersion": "REPLACE-WITH-YOUR-DATE",
   "categories": {
     "necessary": {},
@@ -705,7 +711,7 @@ cookyay-scanner scan https://yoursite.com</code></pre>
           snippet before the GTM container snippet in <code>&lt;head&gt;</code>:
         </p>
 
-        <pre><code>&lt;head&gt;
+        <pre><code class="language-markup">&lt;head&gt;
   &lt;!-- 1. Cookyay bootstrap — MUST be first --&gt;
   &lt;script&gt;/* inline bootstrap here */&lt;/script&gt;
 
@@ -783,7 +789,7 @@ cookyay-scanner scan https://yoursite.com</code></pre>
 
         <h3>Testing GPC locally</h3>
         <p>In Chromium-based browsers, set the flag in the DevTools console:</p>
-        <pre><code>// In DevTools console — simulates GPC signal
+        <pre><code class="language-javascript">// In DevTools console — simulates GPC signal
 Object.defineProperty(navigator, 'globalPrivacyControl', { value: true })
 location.reload()</code></pre>
         <p>
@@ -834,7 +840,7 @@ location.reload()</code></pre>
 
         <h3>Clearing your own cookies on withdrawal</h3>
         <p>Use the <code>clearOnWithdraw</code> callback to expire first-party cookies:</p>
-        <pre><code>Cookyay.init({
+        <pre><code class="language-javascript">Cookyay.init({
   policyVersion: '2025-01-01',
   clearOnWithdraw(revoked) {
     if (revoked.includes('analytics')) {
@@ -858,7 +864,7 @@ location.reload()</code></pre>
           When you add new cookie categories or materially change data processing, bump
           the <code>policyVersion</code> in your config:
         </p>
-        <pre><code>Cookyay.init({ policyVersion: '2025-06-01' /* was '2025-01-01' */ })</code></pre>
+        <pre><code class="language-javascript">Cookyay.init({ policyVersion: '2025-06-01' /* was '2025-01-01' */ })</code></pre>
         <p>
           On the next page load, visitors whose stored consent was recorded under a different
           <code>policyVersion</code> will see the banner again. Their previous choices are
@@ -892,7 +898,7 @@ location.reload()</code></pre>
         <p>
           The cookie value is a URL-encoded JSON object with short keys for compactness:
         </p>
-        <pre><code>{
+        <pre><code class="language-javascript">{
   "sv": 1,              // schema version
   "t": 1735689600,      // consent timestamp (Unix epoch seconds)
   "pv": "2025-01-01",   // policy version
@@ -907,7 +913,7 @@ location.reload()</code></pre>
 }</code></pre>
 
         <h3>Reading in Node.js / server-rendered apps</h3>
-        <pre><code>// Express / any Node.js framework
+        <pre><code class="language-javascript">// Express / any Node.js framework
 function readCookyayConsent(cookieHeader) {
   const match = cookieHeader?.match(/(?:^|;\s*)cookyay_consent=([^;]+)/)
   if (!match) return null
@@ -924,7 +930,7 @@ if (consent?.c?.a) {
   // visitor has consented to analytics — safe to inject GA4
 }</code></pre>
 
-        <pre><code>// Next.js App Router
+        <pre><code class="language-javascript">// Next.js App Router
 import { cookies } from 'next/headers'
 
 const rawCookie = cookies().get('cookyay_consent')?.value
@@ -981,7 +987,7 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
           To build a server-side consent log, listen to the <code>cookyay:consent</code>
           custom event and POST the record to your backend:
         </p>
-        <pre><code>document.addEventListener('cookyay:consent', (e) =&gt; {
+        <pre><code class="language-javascript">document.addEventListener('cookyay:consent', (e) =&gt; {
   // e.detail fields: schemaVersion, policyVersion, timestamp, categories
   const { schemaVersion, policyVersion, timestamp, categories } = e.detail
   fetch('/api/consent-log', {
@@ -1047,7 +1053,7 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
           link. To satisfy CCPA, add an explicit link in your site footer and wire it to
           <code>Cookyay.openPreferences()</code>:
         </p>
-        <pre><code>&lt;footer&gt;
+        <pre><code class="language-markup">&lt;footer&gt;
   &lt;a href="#" onclick="Cookyay.openPreferences(); return false;"&gt;
     Do Not Sell or Share My Personal Information
   &lt;/a&gt;

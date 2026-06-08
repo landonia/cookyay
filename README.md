@@ -10,7 +10,7 @@ Free, self-hosted cookie consent — zero-dependency banner library.
 > GDPR and CCPA. Whether your specific deployment is compliant is a legal question
 > outside the scope of this library.
 
-📖 **[Full documentation →](https://landonia.github.io/cookyay/)**
+📖 **[Full documentation →](https://cookyay.com/)**
 
 ---
 
@@ -175,7 +175,7 @@ replace `src` with `data-src`.
 ```
 
 You now have a working consent banner + script blocking + Google Consent Mode v2 + GPC
-detection. See the [full docs](https://landonia.github.io/cookyay/) for config reference,
+detection. See the [full docs](https://cookyay.com/) for config reference,
 string overrides, scanner usage, GTM integration, withdrawal/re-prompt, SSR reading, and
 compliance limitations.
 
@@ -252,7 +252,7 @@ document.addEventListener('cookyay:consent', (e) => {
 A native webhook is planned for v2. The consent record schema is webhook-ready today
 (timestamp, banner version, policy version, per-category choices, GPC flag).
 
-See the [full compliance limitations section](https://landonia.github.io/cookyay/#compliance)
+See the [full compliance limitations section](https://cookyay.com/#compliance)
 in the docs for what Cookyay does and does not cover.
 
 ---
