@@ -3,6 +3,11 @@
   "version": "0.1.1",
   "description": "Free, self-hosted cookie consent — zero-dependency banner library",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/landonia/cookyay.git",
+    "directory": "packages/cookyay"
+  },
   "type": "module",
   "sideEffects": true,
   "engines": {
