@@ -88,6 +88,37 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('scan subcommand', () => {
+    // Regression: the README documents `npx @cookyay/scanner scan <url>`, but npx
+    // forwards `scan <url>` to the `cookyay-scan` bin. Without subcommand support
+    // the literal `scan` token was parsed as the URL → `new URL("scan")` threw
+    // `Error: "scan" is not a valid URL.` parseArgs must strip a leading `scan`.
+    it('strips a leading `scan` verb and uses the next token as the URL', () => {
+      const result = parseArgs(['node', 'cookyay-scan', 'scan', 'https://example.com'])
+      expect(result).not.toBeNull()
+      expect(result).not.toBe('help')
+      if (result && result !== 'help') {
+        expect(result.url).toBe('https://example.com')
+      }
+    })
+
+    it('parses `scan <url> [flags]` identically to the bare `<url> [flags]` form', () => {
+      const withVerb = parseArgs(['node', 'cookyay-scan', 'scan', 'https://example.com', '--depth', '1'])
+      const bare = parseArgs(['node', 'cookyay-scan', 'https://example.com', '--depth', '1'])
+      expect(withVerb).toEqual(bare)
+    })
+
+    it('does not treat a non-leading `scan` token as a subcommand', () => {
+      // A URL whose host/path is literally "scan" is unusual, but the verb strip
+      // must only apply to the leading position — flags before it are untouched.
+      const result = parseArgs(['node', 'cookyay-scan', 'https://example.com', '--output', 'scan'])
+      if (result && result !== 'help') {
+        expect(result.url).toBe('https://example.com')
+        expect(result.output).toBe('scan')
+      }
+    })
+  })
+
   describe('other flags', () => {
     it('parses --max-pages correctly', () => {
       const result = parseArgs(['node', 'cookyay-scan', 'https://example.com', '--max-pages', '5'])

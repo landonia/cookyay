@@ -627,11 +627,16 @@ document.addEventListener('cookyay:change', (e) =&gt; {
 
         <h3>Usage</h3>
         <pre><code class="language-bash"># Scan a site and write cookyay.config.json
-npx @cookyay/scanner scan https://yoursite.com
+npx @cookyay/scanner scan https://yoursite.com --config-out cookyay.config.json
 
 # Or install globally
 npm install -g @cookyay/scanner
-cookyay-scanner scan https://yoursite.com</code></pre>
+cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></pre>
+
+        <p>
+          The <code>scan</code> subcommand is optional — <code>npx @cookyay/scanner https://yoursite.com</code>
+          works the same way. Run <code>npx @cookyay/scanner --help</code> for all options.
+        </p>
 
         <h3>Output format</h3>
         <p>The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>:</p>

@@ -36,7 +36,16 @@ export interface CliArgs {
 }
 
 export function parseArgs(argv: string[]): CliArgs | 'help' | null {
-  const args = argv.slice(2)
+  let args = argv.slice(2)
+
+  // Accept an optional leading `scan` subcommand. The documented invocation is
+  // `npx @cookyay/scanner scan <url>`, and npx (package name != bin name) runs
+  // the single `cookyay-scan` bin and forwards `scan <url>` as argv. Without
+  // this, the literal `scan` token is picked up as the URL and `new URL("scan")`
+  // throws. Stripping it here makes both `... scan <url>` and the bare
+  // `... <url>` forms work identically. Only the leading position is treated as
+  // the verb, so a flag-prefixed or later token is untouched.
+  if (args[0] === 'scan') args = args.slice(1)
 
   if (args.includes('-h') || args.includes('--help')) return 'help'
 
