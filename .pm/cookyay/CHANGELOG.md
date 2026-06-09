@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.0.0 — 2026-06-09
+
+Cookyay v3 makes the CLI scanner run end-to-end on a clean machine. After v2 fixed the `scan` subcommand, a cold `npx @cookyay/scanner scan <url>` still failed with `browserType.launch: Executable doesn't exist` because the `playwright` package was installed but its Chromium binary was never downloaded. The scanner now detects the missing browser before launching, prints a one-time `Chromium not found — downloading (~150MB, one time)...` notice, downloads it via the package-local Playwright CLI, and continues the scan — no separate `npx playwright install` step. Download failures surface a branded, actionable error instead of a raw Playwright stack. Published as `@cookyay/scanner@0.1.3` and verified by a cold smoke test from an empty browser cache (`Pages visited: 4`, exit 0).
+
 ## v2.0.0 — 2026-06-08
 
 Cookyay v2 fixes the scanner CLI's documented invocation: `npx @cookyay/scanner scan <url>` — the command shown in the README — previously threw `Error: "scan" is not a valid URL`. The `scan` verb is now accepted as an optional subcommand, the bare `npx @cookyay/scanner <url>` form is unchanged, and docs are reconciled with `--config-out` examples, a corrected bin name (`cookyay-scanner` → `cookyay-scan`), and an optional-verb note. Published as `@cookyay/scanner@0.1.2`. Verified end-to-end against four live sites including theguardian.com (5 services classified with confidence annotations).
