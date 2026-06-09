@@ -206,11 +206,13 @@ onConsent('analytics', (granted) => {
 ## CLI scanner
 
 ```bash
-npx @cookyay/scanner scan https://yoursite.com
+npx @cookyay/scanner scan https://yoursite.com --config-out cookyay.config.json
 ```
 
 Crawls your site with a headless Chromium browser and emits a ready-to-use
 `cookyay.config.json` with cookies and third-party requests classified by category.
+The `scan` subcommand is optional — `npx @cookyay/scanner https://yoursite.com`
+works the same way. Run `npx @cookyay/scanner --help` for all options.
 
 ---
 
