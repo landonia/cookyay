@@ -214,6 +214,13 @@ Crawls your site with a headless Chromium browser and emits a ready-to-use
 The `scan` subcommand is optional — `npx @cookyay/scanner https://yoursite.com`
 works the same way. Run `npx @cookyay/scanner --help` for all options.
 
+**First run:** No separate browser-install step required. On a machine that has never
+run Playwright, the scanner automatically downloads the Chromium headless shell
+(~150 MB, one time) before the crawl starts. Subsequent runs reuse the downloaded
+binary. If the automatic download fails (offline, locked-down network, insufficient
+disk space), the scanner prints a clear error and the manual fallback:
+`npx playwright install chromium`.
+
 ---
 
 ## SRI integrity for self-hosted files

@@ -1,6 +1,6 @@
 ---
 version: v2
-status: planning
+status: shipped
 created: 2026-06-08
 preceded_by: v1
 jira_epic: ""

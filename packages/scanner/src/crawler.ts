@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 import type { BrowserContext } from 'playwright'
+import { ensureBrowser } from './ensure-browser.js'
 import type {
   RawFindings,
   PageFindings,
@@ -139,6 +140,8 @@ export async function crawl(opts: CrawlOptions): Promise<RawFindings> {
 
   const targetOrigin = new URL(url).origin
   const scannedAt = new Date().toISOString()
+
+  await ensureBrowser(import.meta.url)
 
   const browser = await chromium.launch()
   const context = await browser.newContext()
