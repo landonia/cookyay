@@ -638,6 +638,16 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
           works the same way. Run <code>npx @cookyay/scanner --help</code> for all options.
         </p>
 
+        <p>
+          <strong>First run:</strong> No separate browser-install step required. On a machine
+          that has never run Playwright, the scanner automatically downloads the Chromium headless
+          shell (~150 MB, one time) before the crawl starts — you will see
+          <code>Chromium not found — downloading (~150MB, one time)...</code> in the terminal.
+          Subsequent runs reuse the downloaded binary with no extra output. If the automatic
+          download fails (offline, locked-down network, or insufficient disk space), the scanner
+          surfaces a clear error and the manual fallback: <code>npx playwright install chromium</code>.
+        </p>
+
         <h3>Output format</h3>
         <p>The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>:</p>
         <pre><code class="language-javascript">{
