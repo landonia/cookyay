@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: detection — script and iframe host signals</title>
+    <!--
+      Hermetic fixture: exercises script-src and iframe-src host classification.
+      No real third-party network calls are made:
+        - Scripts use type="text/plain" so the browser never fetches them.
+        - Iframes use data-src (not src) so no network request fires.
+
+      The classifier reads the src/data-src *attribute* directly from the DOM
+      via getAttribute(), extracts the hostname with tryExtractHost(), and maps
+      it to a service via findServiceByHost(). No network request is required
+      for this classification path. See classifier.ts:249-309.
+
+      Services exercised (and signals emitted):
+        - ga4 (via script-host) : <script type="text/plain"
+            src="https://www.googletagmanager.com/gtag/js?id=G-FIXTURE">
+            → host "www.googletagmanager.com" → matches ga4.requestHosts
+              ["google-analytics.com", "analytics.google.com", "googletagmanager.com"]
+        - youtube (via iframe-host) : <iframe
+            data-src="https://www.youtube.com/embed/fixture123">
+            → host "www.youtube.com" → matches youtube.requestHosts ["youtube.com", ...]
+    -->
+  </head>
+  <body>
+    <h1>Detection fixture: script and iframe host signals</h1>
+    <p>
+      This page exercises script-src and iframe-src host classification.
+      Scripts carry <code>type="text/plain"</code> (never fetched); iframes
+      carry <code>data-src</code> instead of <code>src</code> (no network request).
+      The classifier reads the <code>src</code>/<code>data-src</code> attribute
+      directly from the DOM and maps the hostname to a service.
+    </p>
+
+    <!-- GA4 / GTM — classified via script src host (www.googletagmanager.com) -->
+    <script
+      type="text/plain"
+      src="https://www.googletagmanager.com/gtag/js?id=G-FIXTURE"
+      id="gtm-script"
+    ></script>
+
+    <!-- YouTube — classified via iframe data-src host (www.youtube.com) -->
+    <iframe
+      data-src="https://www.youtube.com/embed/fixture123"
+      id="yt-iframe"
+      width="560"
+      height="315"
+      title="Synthetic YouTube embed (hermetic — data-src only, no network)"
+      allowfullscreen
+    ></iframe>
+
+    <table>
+      <caption>Signals emitted by this page</caption>
+      <thead>
+        <tr>
+          <th>Signal type</th>
+          <th>Element / attribute</th>
+          <th>Host extracted</th>
+          <th>Service</th>
+          <th>Category</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>script-host</td>
+          <td><code>script[type=text/plain][src]</code></td>
+          <td>www.googletagmanager.com</td>
+          <td>Google Analytics 4 (via GTM host)</td>
+          <td>analytics</td>
+        </tr>
+        <tr>
+          <td>iframe-host</td>
+          <td><code>iframe[data-src]</code></td>
+          <td>www.youtube.com</td>
+          <td>YouTube</td>
+          <td>marketing</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

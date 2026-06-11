@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: detection — localStorage signals</title>
+    <!--
+      Hermetic fixture: sets known-service localStorage keys via localStorage.setItem
+      before the crawler reads storage. No real third-party network calls are made.
+
+      Services exercised:
+        - segment  : ajs_user_id, ajs_anonymous_id (analytics)
+        - hotjar   : _hjSessionId (analytics)
+    -->
+    <script>
+      ;(function () {
+        try {
+          // Segment — analytics
+          localStorage.setItem('ajs_user_id', 'fixture-segment-user')
+          localStorage.setItem('ajs_anonymous_id', 'fixture-segment-anon-' + Date.now())
+          // Hotjar — analytics
+          localStorage.setItem('_hjSessionId', 'fixture-hotjar-session')
+        } catch (e) {
+          // localStorage may be unavailable in some contexts — fixture is best-effort
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <h1>Detection fixture: localStorage signals</h1>
+    <p>
+      This page sets localStorage keys that match known service signatures
+      (<code>ajs_user_id</code>, <code>ajs_anonymous_id</code>, <code>_hjSessionId</code>)
+      so the scanner can detect and classify them. No real third-party scripts or
+      network calls are made.
+    </p>
+    <ul>
+      <li><strong>ajs_user_id</strong> — Segment (analytics)</li>
+      <li><strong>ajs_anonymous_id</strong> — Segment (analytics)</li>
+      <li><strong>_hjSessionId</strong> — Hotjar (analytics)</li>
+    </ul>
+  </body>
+</html>

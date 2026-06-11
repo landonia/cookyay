@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Synthetic YouTube embed stub</title>
+  </head>
+  <body>
+    <div>[Synthetic YouTube embed stub — no real vendor code]</div>
+    <script>
+      // Signal to parent E2E test that the iframe loaded
+      if (window.parent !== window) {
+        try { window.parent.__ytEmbedLoaded = true } catch (_) {}
+      }
+      window.__ytEmbedLoaded = true
+    </script>
+  </body>
+</html>

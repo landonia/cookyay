@@ -45,6 +45,7 @@
       <a href="#config-reference">Config</a>
       <a href="#string-overrides">i18n</a>
       <a href="#script-blocking">Blocking</a>
+      <a href="#autoblock">Auto-block</a>
       <a href="#scanner">Scanner</a>
       <a href="#gtm">GTM</a>
       <a href="#gpc">GPC</a>
@@ -99,7 +100,8 @@
           <li><a href="#script-blocking">Declare scripts to block</a></li>
           <li><a href="#config-reference">Config reference</a></li>
           <li><a href="#string-overrides">String overrides / i18n</a></li>
-          <li><a href="#scanner">CLI scanner</a></li>
+          <li><a href="#scanner">CLI scanner</a> — <a href="#scanner-auto-detection">auto-detection workflow</a>, <a href="#scanner-confidence">confidence levels</a>, <a href="#scanner-recaptcha">reCAPTCHA trade-off</a></li>
+          <li><a href="#autoblock">Runtime auto-block</a> — <code>autoBlock: true</code>, scope limits, Google tags</li>
           <li><a href="#gtm">GTM integration</a></li>
           <li><a href="#gpc">GPC behavior</a></li>
           <li><a href="#withdrawal">Withdrawal &amp; re-prompt</a></li>
@@ -230,6 +232,12 @@
           <li>GPC signal detection with a visible acknowledgment toast</li>
           <li>A persistent "Cookie settings" link for withdrawal</li>
         </ul>
+        <p>
+          To also block known third-party scripts/iframes automatically at runtime (without
+          hand-declaring each one in HTML), add <code>autoBlock: true</code> to your
+          <code>Cookyay.init()</code> call. See <a href="#autoblock">Runtime auto-block</a>
+          for details and scope limits.
+        </p>
       </section>
 
 
@@ -438,6 +446,20 @@ const bootstrapSnippet = readFileSync(
               </td>
             </tr>
             <tr>
+              <td><code>autoBlock</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>
+                Enable runtime auto-block (v5+). When <code>true</code>, the banner intercepts
+                known third-party <code>&lt;script&gt;</code> and <code>&lt;iframe&gt;</code>
+                insertions and holds them inert until the visitor grants consent to the matching
+                category — without requiring any HTML changes. Declared rules always win over
+                auto-detected ones. Google tags (GTM/GA4) are excluded (handled via Consent
+                Mode v2 instead). See <a href="#autoblock">Runtime auto-block</a> for scope
+                limits and the hard install requirement.
+              </td>
+            </tr>
+            <tr>
               <td><code>autoOpenLink</code></td>
               <td><code>boolean</code></td>
               <td><code>true</code></td>
@@ -621,9 +643,21 @@ document.addEventListener('cookyay:change', (e) =&gt; {
 
         <p>
           The <code>@cookyay/scanner</code> package crawls your site with a headless Chromium
-          browser, detects cookies and third-party requests, classifies known services against
-          the Open Cookie Database, and emits a ready-to-use <code>cookyay.config.json</code>.
+          browser, auto-detects ~50 known third-party services (Google Analytics, Meta Pixel,
+          reCAPTCHA, Hotjar, Stripe, Sentry, and more), classifies cookies and requests against
+          a curated signature database plus the Open Cookie Database, and emits a ready-to-use
+          <code>cookyay.config.json</code> with copy-paste blocking snippets.
         </p>
+
+        <div class="callout callout-note">
+          <strong>Scan-time vs run-time auto-detection.</strong>
+          The scanner CLI produces suggested blocking snippets for you to paste into your HTML
+          (declarative blocking). The Cookyay banner (v5+) also supports
+          <a href="#autoblock">runtime auto-block</a> via <code>autoBlock: true</code> —
+          when enabled, known third-party scripts/iframes are intercepted automatically without
+          any HTML changes. Both paths share the same ~50-service signature database, so
+          scan-time and run-time classifications always agree.
+        </div>
 
         <h3>Usage</h3>
         <pre><code class="language-bash"># Scan a site and write cookyay.config.json
@@ -648,53 +682,182 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
           surfaces a clear error and the manual fallback: <code>npx playwright install chromium</code>.
         </p>
 
-        <h3>Output format</h3>
-        <p>The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>:</p>
-        <pre><code class="language-javascript">{
-  "policyVersion": "REPLACE-WITH-YOUR-DATE",
+        <h3 id="scanner-auto-detection">Auto-detection workflow: scan → review → paste</h3>
+
+        <p>
+          After scanning, open the emitted <code>cookyay.config.json</code>. The
+          <code>suggestedBlocking</code> array lists every detected third-party host with a
+          verbatim snippet to paste into your HTML:
+        </p>
+
+        <pre><code class="language-json">{
+  "policyVersion": "REPLACE_ME",
   "categories": {
-    "necessary": {},
     "analytics": {
+      "label": "Analytics",
       "services": [
         {
           "name": "Google Analytics 4",
           "cookies": ["_ga", "_gid"],
-          "_meta": { "confidence": "high", "matchedBy": "cookie" }
+          "_meta": { "confidence": "high", "matchedBy": "cookie", "serviceId": "ga4" }
         }
       ]
-    },
-    "marketing": { "services": [ /* ... */ ] }
+    }
   },
-  "_unclassified": [
+  "suggestedBlocking": [
     {
-      "_warning": "Review these manually",
-      "name": "unknown-tracker.com"
+      "host": "googletagmanager.com",
+      "services": ["ga4", "gtm"],
+      "category": "analytics",
+      "confidence": "high",
+      "snippet": "&lt;script type=\"text/plain\" data-category=\"analytics\" src=\"https://www.googletagmanager.com/gtag/js\"&gt;&lt;/script&gt;"
+    },
+    {
+      "host": "static.hotjar.com",
+      "services": ["hotjar"],
+      "category": "analytics",
+      "confidence": "high",
+      "snippet": "&lt;script type=\"text/plain\" data-category=\"analytics\" src=\"https://static.hotjar.com/c/hotjar-\"&gt;&lt;/script&gt;"
     }
   ],
-  "_noscriptWarnings": [
-    {
-      "_warning": "Remove this &lt;noscript&gt; tag — it fires a pixel even when JS is blocked.",
-      "html": "&lt;noscript&gt;&lt;img src='...'&gt;&lt;/noscript&gt;"
-    }
-  ]
+  "_unclassified": [],
+  "_noscriptWarnings": []
 }</code></pre>
 
         <p>
-          <strong>Confidence levels:</strong>
-          <code>high</code> = exact cookie name matched against the database,
-          <code>medium</code> = host matched only,
-          <code>low</code> = declared category (from page markup).
+          For each entry in <code>suggestedBlocking</code>, copy the <code>snippet</code> value
+          verbatim into your HTML <strong>before</strong> the actual script or iframe loads.
+          The banner holds those elements inert until the visitor consents to the declared
+          category:
         </p>
 
+        <pre><code class="language-html">&lt;!-- Declare BEFORE the real GTM snippet (paste from suggestedBlocking[].snippet) --&gt;
+&lt;script type="text/plain" data-category="analytics" src="https://www.googletagmanager.com/gtag/js"&gt;&lt;/script&gt;
+
+&lt;!-- Your actual GTM snippet follows below --&gt;
+&lt;script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"&gt;&lt;/script&gt;</code></pre>
+
+        <p>
+          When multiple services share a host (e.g. GA4 + Google Ads both fire via
+          <code>googletagmanager.com</code>), they are merged into a single
+          <code>suggestedBlocking</code> entry listing all service IDs — you only need one
+          rule in your markup.
+        </p>
+
+        <h3 id="scanner-confidence">Confidence levels</h3>
+
+        <p>
+          Each detected service carries a <code>confidence</code> level. Use it to prioritise
+          your review — act on <code>high</code> and <code>medium</code> first:
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Level</th>
+              <th scope="col">Meaning</th>
+              <th scope="col">Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>high</code></td>
+              <td>Two independent signals agree: a cookie name <em>and</em> a request host both matched the same service on the same page.</td>
+              <td><code>_ga</code> cookie observed <em>and</em> <code>google-analytics.com</code> request seen.</td>
+            </tr>
+            <tr>
+              <td><code>medium</code></td>
+              <td>One unambiguous signal: a vendor-unique cookie name or a vendor-specific host, but not both independently confirming.</td>
+              <td><code>_hjid</code> cookie (Hotjar-specific) seen alone, or <code>static.hotjar.com</code> request without the matching cookie.</td>
+            </tr>
+            <tr>
+              <td><code>low</code></td>
+              <td>Single generic or shared signal that could plausibly match multiple services.</td>
+              <td><code>PREF</code> cookie (shared across Google Search, YouTube, and Maps).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          For <code>low</code> confidence entries, check the <code>_meta.matchedBy</code> field
+          and the <code>pages</code> list to decide whether the detection is accurate before
+          adding the blocking snippet to your HTML.
+        </p>
+
+        <h3 id="scanner-recaptcha">reCAPTCHA and form-gating trade-off</h3>
+
+        <p>
+          reCAPTCHA v2/v3 is classified as <strong><code>functional</code></strong> in the
+          scanner's signature database. This means <strong>forms protected by reCAPTCHA are
+          gated until the visitor consents to functional cookies.</strong>
+        </p>
+
+        <p>
+          This is the defensible default under a strict GDPR reading: reCAPTCHA is a
+          third-party service (<code>www.google.com/recaptcha/</code>) that sets the
+          <code>_GRECAPTCHA</code> session cookie and the <code>NID</code> cross-site
+          identifier. It cannot be classified as <code>necessary</code> because alternative
+          CAPTCHA solutions exist and the cross-site identifiers fall outside the "strictly
+          necessary" exemption. Classifying it <code>functional</code> is consistent with
+          Cookyay's strictest-everywhere posture.
+        </p>
+
+        <p>
+          The consent-before-submit UX is the site owner's to message — for example, a
+          note near the form saying "Please accept functional cookies to use this form."
+        </p>
+
+        <div class="callout callout-note">
+          <strong>Reclassifying reCAPTCHA as necessary</strong> — If you accept the legal
+          risk, you can override the emitted category by moving reCAPTCHA into the
+          <code>necessary</code> bucket in your config. This is a conscious deviation from
+          the default and should be reviewed with qualified legal counsel. Not legal advice.
+        </div>
+
+        <h3>Output format</h3>
+        <p>The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>. Top-level fields:</p>
+
+        <table>
+          <thead>
+            <tr><th scope="col">Field</th><th scope="col">Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>policyVersion</code></td>
+              <td>Replace <code>"REPLACE_ME"</code> with an ISO date string (e.g. <code>"2026-01-01"</code>). Bump it whenever your cookie usage changes — this triggers re-consent for returning visitors.</td>
+            </tr>
+            <tr>
+              <td><code>categories</code></td>
+              <td>Per-category service lists with confidence metadata. Pass directly to <code>Cookyay.init()</code>.</td>
+            </tr>
+            <tr>
+              <td><code>suggestedBlocking</code></td>
+              <td>Host-deduped blocking rules with paste-ready HTML snippets. See <a href="#scanner-auto-detection">auto-detection workflow</a> above.</td>
+            </tr>
+            <tr>
+              <td><code>_unclassified</code></td>
+              <td>Artifacts detected but not matched to any known service. Review and assign to the correct category manually.</td>
+            </tr>
+            <tr>
+              <td><code>_noscriptWarnings</code></td>
+              <td><code>&lt;noscript&gt;</code> fallback tags detected. These bypass script blocking — remove them from your markup.</td>
+            </tr>
+            <tr>
+              <td><code>_scanMeta</code></td>
+              <td>Scan metadata: timestamp, target URL, pages visited, classifier version.</td>
+            </tr>
+          </tbody>
+        </table>
+
         <div class="callout callout-warn">
-          <strong>⚠ Always review <code>_unclassified</code></strong>
+          <strong>Always review <code>_unclassified</code></strong>
           Artifacts in <code>_unclassified</code> were detected but not recognised by the
           scanner. Review them manually and assign to the appropriate category before shipping.
           Never silently drop them.
         </div>
 
         <div class="callout callout-warn">
-          <strong>⚠ Act on <code>_noscriptWarnings</code></strong>
+          <strong>Act on <code>_noscriptWarnings</code></strong>
           Any <code>&lt;noscript&gt;</code> tag detected inside third-party embeds bypasses
           script blocking entirely. Remove these from your markup — there is no programmatic
           fix.
@@ -703,14 +866,147 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
         <h3>Set <code>policyVersion</code></h3>
         <p>
           The scanner cannot know when your cookie usage changes. Replace the placeholder
-          <code>"REPLACE-WITH-YOUR-DATE"</code> with an ISO date string (e.g.
-          <code>"2025-01-01"</code>) and bump it whenever you add or reclassify cookies.
+          <code>"REPLACE_ME"</code> with an ISO date string (e.g.
+          <code>"2026-01-01"</code>) and bump it whenever you add or reclassify cookies.
         </p>
       </section>
 
 
       <!-- ══════════════════════════════════════════════════════
-           7. GTM INTEGRATION
+           7. RUNTIME AUTO-BLOCK (v5)
+           ══════════════════════════════════════════════════════ -->
+      <section id="autoblock" aria-labelledby="autoblock-heading">
+        <h2 id="autoblock-heading">Runtime auto-block <small style="font-size:0.75em;font-weight:400;color:var(--muted)">(v5+)</small></h2>
+
+        <p>
+          v5 adds <code>autoBlock</code> — a single boolean that lets the banner intercept and
+          hold known third-party scripts and iframes inert at runtime, without you hand-declaring
+          each one in your HTML.
+        </p>
+
+        <pre><code class="language-javascript">Cookyay.init({
+  policyVersion: '2026-01-01',
+  autoBlock: true,   // opt-in; default false
+  categories: { /* ... */ },
+})</code></pre>
+
+        <div class="callout callout-warn">
+          <strong>&#9888; "Cookyay first in <code>&lt;head&gt;</code>" is a hard install requirement</strong>
+          The bootstrap snippet installs the interception proxy synchronously. Any
+          <code>&lt;script src&gt;</code> placed in the HTML <em>before</em> the bootstrap
+          has already been fetched by the browser before the proxy exists — it cannot be
+          blocked. This requirement already exists for Consent Mode v2 correctness; runtime
+          auto-block adds a second equally hard reason to enforce it. If you load GTM or GA4
+          before the Cookyay bootstrap, <code>autoBlock</code> will not intercept those scripts.
+        </div>
+
+        <h3>What auto-block does</h3>
+
+        <p>
+          When <code>autoBlock: true</code>, the bootstrap's <code>document.createElement</code>
+          proxy matches every outgoing <code>&lt;script&gt;</code> and
+          <code>&lt;iframe&gt;</code> insertion against a bundled database of ~50 curated
+          third-party services. Matches are held inert until the visitor grants consent to the
+          matching category, then released using the same grant/inject queue as declarative
+          blocking. Declared rules always take precedence — elements already carrying
+          <code>data-cookyay-state="blocked"</code> are skipped by the auto-block path entirely.
+        </p>
+
+        <p>
+          When <code>autoBlock: false</code> (the default), the database tree-shakes to zero —
+          no bundle cost for opt-out installs.
+        </p>
+
+        <h3>Scope boundaries</h3>
+
+        <p>
+          Auto-block covers <strong>scripts and iframes only</strong>. These are explicitly
+          out of scope for v5:
+        </p>
+
+        <ul>
+          <li>
+            <strong><code>&lt;img&gt;</code> beacon pixels</strong> (e.g.
+            <code>facebook.com/tr</code>) — high false-positive risk for first-party images.
+            Block the parent loader script instead (the Meta Pixel JavaScript loader is in
+            the signature database and will be intercepted). Deferred to a future version.
+          </li>
+          <li>
+            <strong><code>document.write</code> ad injection</strong> — legacy DoubleClick /
+            old AdSense use <code>document.write('&lt;script src="..."&gt;')</code>. Wrapping
+            <code>document.write</code> carries a real page-rendering breakage risk and is
+            deferred to a future version.
+          </li>
+        </ul>
+
+        <h3>Google tags and Consent Mode v2</h3>
+
+        <p>
+          <code>autoBlock</code> does <strong>not</strong> DOM-block Google Tag Manager or
+          GA4. Those services are intentionally passed through:
+        </p>
+        <ul>
+          <li>Cookyay's bootstrap already fires <code>gtag('consent','default',{all denied})</code>
+              synchronously before any Google tag loads, so GTM/GA4 degrade gracefully —
+              they load but collect no data until the visitor grants consent.</li>
+          <li>DOM-blocking GTM would prevent the banner from sending
+              <code>gtag('consent','update','granted')</code> signals, because GTM
+              would never have loaded to receive them.</li>
+        </ul>
+        <p>
+          Non-Google trackers in the signature database (Hotjar, Meta Pixel loader, Stripe,
+          Sentry, PostHog, Intercom, and ~45 others) are still auto-blocked.
+        </p>
+
+        <h3>Auto-block and declarative blocking together</h3>
+
+        <p>
+          The scanner's <a href="#scanner-auto-detection"><code>suggestedBlocking[]</code></a>
+          snippets and <code>autoBlock: true</code> are complementary, not mutually exclusive:
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Approach</th>
+              <th scope="col">HTML changes required?</th>
+              <th scope="col">Covers GTM-injected tags?</th>
+              <th scope="col">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Declarative only (<code>type="text/plain"</code>)</td>
+              <td>Yes — paste scanner snippets</td>
+              <td>No (GTM fires dynamically after page load)</td>
+              <td>Most explicit; zero runtime overhead; works back to v1</td>
+            </tr>
+            <tr>
+              <td><code>autoBlock: true</code></td>
+              <td>No</td>
+              <td>Yes (intercepted at <code>createElement</code>)</td>
+              <td>Google tags excluded; <code>&lt;img&gt;</code> pixels not covered</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          For best coverage on sites that use GTM: paste declarative rules from the scanner
+          for scripts in your static HTML, and enable <code>autoBlock: true</code> to also
+          catch tags injected by GTM at runtime.
+        </p>
+
+        <div class="callout callout-note">
+          <strong>Debug mode</strong> — Enable <code>debug: true</code> to see auto-block
+          decisions in the browser console:
+          <code>[Cookyay] auto-blocked &lt;script&gt; src="https://static.hotjar.com/…" (service: hotjar, category: analytics)</code>.
+          Turn off in production.
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           8. GTM INTEGRATION
            ══════════════════════════════════════════════════════ -->
       <section id="gtm" aria-labelledby="gtm-heading">
         <h2 id="gtm-heading">GTM integration</h2>

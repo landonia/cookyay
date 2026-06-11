@@ -2,9 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["node"],
-    "rootDir": "src",
-    "outDir": "dist"
+    "types": ["node"]
+    // No rootDir/outDir: tsup owns emit (its own entry/outDir); this tsconfig
+    // is typecheck-only (tsc --noEmit). rootDir:"src" would reject the
+    // test-only cross-package import in parity.test.ts (TS6059).
   },
   "include": ["src"]
 }

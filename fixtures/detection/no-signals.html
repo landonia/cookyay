@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: detection — no signals</title>
+    <!--
+      Hermetic fixture: a completely clean page with no tracking cookies, no
+      third-party scripts, and no localStorage entries. Used to assert that the
+      classifier produces zero classified services and an empty _unclassified list
+      for benign pages (no false positives).
+    -->
+  </head>
+  <body>
+    <h1>Detection fixture: no signals</h1>
+    <p>
+      This page is completely clean — no cookies, no third-party scripts, no localStorage.
+      The scanner should produce zero classified services and an empty
+      <code>_unclassified</code> list.
+    </p>
+  </body>
+</html>

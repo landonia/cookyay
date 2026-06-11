@@ -1,0 +1,258 @@
+{
+  "policyVersion": "REPLACE_ME",
+  "categories": {
+    "analytics": {
+      "label": "Analytics",
+      "services": [
+        {
+          "name": "Google Analytics 4",
+          "cookies": [
+            "_ga",
+            "_ga_FIXTURE"
+          ],
+          "_meta": {
+            "confidence": "medium",
+            "matchedBy": "cookie",
+            "serviceId": "ga4",
+            "pages": [
+              "FIXTURE_BASE/fixtures/detection/mixed-signals.html"
+            ]
+          }
+        },
+        {
+          "name": "Google Universal Analytics (GA3)",
+          "cookies": [
+            "__utma"
+          ],
+          "_meta": {
+            "confidence": "medium",
+            "matchedBy": "cookie",
+            "serviceId": "ua",
+            "pages": [
+              "FIXTURE_BASE/fixtures/detection/mixed-signals.html"
+            ]
+          }
+        },
+        {
+          "name": "Hotjar",
+          "cookies": [
+            "_hjid"
+          ],
+          "_meta": {
+            "confidence": "medium",
+            "matchedBy": "cookie",
+            "serviceId": "hotjar",
+            "pages": [
+              "FIXTURE_BASE/fixtures/detection/mixed-signals.html"
+            ]
+          },
+          "localStorage": [
+            "_hjSessionId"
+          ]
+        },
+        {
+          "name": "Segment",
+          "cookies": [],
+          "_meta": {
+            "confidence": "medium",
+            "matchedBy": "localStorage",
+            "serviceId": "segment",
+            "pages": [
+              "FIXTURE_BASE/fixtures/detection/mixed-signals.html"
+            ]
+          },
+          "localStorage": [
+            "ajs_anonymous_id",
+            "ajs_user_id"
+          ]
+        }
+      ]
+    },
+    "marketing": {
+      "label": "Marketing",
+      "services": [
+        {
+          "name": "Meta (Facebook) Pixel",
+          "cookies": [
+            "_fbp"
+          ],
+          "_meta": {
+            "confidence": "medium",
+            "matchedBy": "cookie",
+            "serviceId": "meta-pixel",
+            "pages": [
+              "FIXTURE_BASE/fixtures/detection/mixed-signals.html"
+            ]
+          }
+        },
+        {
+          "name": "Google Ads",
+          "cookies": [
+            "_gcl_au"
+          ],
+          "_meta": {
+            "confidence": "medium",
+            "matchedBy": "cookie",
+            "serviceId": "google-ads",
+            "pages": [
+              "FIXTURE_BASE/fixtures/detection/mixed-signals.html"
+            ]
+          }
+        },
+        {
+          "name": "YouTube",
+          "cookies": [
+            "VISITOR_INFO1_LIVE",
+            "YSC",
+            "PREF"
+          ],
+          "_meta": {
+            "confidence": "medium",
+            "matchedBy": "iframe-host",
+            "serviceId": "youtube",
+            "pages": [
+              "FIXTURE_BASE/fixtures/detection/mixed-signals.html"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "suggestedBlocking": [
+    {
+      "host": "analytics.google.com",
+      "services": [
+        "ga4"
+      ],
+      "category": "analytics",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"analytics\" src=\"https://analytics.google.com\"></script>"
+    },
+    {
+      "host": "cdn.segment.com",
+      "services": [
+        "segment"
+      ],
+      "category": "analytics",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"analytics\" src=\"https://cdn.segment.com\"></script>"
+    },
+    {
+      "host": "connect.facebook.net",
+      "services": [
+        "meta-pixel"
+      ],
+      "category": "marketing",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"marketing\" src=\"https://connect.facebook.net\"></script>"
+    },
+    {
+      "host": "facebook.com",
+      "services": [
+        "meta-pixel"
+      ],
+      "category": "marketing",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"marketing\" src=\"https://facebook.com\"></script>"
+    },
+    {
+      "host": "google-analytics.com",
+      "services": [
+        "ga4",
+        "ua"
+      ],
+      "category": "analytics",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"analytics\" src=\"https://google-analytics.com\"></script>"
+    },
+    {
+      "host": "googleadservices.com",
+      "services": [
+        "google-ads"
+      ],
+      "category": "marketing",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"marketing\" src=\"https://googleadservices.com\"></script>"
+    },
+    {
+      "host": "googlesyndication.com",
+      "services": [
+        "google-ads"
+      ],
+      "category": "marketing",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"marketing\" src=\"https://googlesyndication.com\"></script>"
+    },
+    {
+      "host": "googletagmanager.com",
+      "services": [
+        "ga4"
+      ],
+      "category": "analytics",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"analytics\" src=\"https://googletagmanager.com\"></script>"
+    },
+    {
+      "host": "hotjar.com",
+      "services": [
+        "hotjar"
+      ],
+      "category": "analytics",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"analytics\" src=\"https://hotjar.com\"></script>"
+    },
+    {
+      "host": "segment.io",
+      "services": [
+        "segment"
+      ],
+      "category": "analytics",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"analytics\" src=\"https://segment.io\"></script>"
+    },
+    {
+      "host": "static.hotjar.com",
+      "services": [
+        "hotjar"
+      ],
+      "category": "analytics",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"analytics\" src=\"https://static.hotjar.com\"></script>"
+    },
+    {
+      "host": "youtube-nocookie.com",
+      "services": [
+        "youtube"
+      ],
+      "category": "marketing",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"marketing\" src=\"https://youtube-nocookie.com\"></script>"
+    },
+    {
+      "host": "youtube.com",
+      "services": [
+        "youtube"
+      ],
+      "category": "marketing",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"marketing\" src=\"https://youtube.com\"></script>"
+    },
+    {
+      "host": "ytimg.com",
+      "services": [
+        "youtube"
+      ],
+      "category": "marketing",
+      "confidence": "medium",
+      "snippet": "<script type=\"text/plain\" data-category=\"marketing\" src=\"https://ytimg.com\"></script>"
+    }
+  ],
+  "_unclassified": [],
+  "_noscriptWarnings": [],
+  "_scanMeta": {
+    "scannedAt": "NORMALIZED",
+    "targetUrl": "FIXTURE_BASE/fixtures/detection/mixed-signals.html",
+    "pagesVisited": 1,
+    "classifierVersion": "1.0.0"
+  }
+}

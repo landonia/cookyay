@@ -1,12 +1,15 @@
 /**
- * Classification engine — takes raw crawl findings (task 015) and maps each
- * cookie, storage entry, request host, script, and iframe to a known service
- * (or an "unclassified" bucket). Annotates each hit with a confidence level.
+ * Classification engine — takes raw crawl findings and maps each cookie,
+ * storage entry, request host, script, and iframe to a known service (or an
+ * "unclassified" bucket). Annotates each hit with a confidence level.
  *
- * Confidence levels (per task 016 impl notes):
- *   high   — exact known cookie name + host (or curated exact match)
- *   medium — host match only (service inferred from request origin)
- *   low    — heuristic / pattern guess with no definitive signal
+ * Confidence levels (task 006 — "two signals agree = high" model):
+ *   high   — two independent signals agree on the same service on the same page
+ *            (e.g. a cookie match AND a requestHost match for the same service).
+ *            Computed here after all per-page signals are collected. A curated
+ *            service with only one observed signal is NOT automatically high.
+ *   medium — single unambiguous signal (cookie match or request-host match).
+ *   low    — heuristic / declared-category only (no cookie or host signal).
  *
  * Unknown artifacts are NEVER silently dropped — they land in an explicit
  * "unclassified — review me" section (acceptance criterion 2).
@@ -15,6 +18,7 @@ import type { RawFindings } from './types.js'
 import {
   findServiceByCookie,
   findServiceByHost,
+  findServiceByRequest,
   findServiceByLocalStorage,
   type Confidence,
   type ServiceCategory,
@@ -129,6 +133,23 @@ export function classify(raw: RawFindings): ClassifiedFindings {
   const noscriptMap = new Map<string, NoscriptWarning>()           // key: normalized text
   const unclassifiedMap = new Map<string, UnclassifiedArtifact>()  // key: `${kind}@@${name}`
 
+  // Cross-signal confidence tracking (task 006):
+  // For each page, record which service IDs were matched by a cookie/storage
+  // signal and which were matched by a request/host signal.  After all signals
+  // are collected for a page, any service that appears in BOTH sets gets its
+  // confidence upgraded to 'high' in the dedup maps.
+  //
+  // Map<pageUrl, Set<serviceId>> — populated during the cookie/storage loops,
+  // checked against request matches at the bottom of each page iteration.
+  const pageCookieServices = new Map<string, Set<string>>()    // cookie/storage hits per page
+  const pageRequestServices = new Map<string, Set<string>>()   // request hits per page
+
+  function addPageSignal(map: Map<string, Set<string>>, page: string, serviceId: string): void {
+    let s = map.get(page)
+    if (!s) { s = new Set(); map.set(page, s) }
+    s.add(serviceId)
+  }
+
   for (const page of raw.pages) {
     const pageUrl = page.url
 
@@ -150,6 +171,7 @@ export function classify(raw: RawFindings): ClassifiedFindings {
           pages: [],
         }))
         if (!entry.pages.includes(pageUrl)) entry.pages.push(pageUrl)
+        addPageSignal(pageCookieServices, pageUrl, match.service.id)
       } else {
         // Only report non-trivial, non-session-only cookies as unclassified
         const uKey = `cookie@@${cookie.name}`
@@ -178,6 +200,7 @@ export function classify(raw: RawFindings): ClassifiedFindings {
           pages: [],
         }))
         if (!classified.pages.includes(pageUrl)) classified.pages.push(pageUrl)
+        addPageSignal(pageCookieServices, pageUrl, match.service.id)
       } else {
         const uKey = `${entry.type}@@${entry.key}`
         const uEntry = getOrCreate(unclassifiedMap, uKey, () => ({
@@ -190,11 +213,15 @@ export function classify(raw: RawFindings): ClassifiedFindings {
     }
 
     // -----------------------------------------------------------------------
-    // Requests (third-party hosts)
+    // Requests (third-party hosts) — uses path-aware matching
     // -----------------------------------------------------------------------
     for (const req of page.requests) {
       if (req.firstParty) continue
-      const match = findServiceByHost(req.host)
+      // Use findServiceByRequest (path-aware) rather than findServiceByHost so
+      // that services with requestPaths (e.g. Meta Pixel at facebook.com/tr)
+      // are only matched when the URL path also matches, preventing false
+      // positives from unrelated traffic to the same host.
+      const match = findServiceByRequest(req.url, req.host)
       if (match) {
         const rKey = `${req.host}@@${match.service.id}`
         const entry = getOrCreate(requestMap, rKey, () => ({
@@ -204,6 +231,7 @@ export function classify(raw: RawFindings): ClassifiedFindings {
           pages: [],
         }))
         if (!entry.pages.includes(pageUrl)) entry.pages.push(pageUrl)
+        addPageSignal(pageRequestServices, pageUrl, match.service.id)
       } else {
         const uKey = `request-host@@${req.host}`
         const entry = getOrCreate(unclassifiedMap, uKey, () => ({
@@ -296,6 +324,42 @@ export function classify(raw: RawFindings): ClassifiedFindings {
       const nKey = text.slice(0, 200) // stable dedup key
       const entry = getOrCreate(noscriptMap, nKey, () => ({ text, pages: [] }))
       if (!entry.pages.includes(pageUrl)) entry.pages.push(pageUrl)
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Cross-signal confidence upgrade (task 006 — "two signals agree = high")
+  //
+  // After collecting all per-page signals, find every service ID that was
+  // observed by BOTH a cookie/storage signal AND a request/host signal on the
+  // same page.  Upgrade those entries to 'high' confidence in the dedup maps.
+  //
+  // This is the only place in the codebase that emits 'high' confidence —
+  // the lookup helpers in db.ts always return 'medium' for a single signal.
+  // -------------------------------------------------------------------------
+  for (const [pageUrl, cookieSvcIds] of pageCookieServices) {
+    const requestSvcIds = pageRequestServices.get(pageUrl)
+    if (!requestSvcIds) continue
+
+    for (const serviceId of cookieSvcIds) {
+      if (!requestSvcIds.has(serviceId)) continue
+      // Two independent signals agree on this service for this page —
+      // upgrade all dedup entries that reference this serviceId.
+      for (const entry of cookieMap.values()) {
+        if (entry.service.id === serviceId && entry.pages.includes(pageUrl)) {
+          entry.confidence = 'high'
+        }
+      }
+      for (const entry of storageMap.values()) {
+        if (entry.service.id === serviceId && entry.pages.includes(pageUrl)) {
+          entry.confidence = 'high'
+        }
+      }
+      for (const entry of requestMap.values()) {
+        if (entry.service.id === serviceId && entry.pages.includes(pageUrl)) {
+          entry.confidence = 'high'
+        }
+      }
     }
   }
 

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: detection — mixed signals</title>
+    <!--
+      Hermetic fixture: emits multiple signal types for representative services so the
+      scanner's full crawl → detect → emit path can be asserted against a golden config.
+      No real third-party network calls are made.
+
+      Services exercised (and signals emitted):
+        - ga4          : _ga cookie (analytics) + script-src at googletagmanager.com
+        - ua           : __utma cookie (analytics) → shares google-analytics.com with ga4
+        - google-ads   : _gcl_au cookie (marketing)
+        - meta-pixel   : _fbp cookie (marketing)
+        - hotjar       : _hjid cookie + _hjSessionId localStorage (analytics)
+        - segment      : ajs_user_id + ajs_anonymous_id localStorage (analytics)
+        - youtube      : iframe data-src at www.youtube.com (marketing)
+
+      Host-dedup case (via cookie + script signals):
+        ga4 (_ga cookie) and ua (__utma cookie) both have google-analytics.com in
+        their requestHosts. The suggestedBlocking emitter groups all services by
+        blocking host — so the golden has a single google-analytics.com entry
+        with services: ["ga4", "ua"]. This verifies 007's dedup behavior end-to-end.
+
+      Script-src signal:
+        <script type="text/plain" src="https://www.googletagmanager.com/gtag/js?id=G-FIXTURE">
+        The browser never fetches this (type="text/plain"). The classifier reads
+        the src attribute, extracts host "www.googletagmanager.com", and matches ga4
+        via findServiceByHost(). See classifier.ts:249-255.
+
+      Iframe-src signal:
+        <iframe data-src="https://www.youtube.com/embed/fixture123">
+        No network request fires (data-src, not src). The classifier reads the
+        data-src attribute, extracts host "www.youtube.com", and matches youtube
+        via findServiceByHost(). See classifier.ts:284-289.
+    -->
+    <script>
+      ;(function () {
+        var expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString()
+
+        // GA4 — analytics (cookie signal)
+        document.cookie = '_ga=GA1.2.fixture.' + Date.now() + '; expires=' + expires + '; path=/; SameSite=Lax'
+        document.cookie = '_ga_FIXTURE=GS1.1.' + Date.now() + '.1; expires=' + expires + '; path=/; SameSite=Lax'
+
+        // UA (Google Universal Analytics) — analytics (cookie signal)
+        // Shares google-analytics.com with ga4 → triggers host-dedup in suggestedBlocking
+        document.cookie = '__utma=1.fixture.' + Date.now() + '.1.1.1; expires=' + expires + '; path=/; SameSite=Lax'
+
+        // Meta Pixel — marketing (cookie signal)
+        document.cookie = '_fbp=fb.1.' + Date.now() + '.0; expires=' + expires + '; path=/; SameSite=Lax'
+        // Google Ads — marketing (cookie signal)
+        document.cookie = '_gcl_au=1.1.fixture.' + Date.now() + '; expires=' + expires + '; path=/; SameSite=Lax'
+
+        // Hotjar — analytics (cookie + localStorage signals; two signals = high confidence)
+        document.cookie = '_hjid=fixture-hotjar-id; expires=' + expires + '; path=/; SameSite=Lax'
+        try {
+          localStorage.setItem('_hjSessionId', 'fixture-hotjar-session')
+
+          // Segment — analytics (localStorage signals)
+          localStorage.setItem('ajs_user_id', 'fixture-segment-user')
+          localStorage.setItem('ajs_anonymous_id', 'fixture-segment-anon-' + Date.now())
+        } catch (e) {
+          // localStorage may be unavailable in some contexts — fixture is best-effort
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <h1>Detection fixture: mixed signals</h1>
+    <p>
+      This page emits multiple signal types for representative services. Used as the
+      source for the second golden config file (<code>e2e/expected-detection-config.json</code>).
+    </p>
+
+    <!--
+      Script-src signal: GA4 via GTM host.
+      type="text/plain" prevents the browser from fetching the URL — no network call.
+      The classifier reads the src attribute from the DOM and classifies by hostname.
+    -->
+    <script
+      type="text/plain"
+      src="https://www.googletagmanager.com/gtag/js?id=G-FIXTURE"
+      id="gtm-script-signal"
+    ></script>
+
+    <!--
+      Iframe-src signal: YouTube via data-src (no src → no network request).
+      The classifier reads the data-src attribute from the DOM and classifies by hostname.
+    -->
+    <iframe
+      data-src="https://www.youtube.com/embed/fixture123"
+      id="yt-iframe-signal"
+      width="560"
+      height="315"
+      title="Synthetic YouTube embed (hermetic — data-src only, no network)"
+      allowfullscreen
+    ></iframe>
+
+    <table>
+      <caption>Signals emitted by this page</caption>
+      <thead>
+        <tr>
+          <th>Signal type</th>
+          <th>Key / name</th>
+          <th>Service</th>
+          <th>Category</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>cookie</td><td>_ga</td><td>Google Analytics 4</td><td>analytics</td></tr>
+        <tr><td>cookie</td><td>_ga_FIXTURE</td><td>Google Analytics 4</td><td>analytics</td></tr>
+        <tr><td>cookie</td><td>__utma</td><td>Google Universal Analytics (UA)</td><td>analytics</td></tr>
+        <tr><td>cookie</td><td>_fbp</td><td>Meta Pixel</td><td>marketing</td></tr>
+        <tr><td>cookie</td><td>_gcl_au</td><td>Google Ads</td><td>marketing</td></tr>
+        <tr><td>cookie</td><td>_hjid</td><td>Hotjar</td><td>analytics</td></tr>
+        <tr><td>localStorage</td><td>_hjSessionId</td><td>Hotjar</td><td>analytics</td></tr>
+        <tr><td>localStorage</td><td>ajs_user_id</td><td>Segment</td><td>analytics</td></tr>
+        <tr><td>localStorage</td><td>ajs_anonymous_id</td><td>Segment</td><td>analytics</td></tr>
+        <tr><td>script-host</td><td>www.googletagmanager.com</td><td>Google Analytics 4</td><td>analytics</td></tr>
+        <tr><td>iframe-host</td><td>www.youtube.com</td><td>YouTube</td><td>marketing</td></tr>
+      </tbody>
+    </table>
+  </body>
+</html>

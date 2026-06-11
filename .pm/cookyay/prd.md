@@ -2,8 +2,8 @@
 slug: cookyay
 title: Cookyay — free, self-hosted cookie consent
 created: 2026-06-06
-active_version: v3
-status: shipped
+active_version: v5
+status: active
 ---
 
 # Cookyay — free, self-hosted cookie consent
