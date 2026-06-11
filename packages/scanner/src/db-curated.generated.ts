@@ -25,6 +25,7 @@ export const CURATED_SERVICES: ServiceDefinition[] = [
       "analytics.google.com",
       "googletagmanager.com",
     ],
+    google: true,
     source: 'curated',
   },
   {
@@ -45,6 +46,7 @@ export const CURATED_SERVICES: ServiceDefinition[] = [
     requestHosts: [
       "google-analytics.com",
     ],
+    google: true,
     source: 'curated',
   },
   {
@@ -58,6 +60,7 @@ export const CURATED_SERVICES: ServiceDefinition[] = [
     requestHosts: [
       "googletagmanager.com",
     ],
+    google: true,
     source: 'curated',
   },
   {
@@ -357,6 +360,7 @@ export const CURATED_SERVICES: ServiceDefinition[] = [
     requestPaths: [
       "www.google.com/recaptcha/",
     ],
+    google: true,
     source: 'curated',
   },
   {
@@ -374,6 +378,7 @@ export const CURATED_SERVICES: ServiceDefinition[] = [
       "googleadservices.com",
       "googlesyndication.com",
     ],
+    google: true,
     source: 'curated',
   },
   {
@@ -750,6 +755,7 @@ export const CURATED_SERVICES: ServiceDefinition[] = [
     requestHosts: [
       "optimize.google.com",
     ],
+    google: true,
     source: 'curated',
   },
   {

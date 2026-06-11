@@ -19,6 +19,7 @@ Free, self-hosted cookie consent — zero-dependency banner library.
 - **Zero runtime dependencies** — vanilla TypeScript, no framework required
 - **< 20 KB min+gzip** — combined IIFE + inline bootstrap snippet
 - **Declarative script/iframe blocking** — block analytics/marketing until consented
+- **Runtime auto-block (`autoBlock: true`, v5)** — intercepts known third-party scripts/iframes at runtime from a bundled ~50-service signature database; no HTML changes needed
 - **Google Consent Mode v2** — fires default + update signals automatically
 - **GPC (Global Privacy Control)** — detected and honored with a visible toast
 - **Consent withdrawal** — surfaces a "reload required" prompt
@@ -220,6 +221,106 @@ run Playwright, the scanner automatically downloads the Chromium headless shell
 binary. If the automatic download fails (offline, locked-down network, insufficient
 disk space), the scanner prints a clear error and the manual fallback:
 `npx playwright install chromium`.
+
+---
+
+## Runtime auto-block (v5)
+
+v5 adds `autoBlock` — a single boolean config flag that lets the banner intercept
+and hold known third-party scripts and iframes inert at runtime, *without* you
+hand-declaring each one in your HTML.
+
+```js
+Cookyay.init({
+  policyVersion: '2026-01-01',
+  autoBlock: true,          // opt-in; default false
+  categories: { /* ... */ },
+})
+```
+
+### What it does
+
+When `autoBlock: true`, the banner's `document.createElement`/`setAttribute`
+proxy (installed in the synchronous bootstrap snippet) matches outgoing
+`<script>` and `<iframe>` element insertions against a bundled signature database
+of ~50 curated third-party services. Any match is held inert until the visitor
+grants consent to the matching category, then re-executed using the same
+grant/inject queue as declarative blocking.
+
+Effective combinations:
+
+- **`autoBlock: false` (default)** — declarative-only: the banner blocks exactly
+  what you declare with `type="text/plain" data-category="..."`. Unchanged from
+  v4. The signature database tree-shakes to zero in this mode (no bundle cost).
+- **`autoBlock: true`** — declarative + runtime: declared rules are applied first
+  (they always win); then any script/iframe not already declared is matched
+  against the signature database and auto-blocked if a known service is
+  recognised.
+
+### The non-negotiable install requirement
+
+> **The Cookyay bootstrap snippet MUST be the first `<script>` in `<head>`,
+> before every third-party tag — GTM, GA4, or anything else.**
+
+The bootstrap installs the `createElement`/`setAttribute` proxy synchronously.
+Any `<script src>` placed in the HTML *before* the bootstrap has already been
+fetched and parsed by the browser before the interceptor exists — it cannot be
+blocked, silently or otherwise. This is an architectural limit of DOM-level
+interception, not a bug.
+
+If you load GTM or GA4 before the Cookyay bootstrap, `autoBlock` will have no
+effect on those scripts. The only fix is load-order: Cookyay first.
+
+This requirement already exists for Google Consent Mode v2 correctness (see
+[Quickstart](https://cookyay.com/#quickstart)) — `autoBlock` adds a second,
+equally hard reason to enforce it.
+
+### Scope boundaries (v5)
+
+`autoBlock` covers **scripts and iframes only**. These categories are explicitly
+out of scope and deferred to a future version:
+
+- **`<img>` beacon pixels** (e.g. `facebook.com/tr`) — Blocking these requires
+  wrapping `HTMLImageElement.src`, which carries a higher false-positive risk for
+  first-party images. Block the parent loader script instead (Meta Pixel's
+  loader, for example, is in the signature database).
+- **`document.write` ad injection** — Legacy ad networks (DoubleClick, old
+  AdSense) use `document.write('<script src="...">')`. Intercepting
+  `document.write` is possible but carries a real page-rendering breakage risk
+  and is deferred.
+
+### Google tags and Consent Mode v2
+
+`autoBlock` does **not** DOM-block Google Tag Manager or GA4. Those services are
+intentionally passed through so that Consent Mode v2 `update` signals can fire.
+
+When Consent Mode v2 is active (the default with Cookyay's bootstrap), GTM and
+GA4 already degrade gracefully under all-denied defaults — they load but collect
+no data. DOM-blocking GTM would prevent the banner from sending `gtag('consent',
+'update', 'granted')` signals at all, because GTM would never have loaded to
+receive them.
+
+Non-Google trackers in the signature database (Hotjar, Meta Pixel loader, Stripe,
+Sentry, PostHog, Intercom, etc.) are still auto-blocked.
+
+### Relation to the scanner's `suggestedBlocking[]`
+
+The `@cookyay/scanner` CLI (v4+) scans your site and emits a
+[`suggestedBlocking[]`](https://cookyay.com/#scanner-auto-detection) array of
+copy-paste blocking snippets — one per detected third-party host.
+
+`autoBlock` and the scanner use the same underlying signature database. The
+scanner tells you what it found; `autoBlock` blocks it at runtime without the
+HTML edits. They are complementary:
+
+| Approach | HTML changes required | Works with GTM-injected tags | Notes |
+|---|---|---|---|
+| Declarative (v1+) | Yes — paste scanner snippets | No (GTM fires dynamically) | Most explicit; zero runtime overhead |
+| `autoBlock: true` (v5) | No | Yes (intercepted at createElement) | Covers dynamic injection; Google tags excluded |
+
+For best coverage on sites with GTM, use both: paste declarative rules from the
+scanner for scripts in your static HTML, and enable `autoBlock: true` to catch
+GTM-managed tags injected at runtime.
 
 ---
 

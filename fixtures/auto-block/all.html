@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: auto-block all cases</title>
+    <!--
+      Bootstrap MUST be first in <head>.
+      [goals.md §Interception mechanism: "Cookyay first in <head>" is a hard install requirement]
+    -->
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+
+    <!--
+      IMPORTANT: Third-party scripts are injected by JavaScript (see <body>) so that
+      the runtime proxy can intercept document.createElement('script') and
+      el.src = '...' calls — this is the primary real-world vector the proxy covers.
+
+      Any <script src="..."> present in the HTML at parse time would execute before
+      init() is called (init() is in a type="module" block below, which is deferred).
+      Dynamically injected scripts are the correct test vector for the proxy.
+      [goals.md §Interception mechanism: proxy installed via init({ autoBlock:true })]
+      [research/test-strategist.md §Gotchas]
+    -->
+  </head>
+  <body>
+    <h1>Auto-block fixture — all cases</h1>
+    <p>
+      Tests the runtime auto-block proxy: known third-party scripts/iframes are
+      blocked until the matching consent category is granted, with no
+      <code>data-category</code> declarations needed.
+    </p>
+
+    <h2>1. Hotjar analytics (auto-blocked)</h2>
+    <div id="hotjar-status" class="status-box status-blocked">Hotjar: blocked</div>
+
+    <h2>2. Meta Pixel marketing (auto-blocked)</h2>
+    <div id="pixel-status" class="status-box status-blocked">Meta Pixel: blocked</div>
+
+    <h2>3. YouTube iframe marketing (auto-blocked)</h2>
+    <div id="yt-status" class="status-box status-blocked">YouTube iframe: blocked</div>
+
+    <h2>4. Coexistence: declared analytics + DB-match (declared wins)</h2>
+    <!--
+      This script is declared with type="text/plain" data-category="analytics"
+      AND its src would match Hotjar in the DB. The declarative engine owns it
+      (scanBlocked registers it); the proxy must skip it (data-cookyay-auto absent).
+      It executes exactly once via the declarative grant path.
+    -->
+    <script
+      type="text/plain"
+      data-category="analytics"
+      src="https://static.hotjar.com/c/hotjar-coexist.js"
+      id="autoblock-coexist"
+      data-test-autoblock="true"
+    ></script>
+    <div id="coexist-status" class="status-box status-blocked">Coexistence script: blocked</div>
+
+    <h2>5. Google host (not held — Consent Mode v2 handles Google)</h2>
+    <div id="gtm-status" class="status-box status-blocked">GTM: checking…</div>
+
+    <h2>6. Same-origin script (not held — first-party)</h2>
+    <div id="same-origin-status" class="status-box status-blocked">Same-origin script: loading…</div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      // ---------------------------------------------------------------------------
+      // Step 1: Initialise with autoBlock:true BEFORE injecting any third-party
+      // scripts. The proxy is installed inside init() so any subsequent
+      // document.createElement('script') / el.src = '...' calls are intercepted.
+      // [api.ts — installAutoBlockProxy() called synchronously in init() path]
+      // ---------------------------------------------------------------------------
+      init({
+        policyVersion: 'autoblock-fixture-v1',
+        debug: true,
+        autoBlock: true,
+        categories: {
+          analytics: {
+            label: 'Analytics',
+            services: [{ name: 'Hotjar', cookies: ['_hjSessionUser'] }],
+          },
+          marketing: {
+            label: 'Marketing',
+            services: [
+              { name: 'Meta Pixel', cookies: ['_fbp'] },
+              { name: 'YouTube', cookies: ['VISITOR_INFO1_LIVE'] },
+            ],
+          },
+        },
+      })
+
+      // ---------------------------------------------------------------------------
+      // Step 2: Inject third-party scripts/iframes dynamically.
+      // The proxy intercepts document.createElement and el.src assignments.
+      //
+      // These are the elements the proxy should intercept and hold:
+      //   - Hotjar: static.hotjar.com → analytics
+      //   - Meta Pixel: connect.facebook.net → marketing
+      //   - YouTube iframe: youtube.com → marketing
+      //
+      // Negative cases (proxy should NOT hold these):
+      //   - GTM: googletagmanager.com → google:true, skipped by matcher
+      //   - same-origin: relative URL → null from matcher
+      // ---------------------------------------------------------------------------
+
+      // Inject third-party scripts immediately after init().
+      // The proxy's Phase 1 shim is already installed synchronously by init()
+      // (installAutoBlockProxy called synchronously), so all createElement/src
+      // assignments below are trapped in _staged. When the async matcher loads
+      // (autoblock-loader import), classifyAndRelease drains the queue and holds
+      // matched elements. No wait needed — Phase 1 staging is synchronous.
+      // [autoblock-proxy.ts §Two-phase install, api.ts §init() autoBlock path]
+
+      // --- AC1/AC2: Auto-block cases ---
+
+      // 1. Hotjar analytics script (static.hotjar.com → analytics)
+      const hotjarScript = document.createElement('script')
+      hotjarScript.id = 'autoblock-hotjar'
+      hotjarScript.setAttribute('data-test-autoblock', 'true')
+      hotjarScript.src = 'https://static.hotjar.com/c/hotjar-fixture.js'
+      document.body.appendChild(hotjarScript)
+
+      // 2. Meta Pixel marketing script (connect.facebook.net → marketing)
+      const pixelScript = document.createElement('script')
+      pixelScript.id = 'autoblock-pixel'
+      pixelScript.setAttribute('data-test-autoblock', 'true')
+      pixelScript.src = 'https://connect.facebook.net/en_US/fbevents-fixture.js'
+      document.body.appendChild(pixelScript)
+
+      // 3. YouTube marketing iframe (youtube.com → marketing)
+      const ytIframe = document.createElement('iframe')
+      ytIframe.id = 'autoblock-yt'
+      ytIframe.setAttribute('data-test-autoblock', 'true')
+      ytIframe.setAttribute('width', '560')
+      ytIframe.setAttribute('height', '315')
+      ytIframe.setAttribute('title', 'Synthetic YouTube auto-block test')
+      ytIframe.src = 'https://www.youtube.com/embed/fixture-video-id'
+      document.getElementById('yt-status').insertAdjacentElement('beforebegin', ytIframe)
+
+      // --- AC4: Negative cases ---
+
+      // 5. GTM: Google host — NOT held by auto-block (google:true in DB)
+      const gtmScript = document.createElement('script')
+      gtmScript.id = 'autoblock-gtm'
+      gtmScript.setAttribute('data-test-autoblock', 'true')
+      gtmScript.src = 'https://www.googletagmanager.com/gtag/js?id=GTM-FIXTURE'
+      document.body.appendChild(gtmScript)
+
+      // 6. Same-origin first-party script — NOT held (relative URL)
+      const sameOriginScript = document.createElement('script')
+      sameOriginScript.id = 'autoblock-same-origin'
+      sameOriginScript.setAttribute('data-test-autoblock', 'true')
+      sameOriginScript.src = '/fixtures/stubs/same-origin-app.js'
+      document.body.appendChild(sameOriginScript)
+
+      // ---------------------------------------------------------------------------
+      // Status updates — reflect window flag states in the DOM for E2E assertions
+      // ---------------------------------------------------------------------------
+
+      // GTM: should NOT have data-cookyay-auto (proxy skipped it)
+      setTimeout(() => {
+        const gtmEl = document.getElementById('autoblock-gtm')
+        const autoAttr = gtmEl?.getAttribute('data-cookyay-auto')
+        const el = document.getElementById('gtm-status')
+        el.textContent = 'GTM: auto attr=' + (autoAttr ?? 'absent') + ' (absent = correct)'
+        el.className = 'status-box ' + (!autoAttr ? 'status-granted' : 'status-blocked')
+      }, 300)
+
+      // Same-origin: runs immediately (no consent required)
+      setTimeout(() => {
+        const ran = window.__sameOriginRan
+        const el = document.getElementById('same-origin-status')
+        el.textContent = 'Same-origin script: ' + (ran ? 'executed ✓' : 'NOT executed')
+        el.className = 'status-box ' + (ran ? 'status-granted' : 'status-blocked')
+      }, 300)
+
+      onConsent('analytics', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          const hotjarEl = document.getElementById('hotjar-status')
+          hotjarEl.textContent = 'Hotjar: ' + (window.__hotjarRan ? 'executed ✓' : 'NOT executed')
+          hotjarEl.className = 'status-box ' + (window.__hotjarRan ? 'status-granted' : 'status-blocked')
+
+          const coexEl = document.getElementById('coexist-status')
+          const coexCount = window.__coexistCount ?? 0
+          coexEl.textContent = 'Coexistence: count=' + coexCount + (coexCount === 1 ? ' ✓' : ' (expected 1)')
+          coexEl.className = 'status-box ' + (coexCount === 1 ? 'status-granted' : 'status-blocked')
+        }, 150)
+      })
+
+      onConsent('marketing', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          const pixelEl = document.getElementById('pixel-status')
+          pixelEl.textContent = 'Meta Pixel: ' + (window.__pixelAutoRan ? 'executed ✓' : 'NOT executed')
+          pixelEl.className = 'status-box ' + (window.__pixelAutoRan ? 'status-granted' : 'status-blocked')
+
+          const ytIframeEl = document.getElementById('autoblock-yt')
+          const hasSrc = ytIframeEl && ytIframeEl.getAttribute('src')
+          const ytEl = document.getElementById('yt-status')
+          ytEl.textContent = 'YouTube iframe: ' + (hasSrc ? 'src promoted ✓' : 'still blocked')
+          ytEl.className = 'status-box ' + (hasSrc ? 'status-granted' : 'status-blocked')
+        }, 150)
+      })
+    </script>
+  </body>
+</html>

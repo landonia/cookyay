@@ -2,14 +2,21 @@
 /**
  * build-services-db.mjs — Curated service database generator
  *
- * Reads packages/scanner/data/services.yaml and emits two generated files:
+ * Reads packages/scanner/data/services.yaml and emits three generated files:
  *
  *   1. src/db-curated.generated.ts — TypeScript module imported by db.ts.
  *      This mirrors the ingest-ocd.mjs → db-ocd.generated.ts pipeline for
  *      the hand-curated service entries, making services.yaml the single
  *      contributor-facing source of truth.
  *
- *   2. ../../fixtures/service-fingerprints.json — Test stub descriptor used
+ *   2. ../../cookyay/src/db-autoblock.generated.ts — Client-safe slice for the
+ *      runtime auto-block feature (v5). Contains ONLY id, category,
+ *      requestHosts, requestPaths, scriptUrlGlobs, iframeSrcGlobs, and
+ *      google flag — cookies/localStorage/source fields stripped.
+ *      Typed against the AutoBlockEntry shape used by the client runtime matcher.
+ *      [goals.md §Signature-DB delivery: inline a stripped client subset via codegen]
+ *
+ *   3. ../../fixtures/service-fingerprints.json — Test stub descriptor used
  *      by the fixture server and E2E tests to stay in sync on what "GA4
  *      detected" means. Generated from the same services.yaml so it cannot
  *      drift as the curated DB grows to ~50 services.
@@ -32,6 +39,9 @@ const PKG_ROOT = join(__dirname, '..')
 const WORKSPACE_ROOT = join(PKG_ROOT, '..', '..')
 const INPUT_PATH = join(PKG_ROOT, 'data', 'services.yaml')
 const OUTPUT_PATH = join(PKG_ROOT, 'src', 'db-curated.generated.ts')
+// Client-safe slice for the runtime auto-block feature (v5)
+// [goals.md §Signature-DB delivery: inline a stripped client subset via codegen]
+const AUTOBLOCK_OUTPUT_PATH = join(WORKSPACE_ROOT, 'packages', 'cookyay', 'src', 'db-autoblock.generated.ts')
 const FINGERPRINTS_OUTPUT_PATH = join(WORKSPACE_ROOT, 'fixtures', 'service-fingerprints.json')
 
 // ---------------------------------------------------------------------------
@@ -86,6 +96,15 @@ function validateService(raw, index) {
       `services[${index}] (${s.id}): category must be one of ${[...VALID_CATEGORIES].join('|')}, got ${JSON.stringify(s.category)}`,
     )
   }
+
+  // Boolean flag — optional, default false
+  // google: true marks services owned by Google. The runtime auto-block matcher
+  // skips these services and relies on Consent Mode v2 instead (DOM-blocking GTM/GA4
+  // would suppress all CM v2 update signals).
+  if (s.google !== undefined && typeof s.google !== 'boolean') {
+    throw new Error(`services[${index}] (${s.id}): google must be a boolean, got ${JSON.stringify(s.google)}`)
+  }
+  const google = s.google === true
 
   // Array fields — all optional, default to []
   const cookies = Array.isArray(s.cookies) ? s.cookies : []
@@ -144,6 +163,7 @@ function validateService(raw, index) {
     id: /** @type {string} */ (s.id),
     name: /** @type {string} */ (s.name),
     category: /** @type {string} */ (s.category),
+    google,
     cookies: validatedCookies,
     localStorage: validatedStorage,
     requestHosts: /** @type {string[]} */ (requestHosts),
@@ -241,6 +261,9 @@ function main() {
       }
       lines.push(`    ],`)
     }
+    if (s.google) {
+      lines.push(`    google: true,`)
+    }
     if (s.scriptUrlGlobs.length > 0) {
       lines.push(`    scriptUrlGlobs: [`)
       for (const g of s.scriptUrlGlobs) {
@@ -265,6 +288,109 @@ function main() {
   const output = lines.join('\n')
   writeFileSync(OUTPUT_PATH, output, 'utf-8')
   console.log(`[build-services-db] Wrote ${services.length} service definitions to ${OUTPUT_PATH}`)
+
+  // ---------------------------------------------------------------------------
+  // Emit packages/cookyay/src/db-autoblock.generated.ts
+  //
+  // Client-safe slice of the curated service DB for the v5 runtime auto-block
+  // feature. Contains ONLY: id, category, requestHosts, requestPaths,
+  // scriptUrlGlobs, iframeSrcGlobs, and google flag.
+  // Cookies, localStorage, and source fields are stripped — they are scanner-only
+  // signals and provide no utility for blocking scripts/iframes at runtime.
+  //
+  // The google flag marks Google-owned services (GA4, GTM, Google Ads, reCAPTCHA,
+  // Google Optimize). The runtime matcher skips these and relies on Consent Mode v2
+  // to degrade them instead (DOM-blocking GTM/GA4 would suppress all CM v2 update
+  // signals). [goals.md §Consent Mode v2: skip Google tags, prd.md §3.4]
+  //
+  // Services with no client-side signals (no requestHosts, requestPaths,
+  // scriptUrlGlobs, or iframeSrcGlobs) are omitted from the client slice — they
+  // exist in the scanner DB only for cookie/localStorage classification.
+  //
+  // Typed against AutoBlockEntry (defined in db-autoblock.types.ts in cookyay).
+  // [architecture.md §Amendments 2026-06-10 — v4 architecture decisions (amend)]
+  // ---------------------------------------------------------------------------
+
+  // Filter to services with at least one client-side signal
+  const clientServices = services.filter(
+    (s) =>
+      s.requestHosts.length > 0 ||
+      s.requestPaths.length > 0 ||
+      s.scriptUrlGlobs.length > 0 ||
+      s.iframeSrcGlobs.length > 0,
+  )
+
+  const googleCount = clientServices.filter((s) => s.google).length
+  const nonGoogleCount = clientServices.length - googleCount
+
+  const autoblockLines = [
+    `/**`,
+    ` * AUTO-GENERATED by packages/scanner/scripts/build-services-db.mjs — DO NOT EDIT MANUALLY.`,
+    ` * Generated: ${now}`,
+    ` * Source: packages/scanner/data/services.yaml (schemaVersion: 1)`,
+    ` *`,
+    ` * Client-safe slice of the curated service DB for runtime auto-block (v5).`,
+    ` * Contains ONLY: id, category, requestHosts, requestPaths, scriptUrlGlobs,`,
+    ` * iframeSrcGlobs, and google flag. Cookies/localStorage/source are stripped.`,
+    ` *`,
+    ` * Services with google:true are owned by Google (GA4/GTM/Google Ads/etc.) and`,
+    ` * are handled by Consent Mode v2 instead of DOM-blocking.`,
+    ` * [goals.md §Consent Mode v2: skip Google tags, prd.md §3.4]`,
+    ` *`,
+    ` * To regenerate: node packages/scanner/scripts/build-services-db.mjs`,
+    ` * (or: pnpm --filter @cookyay/scanner build, or the cookyay prebuild)`,
+    ` */`,
+    `import type { AutoBlockEntry } from './db-autoblock.types.js'`,
+    ``,
+    `// ${clientServices.length} curated services with client-side signals`,
+    `// (${googleCount} Google-owned [skipped by runtime matcher], ${nonGoogleCount} non-Google [actively blocked])`,
+    `export const AUTOBLOCK_SERVICES: AutoBlockEntry[] = [`,
+  ]
+
+  for (const s of clientServices) {
+    autoblockLines.push(`  {`)
+    autoblockLines.push(`    id: ${JSON.stringify(s.id)},`)
+    autoblockLines.push(`    category: ${JSON.stringify(s.category)},`)
+    if (s.google) {
+      autoblockLines.push(`    google: true,`)
+    }
+    autoblockLines.push(`    requestHosts: [`)
+    for (const h of s.requestHosts) {
+      autoblockLines.push(`      ${JSON.stringify(h)},`)
+    }
+    autoblockLines.push(`    ],`)
+    if (s.requestPaths.length > 0) {
+      autoblockLines.push(`    requestPaths: [`)
+      for (const p of s.requestPaths) {
+        autoblockLines.push(`      ${JSON.stringify(p)},`)
+      }
+      autoblockLines.push(`    ],`)
+    }
+    if (s.scriptUrlGlobs.length > 0) {
+      autoblockLines.push(`    scriptUrlGlobs: [`)
+      for (const g of s.scriptUrlGlobs) {
+        autoblockLines.push(`      ${JSON.stringify(g)},`)
+      }
+      autoblockLines.push(`    ],`)
+    }
+    if (s.iframeSrcGlobs.length > 0) {
+      autoblockLines.push(`    iframeSrcGlobs: [`)
+      for (const g of s.iframeSrcGlobs) {
+        autoblockLines.push(`      ${JSON.stringify(g)},`)
+      }
+      autoblockLines.push(`    ],`)
+    }
+    autoblockLines.push(`  },`)
+  }
+
+  autoblockLines.push(`]`)
+  autoblockLines.push(``)
+
+  const autoblockOutput = autoblockLines.join('\n')
+  writeFileSync(AUTOBLOCK_OUTPUT_PATH, autoblockOutput, 'utf-8')
+  console.log(
+    `[build-services-db] Wrote ${clientServices.length} auto-block entries (${googleCount} Google, ${nonGoogleCount} non-Google) to ${AUTOBLOCK_OUTPUT_PATH}`,
+  )
 
   // ---------------------------------------------------------------------------
   // Emit fixtures/service-fingerprints.json

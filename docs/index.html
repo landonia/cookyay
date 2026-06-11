@@ -45,6 +45,7 @@
       <a href="#config-reference">Config</a>
       <a href="#string-overrides">i18n</a>
       <a href="#script-blocking">Blocking</a>
+      <a href="#autoblock">Auto-block</a>
       <a href="#scanner">Scanner</a>
       <a href="#gtm">GTM</a>
       <a href="#gpc">GPC</a>
@@ -100,6 +101,7 @@
           <li><a href="#config-reference">Config reference</a></li>
           <li><a href="#string-overrides">String overrides / i18n</a></li>
           <li><a href="#scanner">CLI scanner</a> — <a href="#scanner-auto-detection">auto-detection workflow</a>, <a href="#scanner-confidence">confidence levels</a>, <a href="#scanner-recaptcha">reCAPTCHA trade-off</a></li>
+          <li><a href="#autoblock">Runtime auto-block</a> — <code>autoBlock: true</code>, scope limits, Google tags</li>
           <li><a href="#gtm">GTM integration</a></li>
           <li><a href="#gpc">GPC behavior</a></li>
           <li><a href="#withdrawal">Withdrawal &amp; re-prompt</a></li>
@@ -230,6 +232,12 @@
           <li>GPC signal detection with a visible acknowledgment toast</li>
           <li>A persistent "Cookie settings" link for withdrawal</li>
         </ul>
+        <p>
+          To also block known third-party scripts/iframes automatically at runtime (without
+          hand-declaring each one in HTML), add <code>autoBlock: true</code> to your
+          <code>Cookyay.init()</code> call. See <a href="#autoblock">Runtime auto-block</a>
+          for details and scope limits.
+        </p>
       </section>
 
 
@@ -438,6 +446,20 @@ const bootstrapSnippet = readFileSync(
               </td>
             </tr>
             <tr>
+              <td><code>autoBlock</code></td>
+              <td><code>boolean</code></td>
+              <td><code>false</code></td>
+              <td>
+                Enable runtime auto-block (v5+). When <code>true</code>, the banner intercepts
+                known third-party <code>&lt;script&gt;</code> and <code>&lt;iframe&gt;</code>
+                insertions and holds them inert until the visitor grants consent to the matching
+                category — without requiring any HTML changes. Declared rules always win over
+                auto-detected ones. Google tags (GTM/GA4) are excluded (handled via Consent
+                Mode v2 instead). See <a href="#autoblock">Runtime auto-block</a> for scope
+                limits and the hard install requirement.
+              </td>
+            </tr>
+            <tr>
               <td><code>autoOpenLink</code></td>
               <td><code>boolean</code></td>
               <td><code>true</code></td>
@@ -628,12 +650,13 @@ document.addEventListener('cookyay:change', (e) =&gt; {
         </p>
 
         <div class="callout callout-note">
-          <strong>v4 boundary — scanner-side only.</strong>
-          Auto-detection and the suggested blocking markup are produced by the scanner CLI;
-          the Cookyay banner still blocks only what is declared in your page HTML using
-          <code>type="text/plain" data-category="..."</code>. The scanner tells you what
-          to paste — you paste it. Runtime auto-block (the banner intercepting unknown
-          scripts without HTML changes) is deferred to v5.
+          <strong>Scan-time vs run-time auto-detection.</strong>
+          The scanner CLI produces suggested blocking snippets for you to paste into your HTML
+          (declarative blocking). The Cookyay banner (v5+) also supports
+          <a href="#autoblock">runtime auto-block</a> via <code>autoBlock: true</code> —
+          when enabled, known third-party scripts/iframes are intercepted automatically without
+          any HTML changes. Both paths share the same ~50-service signature database, so
+          scan-time and run-time classifications always agree.
         </div>
 
         <h3>Usage</h3>
@@ -850,7 +873,140 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
 
 
       <!-- ══════════════════════════════════════════════════════
-           7. GTM INTEGRATION
+           7. RUNTIME AUTO-BLOCK (v5)
+           ══════════════════════════════════════════════════════ -->
+      <section id="autoblock" aria-labelledby="autoblock-heading">
+        <h2 id="autoblock-heading">Runtime auto-block <small style="font-size:0.75em;font-weight:400;color:var(--muted)">(v5+)</small></h2>
+
+        <p>
+          v5 adds <code>autoBlock</code> — a single boolean that lets the banner intercept and
+          hold known third-party scripts and iframes inert at runtime, without you hand-declaring
+          each one in your HTML.
+        </p>
+
+        <pre><code class="language-javascript">Cookyay.init({
+  policyVersion: '2026-01-01',
+  autoBlock: true,   // opt-in; default false
+  categories: { /* ... */ },
+})</code></pre>
+
+        <div class="callout callout-warn">
+          <strong>&#9888; "Cookyay first in <code>&lt;head&gt;</code>" is a hard install requirement</strong>
+          The bootstrap snippet installs the interception proxy synchronously. Any
+          <code>&lt;script src&gt;</code> placed in the HTML <em>before</em> the bootstrap
+          has already been fetched by the browser before the proxy exists — it cannot be
+          blocked. This requirement already exists for Consent Mode v2 correctness; runtime
+          auto-block adds a second equally hard reason to enforce it. If you load GTM or GA4
+          before the Cookyay bootstrap, <code>autoBlock</code> will not intercept those scripts.
+        </div>
+
+        <h3>What auto-block does</h3>
+
+        <p>
+          When <code>autoBlock: true</code>, the bootstrap's <code>document.createElement</code>
+          proxy matches every outgoing <code>&lt;script&gt;</code> and
+          <code>&lt;iframe&gt;</code> insertion against a bundled database of ~50 curated
+          third-party services. Matches are held inert until the visitor grants consent to the
+          matching category, then released using the same grant/inject queue as declarative
+          blocking. Declared rules always take precedence — elements already carrying
+          <code>data-cookyay-state="blocked"</code> are skipped by the auto-block path entirely.
+        </p>
+
+        <p>
+          When <code>autoBlock: false</code> (the default), the database tree-shakes to zero —
+          no bundle cost for opt-out installs.
+        </p>
+
+        <h3>Scope boundaries</h3>
+
+        <p>
+          Auto-block covers <strong>scripts and iframes only</strong>. These are explicitly
+          out of scope for v5:
+        </p>
+
+        <ul>
+          <li>
+            <strong><code>&lt;img&gt;</code> beacon pixels</strong> (e.g.
+            <code>facebook.com/tr</code>) — high false-positive risk for first-party images.
+            Block the parent loader script instead (the Meta Pixel JavaScript loader is in
+            the signature database and will be intercepted). Deferred to a future version.
+          </li>
+          <li>
+            <strong><code>document.write</code> ad injection</strong> — legacy DoubleClick /
+            old AdSense use <code>document.write('&lt;script src="..."&gt;')</code>. Wrapping
+            <code>document.write</code> carries a real page-rendering breakage risk and is
+            deferred to a future version.
+          </li>
+        </ul>
+
+        <h3>Google tags and Consent Mode v2</h3>
+
+        <p>
+          <code>autoBlock</code> does <strong>not</strong> DOM-block Google Tag Manager or
+          GA4. Those services are intentionally passed through:
+        </p>
+        <ul>
+          <li>Cookyay's bootstrap already fires <code>gtag('consent','default',{all denied})</code>
+              synchronously before any Google tag loads, so GTM/GA4 degrade gracefully —
+              they load but collect no data until the visitor grants consent.</li>
+          <li>DOM-blocking GTM would prevent the banner from sending
+              <code>gtag('consent','update','granted')</code> signals, because GTM
+              would never have loaded to receive them.</li>
+        </ul>
+        <p>
+          Non-Google trackers in the signature database (Hotjar, Meta Pixel loader, Stripe,
+          Sentry, PostHog, Intercom, and ~45 others) are still auto-blocked.
+        </p>
+
+        <h3>Auto-block and declarative blocking together</h3>
+
+        <p>
+          The scanner's <a href="#scanner-auto-detection"><code>suggestedBlocking[]</code></a>
+          snippets and <code>autoBlock: true</code> are complementary, not mutually exclusive:
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Approach</th>
+              <th scope="col">HTML changes required?</th>
+              <th scope="col">Covers GTM-injected tags?</th>
+              <th scope="col">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Declarative only (<code>type="text/plain"</code>)</td>
+              <td>Yes — paste scanner snippets</td>
+              <td>No (GTM fires dynamically after page load)</td>
+              <td>Most explicit; zero runtime overhead; works back to v1</td>
+            </tr>
+            <tr>
+              <td><code>autoBlock: true</code></td>
+              <td>No</td>
+              <td>Yes (intercepted at <code>createElement</code>)</td>
+              <td>Google tags excluded; <code>&lt;img&gt;</code> pixels not covered</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          For best coverage on sites that use GTM: paste declarative rules from the scanner
+          for scripts in your static HTML, and enable <code>autoBlock: true</code> to also
+          catch tags injected by GTM at runtime.
+        </p>
+
+        <div class="callout callout-note">
+          <strong>Debug mode</strong> — Enable <code>debug: true</code> to see auto-block
+          decisions in the browser console:
+          <code>[Cookyay] auto-blocked &lt;script&gt; src="https://static.hotjar.com/…" (service: hotjar, category: analytics)</code>.
+          Turn off in production.
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════════════════
+           8. GTM INTEGRATION
            ══════════════════════════════════════════════════════ -->
       <section id="gtm" aria-labelledby="gtm-heading">
         <h2 id="gtm-heading">GTM integration</h2>

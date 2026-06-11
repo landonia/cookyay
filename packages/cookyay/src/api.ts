@@ -3,8 +3,20 @@ import { CATEGORY_IDS, buildConsentRecord, readConsent, writeConsent } from './c
 import type { CookyayConfig } from './config.js'
 import { resolveStrings, validateConfig } from './config.js'
 import { dispatchChangeEvent, dispatchConsentEvent } from './events.js'
-import { _resetBlocker, grant, scanBlocked } from './blocking.js'
+import { _resetBlocker, enqueueAutoDetected, grant, scanBlocked } from './blocking.js'
 import { VERSION } from './version.js'
+// Static import of the proxy shim — this module has NO dependency on the
+// auto-block DB (no import of autoblock-matcher.ts or db-autoblock.generated.ts).
+// Keeping it statically imported allows installAutoBlockProxy() to be called
+// synchronously in init() with zero async gap.
+// The DB + matcher load lazily via import('./autoblock-loader.js') below.
+// [goals.md §Interception mechanism, §Auto-block is opt-in]
+import {
+  activateMatcher,
+  getHeldElements,
+  installAutoBlockProxy,
+  _resetAutoBlockProxy,
+} from './autoblock-proxy.js'
 
 type ConsentCallback = (granted: boolean) => void
 
@@ -152,6 +164,41 @@ function _replayStoredGrants(): void {
   _debug('stored grants replayed', record.categories)
 }
 
+/**
+ * Drain the auto-block proxy's held-elements queue and enqueue each element
+ * into the blocking.ts category-keyed grant/inject queue.
+ *
+ * Called once per init() after activateMatcher() resolves (Phase 2 transition).
+ * Held elements have already been classified by the proxy — they carry
+ * data-cookyay-state="blocked", data-cookyay-auto="true", and data-category.
+ * enqueueAutoDetected() stores the captured src URL as data-src and enqueues
+ * the entry so the existing grant() → inject path handles it.
+ *
+ * Declared-wins precedence is enforced by enqueueAutoDetected() (defers to
+ * blocking.ts for the idempotency check; elements already registered by
+ * scanBlocked() carry data-cookyay-state="blocked" and are skipped in
+ * _holdElement() by the proxy, so they never reach here in practice).
+ *
+ * After this call, the held queue is spliced empty to prevent double-registration
+ * if _enqueueHeldElements() were somehow called again.
+ *
+ * [task 005 AC1 — same queue and inject path as declared elements]
+ * [task 005 AC2 — autoDetected marker preserved; declared elements unaffected]
+ * [task 005 AC4 — withdrawal posture consistent: grant() staggered via setTimeout(fn,0)]
+ */
+function _enqueueHeldElements(): void {
+  const held = getHeldElements()
+  // Splice from the live array so _resetAutoBlockProxy() (test teardown) sees 0.
+  const snapshot = held.splice(0)
+  for (const { el, src, category } of snapshot) {
+    enqueueAutoDetected(el, src, category)
+    _debug('auto-detected element enqueued', { src, category, tag: el.tagName.toLowerCase() })
+  }
+  if (snapshot.length > 0) {
+    _debug('_enqueueHeldElements: %d element(s) wired into blocking queue', snapshot.length)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -185,6 +232,69 @@ export function init(config: CookyayConfig): void {
     modal: config.modal ?? false,
     autoOpenLink: config.autoOpenLink ?? true,
   })
+
+  // Install auto-block proxy BEFORE scanning the DOM so any createElement
+  // calls triggered by DOMContentLoaded handlers are already intercepted.
+  //
+  // Two-phase design (see autoblock-proxy.ts for full design doc):
+  //
+  // Phase 1 — synchronous shim (runs HERE, inline):
+  //   installAutoBlockProxy() is called synchronously — it is imported statically
+  //   so no async gap exists. After this line returns, all script/iframe src
+  //   assignments are captured inert in a staging queue. Nothing fetches.
+  //
+  // Phase 2 — lazy classify-and-release:
+  //   autoblock-loader.ts (which imports the DB) loads asynchronously. Once ready,
+  //   activateMatcher() drains the staging queue: matched elements stay held;
+  //   non-matched elements have their src released immediately.
+  //
+  // Tree-shaking contract: autoblock-loader.ts, autoblock-matcher.ts, and
+  // db-autoblock.generated.ts are NOT statically imported by api.ts. They only
+  // load when autoBlock:true via the conditional import() below. Bundlers that
+  // analyse dead code make these a separate lazy chunk — opt-out installs pay
+  // zero byte cost for the ~50-service DB.
+  //
+  // autoblock-proxy.ts IS statically imported above because it has NO DB
+  // dependency (only STATE_BLOCKED from blocking.ts and a type import). This
+  // is the correct split: the tiny shim always loads with the banner; the large
+  // DB only loads when the site opts in.
+  //
+  // [goals.md §Auto-block is opt-in, §Interception mechanism, §Signature-DB delivery]
+  // [research/runtime-interception-domain-expert.md §Findings 1]
+  if (config.autoBlock) {
+    const debugFn = config.debug
+      ? (msg: string, ...args: unknown[]) => console.log(`[Cookyay debug] ${msg}`, ...args)
+      : null
+
+    // Phase 1: synchronous install — no await, no microtask gap.
+    installAutoBlockProxy(debugFn)
+    _debug('auto-block proxy shim installed (createElement + setAttribute overrides active)')
+
+    // Phase 2: lazily load the DB + matcher, then classify staged elements and
+    // wire auto-detected elements into the grant/inject queue.
+    //
+    // After activateMatcher() fires:
+    //   1. The staged queue is drained: matched elements move to _held, non-matched
+    //      have their src released.
+    //   2. _enqueueHeldElements() walks _held and calls enqueueAutoDetected() for
+    //      each, wiring them into the blocking.ts category-keyed queue.
+    //   3. _replayStoredGrants() replays consent for any category the returning
+    //      visitor already granted — this releases auto-detected elements whose
+    //      category is already consented, exactly as it does for declared elements.
+    //
+    // [task 005 AC1 — reuse blocking.ts queue; AC5 — INP-staggered via grant()]
+    void import('./autoblock-loader.js').then(({ getAutoBlockMatcher }) => {
+      const matcher = getAutoBlockMatcher(config)
+      if (!matcher) return
+      activateMatcher(matcher)
+      _debug('auto-block matcher activated — staged elements classified and released')
+      // Wire all newly-classified (held) elements into the blocking queue.
+      _enqueueHeldElements()
+      // Replay grants for any category the visitor already consented to, so
+      // auto-detected elements whose category was previously granted execute now.
+      _replayStoredGrants()
+    })
+  }
 
   // Wire data-cookyay-open click delegation
   document.addEventListener('click', _handleOpenClick)
@@ -333,6 +443,7 @@ export function _resetApi(): void {
   _seenThisSession = false
   _listeners.clear()
   _resetBlocker()
+  _resetAutoBlockProxy()
 }
 
 /**

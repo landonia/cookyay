@@ -136,6 +136,30 @@ export interface CookyayConfig {
    */
   autoOpenLink?: boolean
   /**
+   * Enable runtime auto-blocking of known third-party scripts and iframes.
+   *
+   * When `true`, the banner intercepts `document.createElement`/`setAttribute` calls
+   * and blocks recognised third-party scripts/iframes (from the bundled ~50-service
+   * signature DB) until the matching consent category is granted — even when those
+   * scripts are NOT declared in your `categories` config.
+   *
+   * **Requires "Cookyay first in `<head>`"** — any `<script src>` placed in HTML
+   * *before* the Cookyay bootstrap cannot be blocked. This is a hard install
+   * requirement when `autoBlock: true`. [goals.md §Interception mechanism]
+   *
+   * **Google-owned services (GTM, GA4, reCAPTCHA) are never auto-blocked** —
+   * the existing Consent Mode v2 integration degrades them instead. Blocking GTM
+   * would suppress all CM v2 `update` signals. [prd.md §3.4, goals.md §Consent Mode v2]
+   *
+   * When `false` or omitted (the default), the signature DB and matcher
+   * **tree-shake to zero bytes** in the bundle — existing installs are byte-for-byte
+   * unaffected. Declared rules (the `categories` config) always win over auto-detected
+   * ones regardless of this flag. [goals.md §Auto-block is opt-in, research/_index.md §Update]
+   *
+   * Default: `false`.
+   */
+  autoBlock?: boolean
+  /**
    * Called after a consent withdrawal is detected (at least one previously-granted
    * non-necessary category has been revoked via the preferences modal).
    *
@@ -191,6 +215,13 @@ export function validateConfig(config: CookyayConfig): ConfigWarning[] {
       code: 'MISSING_POLICY_VERSION',
       message: 'policyVersion is required and must be a non-empty string.',
       fatal: true,
+    })
+  }
+
+  if (config.autoBlock !== undefined && typeof config.autoBlock !== 'boolean') {
+    warnings.push({
+      code: 'INVALID_AUTO_BLOCK',
+      message: `autoBlock must be a boolean (true | false) — received ${JSON.stringify(config.autoBlock)}. Defaulting to false.`,
     })
   }
 

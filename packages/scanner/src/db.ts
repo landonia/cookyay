@@ -54,6 +54,13 @@ export interface ServiceDefinition {
   /** Source: 'ocd' = Open Cookie Database, 'curated' = hand-curated supplement. */
   source: 'ocd' | 'curated'
   /**
+   * True for services owned by Google (GA4, GTM, Google Ads, reCAPTCHA, etc.).
+   * The runtime auto-block matcher skips these services and relies on Consent Mode v2
+   * to degrade them instead — DOM-blocking GTM/GA4 would suppress all CM v2 update
+   * signals [goals.md §Consent Mode v2: skip Google tags, prd.md §3.4].
+   */
+  google?: boolean
+  /**
    * Host-qualified URL path prefixes for services that require path-level granularity.
    * Each entry is a `"host/path"` string, e.g. `"facebook.com/tr"` or
    * `"www.google.com/recaptcha/"`. A request matches if its host matches the entry's

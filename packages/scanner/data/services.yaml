@@ -3,6 +3,9 @@
 ##
 ## Human-editable source for the curated service definitions.
 ## Compiled to src/db-curated.generated.ts by scripts/build-services-db.mjs.
+## Also compiled to packages/cookyay/src/db-autoblock.generated.ts (client-safe
+## slice: id/category/requestHosts/requestPaths/scriptUrlGlobs/iframeSrcGlobs/google
+## only — cookies/localStorage/source stripped) by the same script.
 ##
 ## Schema: see schemaVersion below.
 ## License: Apache-2.0
@@ -12,8 +15,8 @@
 ##   - id must be lowercase slug matching /^[a-z0-9-]+$/
 ##   - category must be one of: necessary | functional | analytics | marketing
 ##   - at least one of: cookies, localStorage, requestHosts must be non-empty
-##   - Run `node scripts/build-services-db.mjs` to regenerate db-curated.generated.ts
-##   - Commit both the YAML and the generated TS
+##   - Run `node scripts/build-services-db.mjs` to regenerate both generated files
+##   - Commit the YAML and both generated TS files
 ##
 ## Fields:
 ##   id              (required) unique stable slug
@@ -28,8 +31,15 @@
 ##                  is a subdomain of) the entry host AND the URL pathname starts
 ##                  with the entry path. Use this for services whose host is too
 ##                  broad to put in requestHosts (e.g. facebook.com, www.google.com).
-##   scriptUrlGlobs  (optional) URL glob patterns for known script sources
+##   scriptUrlGlobs  (optional) URL glob patterns for known script sources.
+##                  Required when requestHosts contains a shared CDN host that also
+##                  serves unrelated third-party scripts, to enable URL-level
+##                  disambiguation in the client runtime matcher.
 ##   iframeSrcGlobs  (optional) URL glob patterns for known embed sources
+##   google          (optional, boolean) true for Google-owned services.
+##                  The runtime auto-block matcher skips Google-owned services and
+##                  relies on Consent Mode v2 to degrade them instead (DOM-blocking
+##                  GTM/GA4 would suppress all CM v2 update signals).
 ##
 
 schemaVersion: 1
@@ -38,6 +48,9 @@ services:
   - id: ga4
     name: Google Analytics 4
     category: analytics
+    ## google: true — CM v2 handles GA4 denial; DOM-blocking googletagmanager.com
+    ## would suppress all CM v2 update signals [goals.md §Consent Mode v2: skip Google tags].
+    google: true
     cookies:
       - name: _ga
         wildcard: false
@@ -57,6 +70,9 @@ services:
   - id: ua
     name: Google Universal Analytics (GA3)
     category: analytics
+    ## google: true — legacy GA3 shares googletagmanager.com + google-analytics.com
+    ## with GA4; skipping these hosts avoids breaking CM v2 update signals.
+    google: true
     cookies:
       - name: _gid
         wildcard: false
@@ -82,6 +98,9 @@ services:
   - id: gtm
     name: Google Tag Manager
     category: analytics
+    ## google: true — blocking GTM would suppress all Consent Mode v2 update signals
+    ## [goals.md §Consent Mode v2: skip Google tags, prd.md §3.4].
+    google: true
     cookies: []
     localStorage: []
     requestHosts:
@@ -384,6 +403,10 @@ services:
   - id: recaptcha
     name: Google reCAPTCHA
     category: functional
+    ## google: true — Google-owned; Consent Mode v2 already handles Google service
+    ## degradation. DOM-blocking www.google.com would also risk breaking other Google
+    ## integrations on the same page.
+    google: true
     cookies:
       - name: _GRECAPTCHA
         wildcard: false
@@ -409,6 +432,9 @@ services:
   - id: google-ads
     name: Google Ads
     category: marketing
+    ## google: true — Google-owned; Consent Mode v2 degrades Google Ads
+    ## (ad_storage/ad_user_data denied) instead of DOM-blocking.
+    google: true
     cookies:
       - name: _gcl_au
         wildcard: false
@@ -931,6 +957,8 @@ services:
   - id: google-optimize
     name: Google Optimize (sunset)
     category: analytics
+    ## google: true — Google-owned; Consent Mode v2 handles Google service degradation.
+    google: true
     cookies:
       - name: _gaexp
         wildcard: false
