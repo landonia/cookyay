@@ -31,7 +31,7 @@
     "provenance": true
   },
   "scripts": {
-    "prebuild": "node scripts/ingest-ocd.mjs --offline",
+    "prebuild": "node scripts/build-services-db.mjs && node scripts/ingest-ocd.mjs --offline",
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
@@ -50,6 +50,7 @@
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "yaml": "^2.9.0"
   }
 }

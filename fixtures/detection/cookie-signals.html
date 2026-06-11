@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: detection — cookie signals</title>
+    <!--
+      Hermetic fixture: sets known-service cookies via document.cookie before the
+      crawler reads them. No real third-party network calls are made.
+
+      Services exercised:
+        - ga4          : _ga cookie (analytics)
+        - meta-pixel   : _fbp cookie (marketing)
+        - hotjar       : _hjid cookie (analytics)
+    -->
+    <script>
+      ;(function () {
+        var expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toUTCString()
+        // GA4 — analytics
+        document.cookie = '_ga=GA1.2.fixture.' + Date.now() + '; expires=' + expires + '; path=/; SameSite=Lax'
+        document.cookie = '_ga_FIXTURE=GS1.1.' + Date.now() + '.1; expires=' + expires + '; path=/; SameSite=Lax'
+        // Meta Pixel — marketing
+        document.cookie = '_fbp=fb.1.' + Date.now() + '.0; expires=' + expires + '; path=/; SameSite=Lax'
+        // Hotjar — analytics
+        document.cookie = '_hjid=fixture-hotjar-id; expires=' + expires + '; path=/; SameSite=Lax'
+      })()
+    </script>
+  </head>
+  <body>
+    <h1>Detection fixture: cookie signals</h1>
+    <p>
+      This page sets cookies that match known service signatures (<code>_ga</code>,
+      <code>_fbp</code>, <code>_hjid</code>) so the scanner can detect and classify them.
+      No real third-party scripts or network calls are made.
+    </p>
+    <ul>
+      <li><strong>_ga</strong> — Google Analytics 4 (analytics)</li>
+      <li><strong>_fbp</strong> — Meta Pixel (marketing)</li>
+      <li><strong>_hjid</strong> — Hotjar (analytics)</li>
+    </ul>
+  </body>
+</html>

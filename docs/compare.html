@@ -115,8 +115,8 @@
         <h2 id="feature-table-heading">Feature-by-feature comparison</h2>
 
         <p>
-          The table below compares Cookyay v0.1.0 against CookieYes's free plan and paid
-          plans (Basic / Pro, as of June 2026). CookieYes plan labels vary — "Free" is the
+          The table below compares Cookyay v4 against CookieYes's free plan and paid plans
+          (Basic / Pro, as of June 2026). CookieYes plan labels vary — "Free" is the
           no-credit-card tier; paid tiers unlock the features marked below.
         </p>
 
@@ -125,7 +125,7 @@
             <thead>
               <tr>
                 <th scope="col">Feature</th>
-                <th scope="col" class="col-cookyay">Cookyay (v0.1.0, free/self-hosted)</th>
+                <th scope="col" class="col-cookyay">Cookyay (v4 / free/self-hosted)</th>
                 <th scope="col" class="col-cookieyesfree">CookieYes Free</th>
                 <th scope="col" class="col-cookieyespro">CookieYes Paid</th>
               </tr>
@@ -230,16 +230,21 @@
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
-                <td>Auto-detection of known third-party scripts (no declaration required)</td>
-                <td class="col-cookyay"><span class="cross">✗</span> Declarative-only in v1; site owner must declare every blocked script</td>
-                <td><span class="tick">✓</span> Scans and auto-blocks known trackers</td>
+                <td>Auto-detection of known third-party scripts</td>
+                <td class="col-cookyay"><span class="partial">~</span> Scanner auto-detects ~50 known third parties and emits copy-paste blocking snippets; the banner still requires declared markup — runtime auto-block (no HTML changes needed) is deferred to v5</td>
+                <td><span class="tick">✓</span> Scans and auto-blocks known trackers without HTML changes</td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr class="note-row">
                 <td colspan="4">
-                  Cookyay's CLI scanner (<code>@cookyay/scanner</code>) helps you discover scripts to declare,
-                  but the blocking itself is declarative — you must add <code>type="text/plain" data-category="..."</code>
-                  to each script tag. CookieYes can auto-block without changing your HTML.
+                  As of v4, <code>@cookyay/scanner</code> auto-detects ~50 known third parties (Google Analytics,
+                  Google Ads, Meta Pixel, YouTube, reCAPTCHA, Hotjar, Stripe, Sentry, and more) and emits a
+                  <code>suggestedBlocking[]</code> array of copy-paste HTML snippets — one snippet per blocking host,
+                  with host-deduplication (e.g. GA4 + Google Ads merge into a single
+                  <code>googletagmanager.com</code> rule). You paste these snippets into your HTML; the banner then
+                  holds them inert until consent. CookieYes auto-blocks without requiring any HTML changes.
+                  Runtime auto-block in the Cookyay banner (no HTML changes needed) is explicitly deferred to v5.
+                  See <a href="index.html#scanner-auto-detection">auto-detection workflow</a> in the docs.
                 </td>
               </tr>
 
@@ -409,7 +414,7 @@
               </tr>
               <tr>
                 <td>Cookie categorization database</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Open Cookie Database (1,100+ entries) + curated top services (GA4, Meta Pixel, YouTube, HotJar, Intercom)</td>
+                <td class="col-cookyay"><span class="tick">✓</span> Open Cookie Database (1,100+ entries) + curated ~50 known services (GA4, Google Ads, Meta Pixel, YouTube, reCAPTCHA, Hotjar, Intercom, Stripe, Sentry, PostHog, and more)</td>
                 <td><span class="tick">✓</span> Proprietary database</td>
                 <td><span class="tick">✓</span></td>
               </tr>
@@ -545,11 +550,17 @@
           </li>
 
           <li>
-            <strong>No automatic script detection.</strong> In v1, Cookyay uses declarative
-            blocking only: you must add <code>type="text/plain" data-category="..."</code>
-            to every script tag you want blocked. The <code>@cookyay/scanner</code> CLI
-            helps you find what to declare, but the HTML changes are manual.
-            CookieYes can auto-block known third-party trackers without touching your HTML.
+            <strong>No runtime auto-block (v5 item).</strong> As of v4, the
+            <code>@cookyay/scanner</code> CLI auto-detects ~50 known third parties and
+            emits copy-paste <code>suggestedBlocking[]</code> snippets — but you still
+            need to paste those snippets into your HTML. The Cookyay banner blocks only
+            what is declared with <code>type="text/plain" data-category="..."</code>;
+            it does not intercept unknown scripts at runtime. CookieYes can auto-block
+            known third-party trackers without touching your HTML.
+            Runtime auto-block (the banner intercepting scripts automatically from a
+            bundled signature database, without HTML changes) is deliberately deferred
+            to v5 because it risks the &lt;20 KB bundle budget and adds runtime breakage
+            surface.
           </li>
 
           <li>
@@ -647,7 +658,8 @@
           has a larger user base, more themes, and built-in translations. Cookyay's
           differentiators are: the two-part bootstrap (Consent Mode ordering handled
           automatically), GPC detection and honoring (unique among these three as of June 2026),
-          the local CLI scanner (runs against localhost and authenticated pages), and
+          the local CLI scanner (runs against localhost and authenticated pages, now with
+          auto-detection of ~50 known third parties and copy-paste blocking snippets), and
           the strictest-everywhere posture as an explicit design principle rather than an option.
         </p>
       </section>
@@ -662,7 +674,12 @@
         <h3>You can likely drop CookieYes and use Cookyay if:</h3>
         <ul>
           <li>You are a developer comfortable editing HTML and running CLI tools.</li>
-          <li>You can manually declare each tracked script in your HTML (or run the scanner to find them).</li>
+          <li>
+            You can run the scanner to auto-detect third parties and paste the emitted
+            snippets into your HTML. The scanner covers ~50 known services and produces
+            copy-paste-ready blocking rules — the setup cost is one CLI run + a few HTML
+            edits per site.
+          </li>
           <li>You do not need a hosted consent log — either because your risk profile is low
               (small site, no DPO) or because you are willing to forward consent events to
               your own backend.</li>
@@ -687,9 +704,10 @@
             geo-detection that Cookyay does not have.
           </li>
           <li>
-            <strong>You need auto-detection of third-party scripts.</strong> If you cannot
-            edit your HTML to add <code>type="text/plain"</code> attributes (e.g., scripts
-            injected by a CMS you don't control), Cookyay cannot block them in v1.
+            <strong>You cannot edit your HTML.</strong> If scripts are injected by a CMS or
+            tag manager you don't control, Cookyay cannot block them — the banner blocks only
+            markup it can see at init time. Runtime auto-block (no HTML changes needed) is
+            deferred to v5.
           </li>
           <li>
             <strong>You need IAB TCF compliance.</strong> Cookyay is not a TCF-certified CMP.

@@ -9,21 +9,24 @@
  *    Entries are generated at build time by `scripts/ingest-ocd.mjs` into
  *    `src/db-ocd.generated.ts`. To refresh: `node scripts/ingest-ocd.mjs`.
  *
- * 2. Hand-curated top-20 supplement — adds request-host matching and fills
+ * 2. Hand-curated supplement — adds request-host matching and fills
  *    gaps not covered by the OCD (e.g. localStorage keys, iframe hosts).
+ *    Source: data/services.yaml, compiled to src/db-curated.generated.ts by
+ *    scripts/build-services-db.mjs. Run automatically via `prebuild`.
  *    The curated entries take precedence over OCD entries in lookup order
  *    (curated entries appear first in SERVICE_DB).
  *
  * Confidence levels:
- *   high   — curated entry with exact cookie name or prefix-wildcard match
- *            (intentional deviation from impl notes: host cross-check adds
- *            no meaningful signal for cookie-based classification and is
- *            omitted; "high" = curated source + cookie match)
- *   medium — OCD entry with any cookie match, or any host/request match
+ *   high   — two independent signals agree on the same service on the same page
+ *            (e.g. a cookie match cross-checked against a fired requestHost).
+ *            Computed in classifier.ts — lookup helpers never return 'high'.
+ *   medium — single unambiguous signal (cookie match or host/request match,
+ *            curated or OCD).
  *   low    — heuristic / declared-category only (no cookie or host signal)
  */
 
 import { OCD_SERVICES } from './db-ocd.generated.js'
+import { CURATED_SERVICES } from './db-curated.generated.js'
 
 export type Confidence = 'high' | 'medium' | 'low'
 export type ServiceCategory = 'necessary' | 'functional' | 'analytics' | 'marketing'
@@ -50,250 +53,50 @@ export interface ServiceDefinition {
   requestHosts: string[]
   /** Source: 'ocd' = Open Cookie Database, 'curated' = hand-curated supplement. */
   source: 'ocd' | 'curated'
-}
-
-// ---------------------------------------------------------------------------
-// Curated top-20 supplement — adds request hosts and localStorage
-// ---------------------------------------------------------------------------
-function curated(def: Omit<ServiceDefinition, 'source'>): ServiceDefinition {
-  return { ...def, source: 'curated' }
+  /**
+   * Host-qualified URL path prefixes for services that require path-level granularity.
+   * Each entry is a `"host/path"` string, e.g. `"facebook.com/tr"` or
+   * `"www.google.com/recaptcha/"`. A request matches if its host matches the entry's
+   * host component (exact or subdomain) AND its pathname starts with the entry's path
+   * component. This keeps path matching host-anchored — a `/tr`-prefixed path on an
+   * unrelated host will NOT match meta-pixel.
+   *
+   * Use this for services whose request host is too broad to put in `requestHosts`
+   * (e.g. `facebook.com` serves social login + pixel; `www.google.com` serves Maps,
+   * Fonts, reCAPTCHA). The host+path combination is narrow enough to be unambiguous.
+   *
+   * @example `["facebook.com/tr", "www.google.com/recaptcha/"]`
+   */
+  requestPaths?: string[]
+  /**
+   * URL glob patterns for known script sources
+   * (e.g. `"*.googletagmanager.com/gtm.js*"`).
+   * Used to emit suggested script-blocking markup.
+   */
+  scriptUrlGlobs?: string[]
+  /**
+   * URL glob patterns for known embed (iframe) sources
+   * (e.g. `"https://www.youtube.com/embed/*"`).
+   * Used to emit suggested iframe-blocking markup.
+   */
+  iframeSrcGlobs?: string[]
 }
 
 // ---------------------------------------------------------------------------
 // The combined database
 // Order matters: entries listed earlier win on tie when two definitions match
 // the same cookie (we prefer 'curated' entries which tend to be more specific).
+//
+// Curated entries: data/services.yaml → compiled by scripts/build-services-db.mjs
+//                  → src/db-curated.generated.ts (git-committed, rebuilt in prebuild)
+// OCD entries:     downloaded from Open Cookie Database → compiled by scripts/ingest-ocd.mjs
+//                  → src/db-ocd.generated.ts (git-committed, rebuilt in prebuild)
 // ---------------------------------------------------------------------------
 export const SERVICE_DB: ServiceDefinition[] = [
   // -------------------------------------------------------------------------
-  // CURATED top-20 (with request-host matching)
+  // CURATED entries (with request-host matching) — from data/services.yaml
   // -------------------------------------------------------------------------
-  curated({
-    id: 'ga4',
-    name: 'Google Analytics 4',
-    category: 'analytics',
-    cookies: [
-      { name: '_ga', wildcard: false },
-      { name: '_ga_', wildcard: true },
-      { name: '_gali', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: [
-      'google-analytics.com',
-      'analytics.google.com',
-      'googletagmanager.com',
-    ],
-  }),
-  curated({
-    id: 'ua',
-    name: 'Google Universal Analytics (GA3)',
-    category: 'analytics',
-    cookies: [
-      { name: '_ga', wildcard: false },
-      { name: '_gid', wildcard: false },
-      { name: '_gat', wildcard: true },
-      { name: '_dc_gtm_', wildcard: true },
-      { name: '__utma', wildcard: false },
-      { name: '__utmb', wildcard: false },
-      { name: '__utmc', wildcard: false },
-      { name: '__utmt', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['google-analytics.com'],
-  }),
-  curated({
-    id: 'gtm',
-    name: 'Google Tag Manager',
-    category: 'analytics',
-    cookies: [{ name: '_ga', wildcard: false }],
-    localStorage: [],
-    requestHosts: ['googletagmanager.com'],
-  }),
-  curated({
-    id: 'meta-pixel',
-    name: 'Meta (Facebook) Pixel',
-    category: 'marketing',
-    cookies: [
-      { name: '_fbp', wildcard: false },
-      { name: '_fbc', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['connect.facebook.net', 'facebook.com'],
-  }),
-  curated({
-    id: 'youtube',
-    name: 'YouTube',
-    category: 'marketing',
-    cookies: [
-      { name: 'VISITOR_INFO1_LIVE', wildcard: false },
-      { name: 'YSC', wildcard: false },
-      { name: 'PREF', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['youtube.com', 'youtube-nocookie.com', 'ytimg.com'],
-  }),
-  curated({
-    id: 'linkedin-insight',
-    name: 'LinkedIn Insight Tag',
-    category: 'marketing',
-    cookies: [
-      { name: 'lidc', wildcard: false },
-      { name: 'lissc', wildcard: false },
-      { name: 'li_gc', wildcard: false },
-      { name: 'AnalyticsSyncHistory', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['linkedin.com', 'snap.licdn.com'],
-  }),
-  curated({
-    id: 'hotjar',
-    name: 'Hotjar',
-    category: 'analytics',
-    cookies: [
-      { name: '_hjid', wildcard: false },
-      { name: '_hjFirstSeen', wildcard: false },
-      { name: '_hjIncludedInPageviewSample', wildcard: false },
-      { name: '_hjSession', wildcard: true },
-    ],
-    localStorage: [{ name: '_hjSessionId', wildcard: false }],
-    requestHosts: ['static.hotjar.com', 'hotjar.com'],
-  }),
-  curated({
-    id: 'intercom',
-    name: 'Intercom',
-    category: 'functional',
-    cookies: [
-      { name: 'intercom-id-', wildcard: true },
-      { name: 'intercom-session-', wildcard: true },
-      { name: 'intercom-device-id-', wildcard: true },
-    ],
-    localStorage: [],
-    requestHosts: ['widget.intercom.io', 'intercom.io'],
-  }),
-  curated({
-    id: 'hubspot',
-    name: 'HubSpot Analytics',
-    category: 'analytics',
-    cookies: [
-      { name: 'hubspotutk', wildcard: false },
-      { name: '__hstc', wildcard: false },
-      { name: '__hssc', wildcard: false },
-      { name: '__hssrc', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['hs-analytics.net', 'hubspot.com', 'hs-scripts.com'],
-  }),
-  curated({
-    id: 'zendesk',
-    name: 'Zendesk Chat',
-    category: 'functional',
-    cookies: [
-      { name: '__zlcmid', wildcard: false },
-      { name: 'ZD-buid', wildcard: false },
-      { name: 'ZD-suid', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['static.zdassets.com', 'zopim.com'],
-  }),
-  curated({
-    id: 'crisp',
-    name: 'Crisp Chat',
-    category: 'functional',
-    cookies: [{ name: 'crisp-client/session/', wildcard: true }],
-    localStorage: [{ name: 'crisp-client/session/', wildcard: true }],
-    requestHosts: ['client.crisp.chat', 'crisp.chat'],
-  }),
-  curated({
-    id: 'drift',
-    name: 'Drift',
-    category: 'functional',
-    cookies: [{ name: 'driftt_aid', wildcard: false }],
-    localStorage: [],
-    requestHosts: ['js.driftt.com', 'drift.com'],
-  }),
-  curated({
-    id: 'segment',
-    name: 'Segment',
-    category: 'analytics',
-    cookies: [{ name: 'ajs_', wildcard: true }],
-    localStorage: [
-      { name: 'ajs_user_id', wildcard: false },
-      { name: 'ajs_anonymous_id', wildcard: false },
-    ],
-    requestHosts: ['cdn.segment.com', 'segment.io'],
-  }),
-  curated({
-    id: 'amplitude',
-    name: 'Amplitude',
-    category: 'analytics',
-    cookies: [{ name: 'amplitude_id_', wildcard: true }],
-    localStorage: [
-      { name: 'amplitude_id_', wildcard: true },
-      { name: 'amplitude_unsent_', wildcard: true },
-    ],
-    requestHosts: ['cdn.amplitude.com', 'api.amplitude.com'],
-  }),
-  curated({
-    id: 'mixpanel',
-    name: 'Mixpanel',
-    category: 'analytics',
-    cookies: [{ name: 'mp_', wildcard: true }],
-    localStorage: [],
-    requestHosts: ['cdn.mxpnl.com', 'api.mixpanel.com'],
-  }),
-  curated({
-    id: 'twitter-pixel',
-    name: 'X (Twitter) Pixel',
-    category: 'marketing',
-    cookies: [
-      { name: 'muc_ads', wildcard: false },
-      { name: '_twitter_sess', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['static.ads-twitter.com', 'analytics.twitter.com', 't.co'],
-  }),
-  curated({
-    id: 'clarity',
-    name: 'Microsoft Clarity',
-    category: 'analytics',
-    cookies: [
-      { name: '_clck', wildcard: false },
-      { name: '_clsk', wildcard: false },
-      { name: 'CLID', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['clarity.ms'],
-  }),
-  curated({
-    id: 'cloudflare-insights',
-    name: 'Cloudflare Web Analytics',
-    category: 'analytics',
-    cookies: [{ name: '_cflb', wildcard: false }],
-    localStorage: [],
-    requestHosts: ['static.cloudflareinsights.com', 'cloudflareinsights.com'],
-  }),
-  curated({
-    id: 'vimeo',
-    name: 'Vimeo',
-    category: 'marketing',
-    cookies: [
-      { name: 'player', wildcard: false },
-      { name: 'vuid', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['player.vimeo.com', 'vimeocdn.com'],
-  }),
-  curated({
-    id: 'tiktok-pixel',
-    name: 'TikTok Pixel',
-    category: 'marketing',
-    cookies: [
-      { name: '_tt_enable_cookie', wildcard: false },
-      { name: '_ttp', wildcard: false },
-    ],
-    localStorage: [],
-    requestHosts: ['analytics.tiktok.com', 'tiktok.com'],
-  }),
+  ...CURATED_SERVICES,
 
   // -------------------------------------------------------------------------
   // Open Cookie Database entries — generated by scripts/ingest-ocd.mjs
@@ -303,6 +106,9 @@ export const SERVICE_DB: ServiceDefinition[] = [
   // -------------------------------------------------------------------------
   ...OCD_SERVICES,
 ]
+
+/** Schema version of the curated database (data/services.yaml). */
+export const DB_SCHEMA_VERSION = 1
 
 // ---------------------------------------------------------------------------
 // Lookup helpers used by the classifier
@@ -318,34 +124,27 @@ export function matchesCookiePattern(pattern: CookiePattern, cookieName: string)
 
 /**
  * Find the best matching service for a given cookie name.
- * Returns { service, confidence } or null if not matched.
+ * Returns { service, confidence: 'medium' } or null if not matched.
  *
- * Confidence:
- *   high   — curated entry with exact name match
- *   high   — curated entry with wildcard match
- *   medium — OCD entry with any match
+ * Confidence returned here is always 'medium' — a single cookie signal is
+ * unambiguous but not yet corroborated. The caller (classifier.ts) upgrades
+ * to 'high' when a second independent signal (e.g. a requestHost match) is
+ * observed for the same service on the same page.
+ *
+ * Lookup order: curated entries before OCD entries (SERVICE_DB is ordered),
+ * so the first match is always the best match.
  */
 export function findServiceByCookie(
   cookieName: string,
 ): { service: ServiceDefinition; confidence: Confidence } | null {
-  // Prefer curated entries over OCD entries; within same source prefer exact over wildcard
-  let bestMatch: { service: ServiceDefinition; confidence: Confidence } | null = null
-
   for (const service of SERVICE_DB) {
     for (const pattern of service.cookies) {
       if (matchesCookiePattern(pattern, cookieName)) {
-        const conf: Confidence = service.source === 'curated' ? 'high' : 'medium'
-        // Accept first match; since curated entries are listed before OCD, first is best
-        if (bestMatch === null) {
-          bestMatch = { service, confidence: conf }
-        }
-        break
+        return { service, confidence: 'medium' }
       }
     }
-    if (bestMatch !== null) break
   }
-
-  return bestMatch
+  return null
 }
 
 /**
@@ -358,6 +157,10 @@ export function findServiceByCookie(
  *
  * The `includes()` check is intentionally NOT used — it produces false positives
  * (e.g. 't.co' in requestHosts would match 'react.com', 'giant.com', etc.).
+ *
+ * NOTE: This function only checks requestHosts, not requestPaths. It is safe to
+ * use for scripts/iframes where only the hostname is available (no path context).
+ * For full request URLs where path-level matching is needed, use findServiceByRequest().
  */
 export function findServiceByHost(
   host: string,
@@ -373,7 +176,84 @@ export function findServiceByHost(
 }
 
 /**
+ * Find the best matching service for a third-party network request, applying
+ * both host-level and path-level matching.
+ *
+ * **Semantics:** a request matches a service if EITHER condition holds:
+ *
+ *   1. **Host match:** the request's host matches a `requestHosts` entry
+ *      (exact or subdomain — same rules as `findServiceByHost`).
+ *      This handles unambiguous hosts like `connect.facebook.net`, `static.hotjar.com`.
+ *
+ *   2. **Host-qualified path match:** the request matches a `requestPaths` entry.
+ *      Each `requestPaths` entry is a `"host/path"` string. The request matches
+ *      if its host equals (or is a subdomain of) the entry's host component AND
+ *      its pathname starts with the entry's path component. Both conditions must
+ *      hold simultaneously — a `/tr`-prefixed path on an unrelated host does NOT
+ *      match meta-pixel; `www.google.com/maps/...` does NOT match reCAPTCHA.
+ *      This handles services whose host alone would produce false positives
+ *      (e.g. `facebook.com/tr` for Meta Pixel, `www.google.com/recaptcha/` for reCAPTCHA).
+ *
+ * **Path semantics:** prefix match — `"www.google.com/recaptcha/"` matches
+ * `www.google.com/recaptcha/api.js`, `www.google.com/recaptcha/enterprise.js`, etc.
+ * Consistent with how the architecture describes these as "path prefixes"
+ * [architecture.md §Amendments 2026-06-10 — change 1].
+ *
+ * **Authoring guidance (services.yaml):**
+ * - Put unambiguous host entries in `requestHosts` (match by host, no path needed).
+ * - For hosts shared with unrelated traffic (e.g. `facebook.com`, `www.google.com`),
+ *   leave those hosts OUT of `requestHosts` and instead add the distinctive
+ *   `"host/path"` pattern to `requestPaths`.
+ *
+ * @param url  The full request URL string (e.g. "https://www.facebook.com/tr?id=123").
+ * @param host The pre-extracted hostname (e.g. "www.facebook.com"). Passed separately
+ *             so callers don't pay double-parse cost.
+ */
+export function findServiceByRequest(
+  url: string,
+  host: string,
+): { service: ServiceDefinition; confidence: Confidence } | null {
+  // Parse pathname once, outside the service loop.
+  let pathname: string | null = null
+  try {
+    pathname = new URL(url).pathname
+  } catch {
+    // Malformed URL — fall back to host-only matching (no path check possible).
+  }
+
+  for (const service of SERVICE_DB) {
+    // Condition 1: host match (same as findServiceByHost)
+    for (const h of service.requestHosts) {
+      if (host === h || host.endsWith(`.${h}`)) {
+        return { service, confidence: 'medium' }
+      }
+    }
+
+    // Condition 2: host-qualified path match.
+    // Each requestPaths entry is "host/path" — both must match simultaneously.
+    // A path prefix on an unrelated host does NOT match (prevents false positives).
+    if (pathname !== null && service.requestPaths && service.requestPaths.length > 0) {
+      for (const entry of service.requestPaths) {
+        const slashIdx = entry.indexOf('/')
+        if (slashIdx === -1) continue // malformed entry — skip
+        const entryHost = entry.slice(0, slashIdx)
+        const entryPath = entry.slice(slashIdx) // includes the leading '/'
+        const hostMatches = host === entryHost || host.endsWith(`.${entryHost}`)
+        if (hostMatches && pathname.startsWith(entryPath)) {
+          return { service, confidence: 'medium' }
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
  * Find the best matching service for a localStorage key.
+ * Returns { service, confidence: 'medium' } or null if not matched.
+ *
+ * Confidence is always 'medium' here — single-signal. Upgrade to 'high'
+ * happens in classifier.ts when a second independent signal is also observed.
  */
 export function findServiceByLocalStorage(
   key: string,
@@ -381,7 +261,7 @@ export function findServiceByLocalStorage(
   for (const service of SERVICE_DB) {
     for (const pattern of service.localStorage) {
       if (matchesCookiePattern(pattern, key)) {
-        return { service, confidence: service.source === 'curated' ? 'high' : 'medium' }
+        return { service, confidence: 'medium' }
       }
     }
   }
