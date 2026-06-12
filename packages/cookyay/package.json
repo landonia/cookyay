@@ -1,6 +1,6 @@
 {
   "name": "cookyay",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Free, self-hosted cookie consent — zero-dependency banner library",
   "license": "Apache-2.0",
   "repository": {
