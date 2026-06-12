@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: bootstrap-first diagnostic (prod mode)</title>
+    <!--
+      IMPORTANT: The tracker script is placed BEFORE the Cookyay bootstrap on purpose.
+      This is the same "bad install order" scenario as dev.html, but with debug:false
+      (or omitted). The diagnostic MUST NOT fire — no console.warn should be emitted.
+
+      WARNING: Do NOT reorder these tags. The tracker must appear BEFORE bootstrap.js.
+      Auto-formatters or prettifiers must not reorder <head> children here.
+      [goals.md §Bootstrap-first mitigation, research/test-strategist.md §F2, §Gotchas]
+    -->
+
+    <!--
+      Tracker BEFORE bootstrap — intentional bad install order (same as dev.html).
+    -->
+    <img
+      src="https://www.facebook.com/tr?id=BOOTSTRAP_FIRST_PROD_FIXTURE&ev=PageView"
+      width="1"
+      height="1"
+      alt=""
+      id="pre-bootstrap-pixel"
+      style="display:none"
+    />
+
+    <!--
+      Cookyay bootstrap — AFTER the tracker.
+    -->
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Bootstrap-first diagnostic fixture (prod mode)</h1>
+    <p>
+      Same bad install order as <code>dev.html</code>, but <code>debug</code> is
+      <strong>not set</strong>. The diagnostic MUST NOT fire any console.warn.
+    </p>
+    <p>No install-order warnings should appear in the console.</p>
+
+    <script type="module">
+      import { init } from '/packages/cookyay/dist/index.js'
+
+      // debug is omitted (falsy) — diagnostic must NOT fire
+      // [autoblock-diagnostic.ts AC2: fires ONLY when config.debug === true]
+      init({
+        policyVersion: 'bootstrap-first-prod-fixture-v1',
+        autoBlock: true,
+        categories: {
+          marketing: {
+            label: 'Marketing',
+            services: [{ name: 'Meta Pixel', cookies: ['_fbp'] }],
+          },
+        },
+      })
+    </script>
+  </body>
+</html>

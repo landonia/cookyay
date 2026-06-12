@@ -105,13 +105,13 @@ detected third-party host with a copy-paste snippet:
 
 Each `suggestedBlocking` entry has:
 
-| Field | Description |
-|---|---|
-| `host` | The blocking host. When multiple services share a host (e.g. GA4 + Google Ads both load via `googletagmanager.com`), they are merged into one entry. |
-| `services` | All service IDs whose traffic traverses this host. |
-| `category` | Cookyay category (`functional`, `analytics`, or `marketing`). When services sharing a host disagree, the more privacy-invasive category is used. |
-| `confidence` | `high`, `medium`, or `low` — see [Confidence levels](#confidence-levels) below. |
-| `snippet` | The verbatim HTML to paste into your page. |
+| Field        | Description                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `host`       | The blocking host. When multiple services share a host (e.g. GA4 + Google Ads both load via `googletagmanager.com`), they are merged into one entry. |
+| `services`   | All service IDs whose traffic traverses this host.                                                                                                   |
+| `category`   | Cookyay category (`functional`, `analytics`, or `marketing`). When services sharing a host disagree, the more privacy-invasive category is used.     |
+| `confidence` | `high`, `medium`, or `low` — see [Confidence levels](#confidence-levels) below.                                                                      |
+| `snippet`    | The verbatim HTML to paste into your page.                                                                                                           |
 
 ### Step 3 — Paste snippets
 
@@ -121,21 +121,28 @@ For each entry in `suggestedBlocking`, copy the `snippet` value verbatim into yo
 the visitor consents to the declared category.
 
 **Script example** (add before your GTM container snippet):
+
 ```html
 <!-- Declare BEFORE the real GTM snippet -->
-<script type="text/plain" data-category="analytics" src="https://www.googletagmanager.com/gtag/js"></script>
+<script
+  type="text/plain"
+  data-category="analytics"
+  src="https://www.googletagmanager.com/gtag/js"
+></script>
 
 <!-- Your actual GTM snippet follows below -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script>
 ```
 
 **Iframe example** (replace `src` with `data-src`):
+
 ```html
 <!-- YouTube embed — blocked until marketing consent -->
 <iframe
   data-src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
   data-category="marketing"
-  width="560" height="315"
+  width="560"
+  height="315"
   title="YouTube video"
   allowfullscreen
 ></iframe>
@@ -151,11 +158,11 @@ blocks those third parties until the visitor consents — no further HTML change
 The scanner assigns a confidence level to each detected service. Use this to prioritise
 your review:
 
-| Level | Meaning | Example |
-|---|---|---|
-| `high` | Two independent signals agree: both a cookie name and a request host matched the same service. Strong evidence — act on these first. | `_ga` cookie observed **and** `google-analytics.com` request seen on the same page. |
-| `medium` | One unambiguous signal: either a vendor-unique cookie name or a vendor-specific host, but not both independently confirming. | `_hjid` cookie seen (Hotjar-specific), or `static.hotjar.com` request seen without the matching cookie. |
-| `low` | Single generic or shared signal: a cookie name or host that could plausibly match multiple services. | `PREF` cookie (shared across Google Search, YouTube, Maps) or a heuristic script-path match. |
+| Level    | Meaning                                                                                                                              | Example                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `high`   | Two independent signals agree: both a cookie name and a request host matched the same service. Strong evidence — act on these first. | `_ga` cookie observed **and** `google-analytics.com` request seen on the same page.                     |
+| `medium` | One unambiguous signal: either a vendor-unique cookie name or a vendor-specific host, but not both independently confirming.         | `_hjid` cookie seen (Hotjar-specific), or `static.hotjar.com` request seen without the matching cookie. |
+| `low`    | Single generic or shared signal: a cookie name or host that could plausibly match multiple services.                                 | `PREF` cookie (shared across Google Search, YouTube, Maps) or a heuristic script-path match.            |
 
 You should act on `high` and `medium` confidence entries. For `low` confidence entries,
 review the `_meta.matchedBy` field and the page list to decide whether the detection is
@@ -189,9 +196,7 @@ qualified legal counsel:
 {
   "categories": {
     "necessary": {
-      "services": [
-        { "name": "reCAPTCHA", "cookies": ["_GRECAPTCHA"] }
-      ]
+      "services": [{ "name": "reCAPTCHA", "cookies": ["_GRECAPTCHA"] }]
     }
   }
 }
@@ -206,14 +211,14 @@ qualified legal counsel:
 
 The emitted JSON has these top-level fields:
 
-| Field | Description |
-|---|---|
-| `policyVersion` | Replace `"REPLACE_ME"` with an ISO date string (e.g. `"2026-01-01"`). Bump it whenever your cookie usage changes materially — this triggers re-consent for returning visitors. |
-| `categories` | Per-category service lists. Pass this directly to `Cookyay.init()` after removing `_meta` fields from each service (or use the scanner's `toCookyayConfig` helper). |
-| `suggestedBlocking` | Host-deduped blocking rules with paste-ready snippets. See [Auto-detection workflow](#auto-detection-workflow). |
-| `_unclassified` | Artifacts detected but not matched to any known service. Review manually and assign to the appropriate category. |
-| `_noscriptWarnings` | `<noscript>` fallback tags detected. These bypass script blocking — remove them from your markup. |
-| `_scanMeta` | Scan metadata: timestamp, target URL, pages visited, classifier version. |
+| Field               | Description                                                                                                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `policyVersion`     | Replace `"REPLACE_ME"` with an ISO date string (e.g. `"2026-01-01"`). Bump it whenever your cookie usage changes materially — this triggers re-consent for returning visitors. |
+| `categories`        | Per-category service lists. Pass this directly to `Cookyay.init()` after removing `_meta` fields from each service (or use the scanner's `toCookyayConfig` helper).            |
+| `suggestedBlocking` | Host-deduped blocking rules with paste-ready snippets. See [Auto-detection workflow](#auto-detection-workflow).                                                                |
+| `_unclassified`     | Artifacts detected but not matched to any known service. Review manually and assign to the appropriate category.                                                               |
+| `_noscriptWarnings` | `<noscript>` fallback tags detected. These bypass script blocking — remove them from your markup.                                                                              |
+| `_scanMeta`         | Scan metadata: timestamp, target URL, pages visited, classifier version.                                                                                                       |
 
 ---
 

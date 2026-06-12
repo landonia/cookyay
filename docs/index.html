@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cookyay — Free, self-hosted cookie consent</title>
-    <meta name="description" content="Zero-dependency cookie consent library. Banner + script blocking + Google Consent Mode v2 + GPC. Self-hosted, no subscriptions." />
+    <meta
+      name="description"
+      content="Zero-dependency cookie consent library. Banner + script blocking + Google Consent Mode v2 + GPC. Self-hosted, no subscriptions."
+    />
 
     <!--
       ══════════════════════════════════════════════════════════════
@@ -14,7 +17,52 @@
       and arms the script intercept so no tracker runs pre-consent.
       ══════════════════════════════════════════════════════════════
     -->
-    <script>"use strict";(()=>{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&&(a.functionality_storage="granted",a.security_storage="granted"),e.f&&(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&&(a.analytics_storage="granted"),e.m&&(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&&(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();</script>
+    <script>
+      'use strict'
+      ;(() => {
+        function o() {
+          return {
+            ad_storage: 'denied',
+            analytics_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            functionality_storage: 'denied',
+            personalization_storage: 'denied',
+            security_storage: 'denied',
+            wait_for_update: 500,
+          }
+        }
+        function i(a) {
+          let t = document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/)
+          if (t)
+            try {
+              let n = JSON.parse(decodeURIComponent(t[1]))
+              if (n?.sv !== 1 || !n?.c || typeof n.c != 'object') return
+              let e = n.c
+              ;(e.n && ((a.functionality_storage = 'granted'), (a.security_storage = 'granted')),
+                e.f &&
+                  ((a.functionality_storage = 'granted'), (a.personalization_storage = 'granted')),
+                e.a && (a.analytics_storage = 'granted'),
+                e.m &&
+                  ((a.ad_storage = 'granted'),
+                  (a.ad_user_data = 'granted'),
+                  (a.ad_personalization = 'granted')))
+            } catch {}
+        }
+        function r() {
+          ;(window.__COOKYAY || (window.__COOKYAY = { q: [], gpc: !1 }),
+            (window.__COOKYAY.gpc = !!navigator.globalPrivacyControl),
+            window.dataLayer || (window.dataLayer = []),
+            typeof window.gtag != 'function' &&
+              (window.gtag = function () {
+                window.dataLayer.push(arguments)
+              }))
+          let a = o()
+          ;(i(a), window.gtag('consent', 'default', a))
+        }
+        r()
+      })()
+    </script>
 
     <!--
       STEP 2 OF 2 — COOKYAY UI BUNDLE (deferred)
@@ -38,7 +86,6 @@
     <script src="vendor/prism/prism.js" defer></script>
   </head>
   <body>
-
     <nav class="site-nav" aria-label="Site navigation">
       <a href="#" class="logo">Cookyay</a>
       <a href="#quickstart">Quickstart</a>
@@ -57,7 +104,6 @@
     </nav>
 
     <div class="page-wrap">
-
       <!-- ── Hero ── -->
       <header class="hero">
         <h1>Cookyay</h1>
@@ -69,7 +115,7 @@
           <img src="https://img.shields.io/badge/gzip-%3C20kB-brightgreen" alt="Bundle size" />
           <img src="https://img.shields.io/badge/License-Apache--2.0-blue.svg" alt="Apache-2.0" />
         </div>
-        <p style="margin-top:1rem">
+        <p style="margin-top: 1rem">
           <strong>Not legal advice.</strong> Cookyay helps implement consent UX patterns described
           by GDPR and CCPA. Whether your specific deployment is compliant is a legal question
           outside the scope of this library.
@@ -80,14 +126,16 @@
       <section id="demo" aria-labelledby="demo-heading">
         <h2 id="demo-heading">Live demo</h2>
         <p>
-          This page dogfoods Cookyay itself — the banner you see (or have already dismissed) is
-          the real library loaded from jsDelivr. Click <strong>Cookie settings</strong> in the
+          This page dogfoods Cookyay itself — the banner you see (or have already dismissed) is the
+          real library loaded from jsDelivr. Click <strong>Cookie settings</strong> in the
           bottom-left to re-open the preferences modal.
         </p>
         <div class="demo-box">
-          <p>Cookyay is active on this page. If you haven't interacted yet, the consent banner
-             will appear. Use the "Cookie settings" link injected into the bottom-left corner to
-             re-open preferences at any time.</p>
+          <p>
+            Cookyay is active on this page. If you haven't interacted yet, the consent banner will
+            appear. Use the "Cookie settings" link injected into the bottom-left corner to re-open
+            preferences at any time.
+          </p>
         </div>
       </section>
 
@@ -100,8 +148,16 @@
           <li><a href="#script-blocking">Declare scripts to block</a></li>
           <li><a href="#config-reference">Config reference</a></li>
           <li><a href="#string-overrides">String overrides / i18n</a></li>
-          <li><a href="#scanner">CLI scanner</a> — <a href="#scanner-auto-detection">auto-detection workflow</a>, <a href="#scanner-confidence">confidence levels</a>, <a href="#scanner-recaptcha">reCAPTCHA trade-off</a></li>
-          <li><a href="#autoblock">Runtime auto-block</a> — <code>autoBlock: true</code>, scope limits, Google tags</li>
+          <li>
+            <a href="#scanner">CLI scanner</a> —
+            <a href="#scanner-auto-detection">auto-detection workflow</a>,
+            <a href="#scanner-confidence">confidence levels</a>,
+            <a href="#scanner-recaptcha">reCAPTCHA trade-off</a>
+          </li>
+          <li>
+            <a href="#autoblock">Runtime auto-block</a> — <code>autoBlock: true</code>, pixel
+            coverage (v6), honest limits, Google tags
+          </li>
           <li><a href="#gtm">GTM integration</a></li>
           <li><a href="#gpc">GPC behavior</a></li>
           <li><a href="#withdrawal">Withdrawal &amp; re-prompt</a></li>
@@ -110,7 +166,6 @@
         </ol>
       </nav>
 
-
       <!-- ══════════════════════════════════════════════════════
            1. QUICKSTART
            ══════════════════════════════════════════════════════ -->
@@ -118,8 +173,8 @@
         <h2 id="quickstart-heading">Quickstart — working banner in &lt;15 minutes</h2>
 
         <p>
-          Cookyay uses a <strong>two-part install</strong>. Both parts are required and their
-          order is critical — getting this wrong is the #1 breakage point.
+          Cookyay uses a <strong>two-part install</strong>. Both parts are required and their order
+          is critical — getting this wrong is the #1 breakage point.
         </p>
 
         <div class="callout callout-warn">
@@ -132,18 +187,18 @@
 
         <h3>Part 1 — Inline bootstrap snippet (synchronous, &lt;1 KB)</h3>
         <p>
-          Copy this verbatim as the <strong>first script in <code>&lt;head&gt;</code></strong>.
-          It fires Consent Mode v2 defaults (all denied), detects the GPC signal, and arms the
+          Copy this verbatim as the <strong>first script in <code>&lt;head&gt;</code></strong
+          >. It fires Consent Mode v2 defaults (all denied), detects the GPC signal, and arms the
           script intercept so blocked scripts stay inert until consent is given.
         </p>
         <p>
-          The verbatim snippet above is the compiled build of <code>packages/cookyay/src/bootstrap.ts</code>
-          (<code>dist/bootstrap.js</code>). It reads the <code>cookyay_consent</code> cookie so
-          returning visitors have their stored consent grants restored to Consent Mode
-          <em>before</em> any paint. If you need to inject it programmatically from a build tool,
-          read <code>dist/bootstrap.js</code> from the npm package — not
-          <code>INLINE_SNIPPET_JS</code>, which is a simpler all-denied-only snippet that does
-          not read the consent cookie.
+          The verbatim snippet above is the compiled build of
+          <code>packages/cookyay/src/bootstrap.ts</code> (<code>dist/bootstrap.js</code>). It reads
+          the <code>cookyay_consent</code> cookie so returning visitors have their stored consent
+          grants restored to Consent Mode <em>before</em> any paint. If you need to inject it
+          programmatically from a build tool, read <code>dist/bootstrap.js</code> from the npm
+          package — not <code>INLINE_SNIPPET_JS</code>, which is a simpler all-denied-only snippet
+          that does not read the consent cookie.
         </p>
 
         <pre><code class="language-markup">&lt;head&gt;
@@ -164,10 +219,10 @@
 
         <div class="callout callout-note">
           <strong>Why two parts?</strong>
-          Part 1 (the bootstrap) is synchronous and tiny (&lt;1 KB). It must block HTML parsing
-          for a moment to fire Consent Mode defaults <em>before</em> any Google tag has a chance
-          to fire. Part 2 (the UI bundle) is deferred — it loads the banner UI without blocking
-          page paint.
+          Part 1 (the bootstrap) is synchronous and tiny (&lt;1 KB). It must block HTML parsing for
+          a moment to fire Consent Mode defaults <em>before</em> any Google tag has a chance to
+          fire. Part 2 (the UI bundle) is deferred — it loads the banner UI without blocking page
+          paint.
         </div>
 
         <h3>Initialise Cookyay</h3>
@@ -195,9 +250,9 @@
 
         <h3>Declare scripts to block</h3>
         <p>
-          Replace <code>type="text/javascript"</code> with <code>type="text/plain"</code>
-          and add <code>data-category="&lt;category&gt;"</code>. The bootstrap intercepts these
-          on page load and prevents them from executing until the visitor consents.
+          Replace <code>type="text/javascript"</code> with <code>type="text/plain"</code> and add
+          <code>data-category="&lt;category&gt;"</code>. The bootstrap intercepts these on page load
+          and prevents them from executing until the visitor consents.
         </p>
 
         <pre><code class="language-markup">&lt;!-- Blocked until analytics consent is given --&gt;
@@ -219,9 +274,9 @@
         <div class="callout callout-warn">
           <strong>⚠ Remove <code>&lt;noscript&gt;</code> fallback tags</strong>
           Many third-party snippets (Google Analytics, Meta Pixel) include
-          <code>&lt;noscript&gt;&lt;img src="..."&gt;&lt;/noscript&gt;</code> fallback tags.
-          These bypass script blocking entirely and fire pixels even when JavaScript is
-          off or blocked. Remove all such tags — they are not GDPR-safe.
+          <code>&lt;noscript&gt;&lt;img src="..."&gt;&lt;/noscript&gt;</code> fallback tags. These
+          bypass script blocking entirely and fire pixels even when JavaScript is off or blocked.
+          Remove all such tags — they are not GDPR-safe.
         </div>
 
         <p>That's it. You now have:</p>
@@ -239,7 +294,6 @@
           for details and scope limits.
         </p>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            2. INSTALL / CDN
@@ -295,7 +349,6 @@ const bootstrapSnippet = readFileSync(
         <pre><code class="language-bash">openssl dgst -sha384 -binary dist/index.iife.js | openssl base64 -A | sed 's/^/sha384-/'</code></pre>
       </section>
 
-
       <!-- ══════════════════════════════════════════════════════
            3. SCRIPT BLOCKING
            ══════════════════════════════════════════════════════ -->
@@ -303,16 +356,15 @@ const bootstrapSnippet = readFileSync(
         <h2 id="blocking-heading">Declarative script blocking</h2>
 
         <p>
-          Cookyay uses a <strong>declarative</strong> blocking model. You annotate each
-          script or iframe that should be blocked, and Cookyay handles the rest.
-          Auto-detection is deferred to v2.
+          Cookyay uses a <strong>declarative</strong> blocking model. You annotate each script or
+          iframe that should be blocked, and Cookyay handles the rest. Auto-detection is deferred to
+          v2.
         </p>
 
         <h3>Scripts (<code>&lt;script&gt;</code>)</h3>
         <p>
-          Change <code>type="text/javascript"</code> → <code>type="text/plain"</code>
-          and add <code>data-category</code>. Works for both inline scripts and
-          <code>src</code> scripts.
+          Change <code>type="text/javascript"</code> → <code>type="text/plain"</code> and add
+          <code>data-category</code>. Works for both inline scripts and <code>src</code> scripts.
         </p>
         <pre><code class="language-markup">&lt;!-- External script, blocked until analytics consent --&gt;
 &lt;script type="text/plain" data-category="analytics"
@@ -326,8 +378,8 @@ const bootstrapSnippet = readFileSync(
 
         <h3>Iframes (<code>&lt;iframe&gt;</code>)</h3>
         <p>
-          Replace <code>src</code> with <code>data-src</code> and add
-          <code>data-category</code>. Cookyay swaps <code>data-src</code> → <code>src</code>
+          Replace <code>src</code> with <code>data-src</code> and add <code>data-category</code>.
+          Cookyay swaps <code>data-src</code> → <code>src</code>
           on consent, causing the iframe to load.
         </p>
         <pre><code class="language-markup">&lt;iframe
@@ -340,32 +392,46 @@ const bootstrapSnippet = readFileSync(
 
         <div class="callout callout-note">
           <strong>YouTube note</strong>
-          <code>youtube-nocookie.com</code> still writes localStorage and sends data to Google.
-          Full iframe blocking via <code>data-src</code> swap is required for GDPR compliance.
+          <code>youtube-nocookie.com</code> still writes localStorage and sends data to Google. Full
+          iframe blocking via <code>data-src</code> swap is required for GDPR compliance.
         </div>
 
         <h3>Category values</h3>
         <table>
           <thead>
-            <tr><th>Value</th><th>Description</th></tr>
+            <tr>
+              <th>Value</th>
+              <th>Description</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><code>necessary</code></td><td>Always unblocked — do not use for analytics/marketing</td></tr>
-            <tr><td><code>functional</code></td><td>Live chat, session replay, user preferences</td></tr>
-            <tr><td><code>analytics</code></td><td>Page analytics (GA4, Plausible, etc.)</td></tr>
-            <tr><td><code>marketing</code></td><td>Ad tracking, retargeting pixels, video embeds</td></tr>
+            <tr>
+              <td><code>necessary</code></td>
+              <td>Always unblocked — do not use for analytics/marketing</td>
+            </tr>
+            <tr>
+              <td><code>functional</code></td>
+              <td>Live chat, session replay, user preferences</td>
+            </tr>
+            <tr>
+              <td><code>analytics</code></td>
+              <td>Page analytics (GA4, Plausible, etc.)</td>
+            </tr>
+            <tr>
+              <td><code>marketing</code></td>
+              <td>Ad tracking, retargeting pixels, video embeds</td>
+            </tr>
           </tbody>
         </table>
 
         <h3>Re-execution on consent</h3>
         <p>
           When consent is granted, Cookyay clones the blocked <code>&lt;script&gt;</code> element
-          and re-inserts it — mutating <code>type</code> does not re-execute scripts in any
-          browser. The re-inserted script runs with full DOM access (since
+          and re-inserts it — mutating <code>type</code> does not re-execute scripts in any browser.
+          The re-inserted script runs with full DOM access (since
           <code>document.readyState</code> is <code>'complete'</code> at that point).
         </p>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            4. CONFIG REFERENCE
@@ -377,7 +443,12 @@ const bootstrapSnippet = readFileSync(
 
         <table>
           <thead>
-            <tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr>
+            <tr>
+              <th>Key</th>
+              <th>Type</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
           </thead>
           <tbody>
             <tr>
@@ -385,8 +456,8 @@ const bootstrapSnippet = readFileSync(
               <td><code>string</code></td>
               <td><em>required</em></td>
               <td>
-                Bump when your cookie usage changes materially. Stored visitors whose saved
-                version differs will see the banner again. Example: <code>'2025-01-01'</code>.
+                Bump when your cookie usage changes materially. Stored visitors whose saved version
+                differs will see the banner again. Example: <code>'2025-01-01'</code>.
               </td>
             </tr>
             <tr>
@@ -422,9 +493,9 @@ const bootstrapSnippet = readFileSync(
               <td><code>boolean</code></td>
               <td><code>false</code></td>
               <td>
-                <code>true</code> renders the first-layer banner as a focus-trapped modal
-                (blocks interaction). Default is a non-blocking dialog. Note: consent walls
-                are prohibited under GDPR unless you offer a genuine no-tracking alternative.
+                <code>true</code> renders the first-layer banner as a focus-trapped modal (blocks
+                interaction). Default is a non-blocking dialog. Note: consent walls are prohibited
+                under GDPR unless you offer a genuine no-tracking alternative.
               </td>
             </tr>
             <tr>
@@ -441,8 +512,8 @@ const bootstrapSnippet = readFileSync(
               <td><code>boolean</code></td>
               <td><code>false</code></td>
               <td>
-                Enable verbose <code>console.log</code> output at init time. Useful for
-                diagnosing misconfiguration. Turn off in production.
+                Enable verbose <code>console.log</code> output at init time. Useful for diagnosing
+                misconfiguration. Turn off in production.
               </td>
             </tr>
             <tr>
@@ -450,13 +521,17 @@ const bootstrapSnippet = readFileSync(
               <td><code>boolean</code></td>
               <td><code>false</code></td>
               <td>
-                Enable runtime auto-block (v5+). When <code>true</code>, the banner intercepts
-                known third-party <code>&lt;script&gt;</code> and <code>&lt;iframe&gt;</code>
-                insertions and holds them inert until the visitor grants consent to the matching
-                category — without requiring any HTML changes. Declared rules always win over
-                auto-detected ones. Google tags (GTM/GA4) are excluded (handled via Consent
-                Mode v2 instead). See <a href="#autoblock">Runtime auto-block</a> for scope
-                limits and the hard install requirement.
+                Enable runtime auto-block (v5+). When <code>true</code>, the banner intercepts known
+                third-party <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, and (v6+)
+                <code>&lt;img&gt;</code> beacon pixel insertions, holding them inert until the
+                visitor grants consent to the matching category — without requiring any HTML
+                changes. Declared rules always win over auto-detected ones. Google tags (GTM/GA4)
+                are excluded (handled via Consent Mode v2 instead). <code>fetch()</code>/<code
+                  >sendBeacon()</code
+                >
+                beacons are not intercepted (DOM-level limitation). See
+                <a href="#autoblock">Runtime auto-block</a> for pixel coverage details, honest
+                limits, and the hard install requirement.
               </td>
             </tr>
             <tr>
@@ -464,8 +539,8 @@ const bootstrapSnippet = readFileSync(
               <td><code>boolean</code></td>
               <td><code>true</code></td>
               <td>
-                Auto-injects a persistent "Cookie settings" link in the bottom-left corner
-                so visitors can change their preferences at any time. Set <code>false</code>
+                Auto-injects a persistent "Cookie settings" link in the bottom-left corner so
+                visitors can change their preferences at any time. Set <code>false</code>
                 to suppress and wire your own opener via
                 <code>data-cookyay-open</code> or <code>Cookyay.openPreferences()</code>.
               </td>
@@ -475,9 +550,9 @@ const bootstrapSnippet = readFileSync(
               <td><code>(revoked: CategoryId[]) =&gt; void</code></td>
               <td><em>none</em></td>
               <td>
-                Callback fired when consent is withdrawn for one or more categories. Use it
-                to expire your own first-party cookies. Third-party script state cannot be
-                cleared programmatically — a page reload is required.
+                Callback fired when consent is withdrawn for one or more categories. Use it to
+                expire your own first-party cookies. Third-party script state cannot be cleared
+                programmatically — a page reload is required.
               </td>
             </tr>
           </tbody>
@@ -512,8 +587,8 @@ Cookyay.openPreferences()
 
         <h3>Custom events</h3>
         <p>
-          Cookyay dispatches events on <code>document</code> for zero-coupling integrations
-          (GTM triggers, other scripts):
+          Cookyay dispatches events on <code>document</code> for zero-coupling integrations (GTM
+          triggers, other scripts):
         </p>
         <pre><code class="language-javascript">document.addEventListener('cookyay:consent', (e) =&gt; {
   const { schemaVersion, policyVersion, timestamp, categories } = e.detail
@@ -543,11 +618,11 @@ document.addEventListener('cookyay:change', (e) =&gt; {
             Unknown category key: <code>[cookyay] categories["xyz"] is not a known category…</code>
           </li>
           <li>
-            Empty category (no services): <code>[cookyay] categories["analytics"] has no declared services…</code>
+            Empty category (no services):
+            <code>[cookyay] categories["analytics"] has no declared services…</code>
           </li>
         </ul>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            5. STRING OVERRIDES / i18n
@@ -556,9 +631,9 @@ document.addEventListener('cookyay:change', (e) =&gt; {
         <h2 id="strings-heading">String overrides / i18n</h2>
 
         <p>
-          Cookyay v1 ships with English defaults. Every user-visible and ARIA string is
-          overridable via the <code>strings</code> config key. This is the intended
-          localisation mechanism — supply translated strings for your locale.
+          Cookyay v1 ships with English defaults. Every user-visible and ARIA string is overridable
+          via the <code>strings</code> config key. This is the intended localisation mechanism —
+          supply translated strings for your locale.
         </p>
 
         <pre><code class="language-javascript">Cookyay.init({
@@ -599,41 +674,106 @@ document.addEventListener('cookyay:change', (e) =&gt; {
 })</code></pre>
 
         <p>
-          You only need to supply the keys you want to override. Omitted keys fall back to
-          their English defaults. The <code>'{label}'</code> placeholder in
+          You only need to supply the keys you want to override. Omitted keys fall back to their
+          English defaults. The <code>'{label}'</code> placeholder in
           <code>aria-category-toggle</code> is replaced with the category label at render time.
         </p>
 
         <h3>Full string table (English defaults)</h3>
         <table>
           <thead>
-            <tr><th>Key</th><th>Default value</th></tr>
+            <tr>
+              <th>Key</th>
+              <th>Default value</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><code>bannerTitle</code></td><td>We use cookies</td></tr>
-            <tr><td><code>bannerDescription</code></td><td>This site uses cookies and similar technologies to improve your experience.</td></tr>
-            <tr><td><code>acceptAllLabel</code></td><td>Accept all</td></tr>
-            <tr><td><code>rejectAllLabel</code></td><td>Reject all</td></tr>
-            <tr><td><code>managePreferencesLabel</code></td><td>Manage preferences</td></tr>
-            <tr><td><code>preferencesTitle</code></td><td>Cookie preferences</td></tr>
-            <tr><td><code>savePreferencesLabel</code></td><td>Save preferences</td></tr>
-            <tr><td><code>closeLabel</code></td><td>Close</td></tr>
-            <tr><td><code>gpcNoticeText</code></td><td>Your privacy preference (Global Privacy Control) was detected and applied.</td></tr>
-            <tr><td><code>withdrawalPromptText</code></td><td>Your preferences have been saved. Scripts that already ran this session keep running until you reload the page.</td></tr>
-            <tr><td><code>reloadLabel</code></td><td>Reload page</td></tr>
-            <tr><td><code>reopenLabel</code></td><td>Cookie settings</td></tr>
-            <tr><td><code>aria-banner</code></td><td>Cookie consent banner</td></tr>
-            <tr><td><code>aria-preferences-modal</code></td><td>Cookie preferences</td></tr>
-            <tr><td><code>aria-close</code></td><td>Close</td></tr>
-            <tr><td><code>aria-accept-all</code></td><td>Accept all cookies</td></tr>
-            <tr><td><code>aria-reject-all</code></td><td>Reject all cookies</td></tr>
-            <tr><td><code>aria-manage-preferences</code></td><td>Manage cookie preferences</td></tr>
-            <tr><td><code>aria-save-preferences</code></td><td>Save cookie preferences</td></tr>
-            <tr><td><code>aria-category-toggle</code></td><td>Toggle {label} cookies</td></tr>
+            <tr>
+              <td><code>bannerTitle</code></td>
+              <td>We use cookies</td>
+            </tr>
+            <tr>
+              <td><code>bannerDescription</code></td>
+              <td>This site uses cookies and similar technologies to improve your experience.</td>
+            </tr>
+            <tr>
+              <td><code>acceptAllLabel</code></td>
+              <td>Accept all</td>
+            </tr>
+            <tr>
+              <td><code>rejectAllLabel</code></td>
+              <td>Reject all</td>
+            </tr>
+            <tr>
+              <td><code>managePreferencesLabel</code></td>
+              <td>Manage preferences</td>
+            </tr>
+            <tr>
+              <td><code>preferencesTitle</code></td>
+              <td>Cookie preferences</td>
+            </tr>
+            <tr>
+              <td><code>savePreferencesLabel</code></td>
+              <td>Save preferences</td>
+            </tr>
+            <tr>
+              <td><code>closeLabel</code></td>
+              <td>Close</td>
+            </tr>
+            <tr>
+              <td><code>gpcNoticeText</code></td>
+              <td>Your privacy preference (Global Privacy Control) was detected and applied.</td>
+            </tr>
+            <tr>
+              <td><code>withdrawalPromptText</code></td>
+              <td>
+                Your preferences have been saved. Scripts that already ran this session keep running
+                until you reload the page.
+              </td>
+            </tr>
+            <tr>
+              <td><code>reloadLabel</code></td>
+              <td>Reload page</td>
+            </tr>
+            <tr>
+              <td><code>reopenLabel</code></td>
+              <td>Cookie settings</td>
+            </tr>
+            <tr>
+              <td><code>aria-banner</code></td>
+              <td>Cookie consent banner</td>
+            </tr>
+            <tr>
+              <td><code>aria-preferences-modal</code></td>
+              <td>Cookie preferences</td>
+            </tr>
+            <tr>
+              <td><code>aria-close</code></td>
+              <td>Close</td>
+            </tr>
+            <tr>
+              <td><code>aria-accept-all</code></td>
+              <td>Accept all cookies</td>
+            </tr>
+            <tr>
+              <td><code>aria-reject-all</code></td>
+              <td>Reject all cookies</td>
+            </tr>
+            <tr>
+              <td><code>aria-manage-preferences</code></td>
+              <td>Manage cookie preferences</td>
+            </tr>
+            <tr>
+              <td><code>aria-save-preferences</code></td>
+              <td>Save cookie preferences</td>
+            </tr>
+            <tr>
+              <td><code>aria-category-toggle</code></td>
+              <td>Toggle {label} cookies</td>
+            </tr>
           </tbody>
         </table>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            6. SCANNER
@@ -644,8 +784,8 @@ document.addEventListener('cookyay:change', (e) =&gt; {
         <p>
           The <code>@cookyay/scanner</code> package crawls your site with a headless Chromium
           browser, auto-detects ~50 known third-party services (Google Analytics, Meta Pixel,
-          reCAPTCHA, Hotjar, Stripe, Sentry, and more), classifies cookies and requests against
-          a curated signature database plus the Open Cookie Database, and emits a ready-to-use
+          reCAPTCHA, Hotjar, Stripe, Sentry, and more), classifies cookies and requests against a
+          curated signature database plus the Open Cookie Database, and emits a ready-to-use
           <code>cookyay.config.json</code> with copy-paste blocking snippets.
         </p>
 
@@ -653,10 +793,10 @@ document.addEventListener('cookyay:change', (e) =&gt; {
           <strong>Scan-time vs run-time auto-detection.</strong>
           The scanner CLI produces suggested blocking snippets for you to paste into your HTML
           (declarative blocking). The Cookyay banner (v5+) also supports
-          <a href="#autoblock">runtime auto-block</a> via <code>autoBlock: true</code> —
-          when enabled, known third-party scripts/iframes are intercepted automatically without
-          any HTML changes. Both paths share the same ~50-service signature database, so
-          scan-time and run-time classifications always agree.
+          <a href="#autoblock">runtime auto-block</a> via <code>autoBlock: true</code> — when
+          enabled, known third-party scripts/iframes are intercepted automatically without any HTML
+          changes. Both paths share the same ~50-service signature database, so scan-time and
+          run-time classifications always agree.
         </div>
 
         <h3>Usage</h3>
@@ -668,26 +808,28 @@ npm install -g @cookyay/scanner
 cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></pre>
 
         <p>
-          The <code>scan</code> subcommand is optional — <code>npx @cookyay/scanner https://yoursite.com</code>
-          works the same way. Run <code>npx @cookyay/scanner --help</code> for all options.
+          The <code>scan</code> subcommand is optional —
+          <code>npx @cookyay/scanner https://yoursite.com</code> works the same way. Run
+          <code>npx @cookyay/scanner --help</code> for all options.
         </p>
 
         <p>
-          <strong>First run:</strong> No separate browser-install step required. On a machine
-          that has never run Playwright, the scanner automatically downloads the Chromium headless
-          shell (~150 MB, one time) before the crawl starts — you will see
+          <strong>First run:</strong> No separate browser-install step required. On a machine that
+          has never run Playwright, the scanner automatically downloads the Chromium headless shell
+          (~150 MB, one time) before the crawl starts — you will see
           <code>Chromium not found — downloading (~150MB, one time)...</code> in the terminal.
           Subsequent runs reuse the downloaded binary with no extra output. If the automatic
           download fails (offline, locked-down network, or insufficient disk space), the scanner
-          surfaces a clear error and the manual fallback: <code>npx playwright install chromium</code>.
+          surfaces a clear error and the manual fallback:
+          <code>npx playwright install chromium</code>.
         </p>
 
         <h3 id="scanner-auto-detection">Auto-detection workflow: scan → review → paste</h3>
 
         <p>
           After scanning, open the emitted <code>cookyay.config.json</code>. The
-          <code>suggestedBlocking</code> array lists every detected third-party host with a
-          verbatim snippet to paste into your HTML:
+          <code>suggestedBlocking</code> array lists every detected third-party host with a verbatim
+          snippet to paste into your HTML:
         </p>
 
         <pre><code class="language-json">{
@@ -726,9 +868,8 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
 
         <p>
           For each entry in <code>suggestedBlocking</code>, copy the <code>snippet</code> value
-          verbatim into your HTML <strong>before</strong> the actual script or iframe loads.
-          The banner holds those elements inert until the visitor consents to the declared
-          category:
+          verbatim into your HTML <strong>before</strong> the actual script or iframe loads. The
+          banner holds those elements inert until the visitor consents to the declared category:
         </p>
 
         <pre><code class="language-html">&lt;!-- Declare BEFORE the real GTM snippet (paste from suggestedBlocking[].snippet) --&gt;
@@ -740,15 +881,15 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
         <p>
           When multiple services share a host (e.g. GA4 + Google Ads both fire via
           <code>googletagmanager.com</code>), they are merged into a single
-          <code>suggestedBlocking</code> entry listing all service IDs — you only need one
-          rule in your markup.
+          <code>suggestedBlocking</code> entry listing all service IDs — you only need one rule in
+          your markup.
         </p>
 
         <h3 id="scanner-confidence">Confidence levels</h3>
 
         <p>
-          Each detected service carries a <code>confidence</code> level. Use it to prioritise
-          your review — act on <code>high</code> and <code>medium</code> first:
+          Each detected service carries a <code>confidence</code> level. Use it to prioritise your
+          review — act on <code>high</code> and <code>medium</code> first:
         </p>
 
         <table>
@@ -762,13 +903,25 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
           <tbody>
             <tr>
               <td><code>high</code></td>
-              <td>Two independent signals agree: a cookie name <em>and</em> a request host both matched the same service on the same page.</td>
-              <td><code>_ga</code> cookie observed <em>and</em> <code>google-analytics.com</code> request seen.</td>
+              <td>
+                Two independent signals agree: a cookie name <em>and</em> a request host both
+                matched the same service on the same page.
+              </td>
+              <td>
+                <code>_ga</code> cookie observed <em>and</em>
+                <code>google-analytics.com</code> request seen.
+              </td>
             </tr>
             <tr>
               <td><code>medium</code></td>
-              <td>One unambiguous signal: a vendor-unique cookie name or a vendor-specific host, but not both independently confirming.</td>
-              <td><code>_hjid</code> cookie (Hotjar-specific) seen alone, or <code>static.hotjar.com</code> request without the matching cookie.</td>
+              <td>
+                One unambiguous signal: a vendor-unique cookie name or a vendor-specific host, but
+                not both independently confirming.
+              </td>
+              <td>
+                <code>_hjid</code> cookie (Hotjar-specific) seen alone, or
+                <code>static.hotjar.com</code> request without the matching cookie.
+              </td>
             </tr>
             <tr>
               <td><code>low</code></td>
@@ -779,68 +932,93 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
         </table>
 
         <p>
-          For <code>low</code> confidence entries, check the <code>_meta.matchedBy</code> field
-          and the <code>pages</code> list to decide whether the detection is accurate before
-          adding the blocking snippet to your HTML.
+          For <code>low</code> confidence entries, check the <code>_meta.matchedBy</code> field and
+          the <code>pages</code> list to decide whether the detection is accurate before adding the
+          blocking snippet to your HTML.
         </p>
 
         <h3 id="scanner-recaptcha">reCAPTCHA and form-gating trade-off</h3>
 
         <p>
-          reCAPTCHA v2/v3 is classified as <strong><code>functional</code></strong> in the
-          scanner's signature database. This means <strong>forms protected by reCAPTCHA are
-          gated until the visitor consents to functional cookies.</strong>
+          reCAPTCHA v2/v3 is classified as <strong><code>functional</code></strong> in the scanner's
+          signature database. This means
+          <strong
+            >forms protected by reCAPTCHA are gated until the visitor consents to functional
+            cookies.</strong
+          >
         </p>
 
         <p>
-          This is the defensible default under a strict GDPR reading: reCAPTCHA is a
-          third-party service (<code>www.google.com/recaptcha/</code>) that sets the
-          <code>_GRECAPTCHA</code> session cookie and the <code>NID</code> cross-site
-          identifier. It cannot be classified as <code>necessary</code> because alternative
-          CAPTCHA solutions exist and the cross-site identifiers fall outside the "strictly
-          necessary" exemption. Classifying it <code>functional</code> is consistent with
-          Cookyay's strictest-everywhere posture.
+          This is the defensible default under a strict GDPR reading: reCAPTCHA is a third-party
+          service (<code>www.google.com/recaptcha/</code>) that sets the
+          <code>_GRECAPTCHA</code> session cookie and the <code>NID</code> cross-site identifier. It
+          cannot be classified as <code>necessary</code> because alternative CAPTCHA solutions exist
+          and the cross-site identifiers fall outside the "strictly necessary" exemption.
+          Classifying it <code>functional</code> is consistent with Cookyay's strictest-everywhere
+          posture.
         </p>
 
         <p>
-          The consent-before-submit UX is the site owner's to message — for example, a
-          note near the form saying "Please accept functional cookies to use this form."
+          The consent-before-submit UX is the site owner's to message — for example, a note near the
+          form saying "Please accept functional cookies to use this form."
         </p>
 
         <div class="callout callout-note">
-          <strong>Reclassifying reCAPTCHA as necessary</strong> — If you accept the legal
-          risk, you can override the emitted category by moving reCAPTCHA into the
-          <code>necessary</code> bucket in your config. This is a conscious deviation from
-          the default and should be reviewed with qualified legal counsel. Not legal advice.
+          <strong>Reclassifying reCAPTCHA as necessary</strong> — If you accept the legal risk, you
+          can override the emitted category by moving reCAPTCHA into the
+          <code>necessary</code> bucket in your config. This is a conscious deviation from the
+          default and should be reviewed with qualified legal counsel. Not legal advice.
         </div>
 
         <h3>Output format</h3>
-        <p>The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>. Top-level fields:</p>
+        <p>
+          The scanner emits a config JSON ready to pass to <code>Cookyay.init()</code>. Top-level
+          fields:
+        </p>
 
         <table>
           <thead>
-            <tr><th scope="col">Field</th><th scope="col">Description</th></tr>
+            <tr>
+              <th scope="col">Field</th>
+              <th scope="col">Description</th>
+            </tr>
           </thead>
           <tbody>
             <tr>
               <td><code>policyVersion</code></td>
-              <td>Replace <code>"REPLACE_ME"</code> with an ISO date string (e.g. <code>"2026-01-01"</code>). Bump it whenever your cookie usage changes — this triggers re-consent for returning visitors.</td>
+              <td>
+                Replace <code>"REPLACE_ME"</code> with an ISO date string (e.g.
+                <code>"2026-01-01"</code>). Bump it whenever your cookie usage changes — this
+                triggers re-consent for returning visitors.
+              </td>
             </tr>
             <tr>
               <td><code>categories</code></td>
-              <td>Per-category service lists with confidence metadata. Pass directly to <code>Cookyay.init()</code>.</td>
+              <td>
+                Per-category service lists with confidence metadata. Pass directly to
+                <code>Cookyay.init()</code>.
+              </td>
             </tr>
             <tr>
               <td><code>suggestedBlocking</code></td>
-              <td>Host-deduped blocking rules with paste-ready HTML snippets. See <a href="#scanner-auto-detection">auto-detection workflow</a> above.</td>
+              <td>
+                Host-deduped blocking rules with paste-ready HTML snippets. See
+                <a href="#scanner-auto-detection">auto-detection workflow</a> above.
+              </td>
             </tr>
             <tr>
               <td><code>_unclassified</code></td>
-              <td>Artifacts detected but not matched to any known service. Review and assign to the correct category manually.</td>
+              <td>
+                Artifacts detected but not matched to any known service. Review and assign to the
+                correct category manually.
+              </td>
             </tr>
             <tr>
               <td><code>_noscriptWarnings</code></td>
-              <td><code>&lt;noscript&gt;</code> fallback tags detected. These bypass script blocking — remove them from your markup.</td>
+              <td>
+                <code>&lt;noscript&gt;</code> fallback tags detected. These bypass script blocking —
+                remove them from your markup.
+              </td>
             </tr>
             <tr>
               <td><code>_scanMeta</code></td>
@@ -851,37 +1029,37 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
 
         <div class="callout callout-warn">
           <strong>Always review <code>_unclassified</code></strong>
-          Artifacts in <code>_unclassified</code> were detected but not recognised by the
-          scanner. Review them manually and assign to the appropriate category before shipping.
-          Never silently drop them.
+          Artifacts in <code>_unclassified</code> were detected but not recognised by the scanner.
+          Review them manually and assign to the appropriate category before shipping. Never
+          silently drop them.
         </div>
 
         <div class="callout callout-warn">
           <strong>Act on <code>_noscriptWarnings</code></strong>
-          Any <code>&lt;noscript&gt;</code> tag detected inside third-party embeds bypasses
-          script blocking entirely. Remove these from your markup — there is no programmatic
-          fix.
+          Any <code>&lt;noscript&gt;</code> tag detected inside third-party embeds bypasses script
+          blocking entirely. Remove these from your markup — there is no programmatic fix.
         </div>
 
         <h3>Set <code>policyVersion</code></h3>
         <p>
           The scanner cannot know when your cookie usage changes. Replace the placeholder
-          <code>"REPLACE_ME"</code> with an ISO date string (e.g.
-          <code>"2026-01-01"</code>) and bump it whenever you add or reclassify cookies.
+          <code>"REPLACE_ME"</code> with an ISO date string (e.g. <code>"2026-01-01"</code>) and
+          bump it whenever you add or reclassify cookies.
         </p>
       </section>
 
-
       <!-- ══════════════════════════════════════════════════════
-           7. RUNTIME AUTO-BLOCK (v5)
+           7. RUNTIME AUTO-BLOCK (v5+)
            ══════════════════════════════════════════════════════ -->
       <section id="autoblock" aria-labelledby="autoblock-heading">
-        <h2 id="autoblock-heading">Runtime auto-block <small style="font-size:0.75em;font-weight:400;color:var(--muted)">(v5+)</small></h2>
+        <h2 id="autoblock-heading">
+          Runtime auto-block
+          <small style="font-size: 0.75em; font-weight: 400; color: var(--muted)">(v5+)</small>
+        </h2>
 
         <p>
-          v5 adds <code>autoBlock</code> — a single boolean that lets the banner intercept and
-          hold known third-party scripts and iframes inert at runtime, without you hand-declaring
-          each one in your HTML.
+          <code>autoBlock</code> is a single boolean that lets the banner intercept and hold known
+          third-party trackers inert at runtime, without you hand-declaring each one in your HTML.
         </p>
 
         <pre><code class="language-javascript">Cookyay.init({
@@ -891,78 +1069,145 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
 })</code></pre>
 
         <div class="callout callout-warn">
-          <strong>&#9888; "Cookyay first in <code>&lt;head&gt;</code>" is a hard install requirement</strong>
+          <strong
+            >&#9888; "Cookyay first in <code>&lt;head&gt;</code>" is a hard install
+            requirement</strong
+          >
           The bootstrap snippet installs the interception proxy synchronously. Any
-          <code>&lt;script src&gt;</code> placed in the HTML <em>before</em> the bootstrap
-          has already been fetched by the browser before the proxy exists — it cannot be
-          blocked. This requirement already exists for Consent Mode v2 correctness; runtime
-          auto-block adds a second equally hard reason to enforce it. If you load GTM or GA4
-          before the Cookyay bootstrap, <code>autoBlock</code> will not intercept those scripts.
+          <code>&lt;script src&gt;</code> or pixel placed in the HTML <em>before</em> the bootstrap
+          has already been fetched by the browser before the proxy exists — it cannot be blocked.
+          This requirement already exists for Consent Mode v2 correctness; runtime auto-block adds a
+          second equally hard reason to enforce it. If you load GTM or GA4 before the Cookyay
+          bootstrap, <code>autoBlock</code> will not intercept those scripts. <br /><br />
+          <strong>Install-order diagnostic (v6):</strong> Set <code>debug: true</code> and the
+          banner will warn you in the console whenever it detects a known tracker that loaded before
+          the bootstrap. Example:
+          <code
+            >[Cookyay] INSTALL ORDER WARNING: "Meta Pixel"
+            (https://connect.facebook.net/en_US/fbevents.js) loaded before Cookyay bootstrap. Move
+            Cookyay first in &lt;head&gt;.</code
+          >
         </div>
 
         <h3>What auto-block does</h3>
 
         <p>
-          When <code>autoBlock: true</code>, the bootstrap's <code>document.createElement</code>
-          proxy matches every outgoing <code>&lt;script&gt;</code> and
-          <code>&lt;iframe&gt;</code> insertion against a bundled database of ~50 curated
-          third-party services. Matches are held inert until the visitor grants consent to the
-          matching category, then released using the same grant/inject queue as declarative
-          blocking. Declared rules always take precedence — elements already carrying
+          When <code>autoBlock: true</code>, the bootstrap's proxy matches every outgoing
+          <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, and — new in v6 —
+          <strong><code>&lt;img&gt;</code> beacon pixel</strong> insertion against a bundled
+          database of curated third-party services. Matches are held inert until the visitor grants
+          consent to the matching category, then released using the same grant/inject queue as
+          declarative blocking. Declared rules always take precedence — elements already carrying
           <code>data-cookyay-state="blocked"</code> are skipped by the auto-block path entirely.
         </p>
 
         <p>
-          When <code>autoBlock: false</code> (the default), the database tree-shakes to zero —
-          no bundle cost for opt-out installs.
+          When <code>autoBlock: false</code> (the default), the database tree-shakes to zero — no
+          bundle cost for opt-out installs.
         </p>
 
-        <h3>Scope boundaries</h3>
+        <h3>v6 — <code>&lt;img&gt;</code> beacon pixel coverage</h3>
 
         <p>
-          Auto-block covers <strong>scripts and iframes only</strong>. These are explicitly
-          out of scope for v5:
+          v6 extends auto-block to known tracking-pixel endpoints. The proxy intercepts
+          <code>new Image()</code> constructor calls and <code>&lt;img&gt;</code>
+          <code>src</code> assignments and holds them inert until the matching category is
+          consented. On grant, the suppressed pixel is fired once (a single network request to the
+          tracker endpoint). Covered pixels include:
+        </p>
+
+        <ul>
+          <li><strong>Meta Pixel</strong> — <code>facebook.com/tr</code></li>
+          <li><strong>LinkedIn Insight Tag</strong> — <code>px.ads.linkedin.com/collect</code></li>
+          <li><strong>Pinterest Tag</strong> — <code>ct.pinterest.com/v3/</code></li>
+          <li><strong>Snapchat Pixel</strong> — <code>tr.snapchat.com/p</code></li>
+          <li><strong>TikTok Pixel</strong> — <code>analytics.tiktok.com/i18n/pixel/</code></li>
+          <li><strong>Reddit Pixel</strong> — <code>alb.reddit.com/rp.gif</code></li>
+          <li>…and other pixel endpoints in the curated DB.</li>
+        </ul>
+
+        <p>
+          Pixel blocking is scoped strictly to <strong>curated host+path combinations</strong> from
+          the signature database — a bare
+          <code>&lt;img src="https://facebook.com/photo.jpg"&gt;</code> does <em>not</em> match
+          because the path is not in the pixel endpoint list. First-party images and image CDNs are
+          never touched.
+        </p>
+
+        <h3>Honest limits of DOM-level interception</h3>
+
+        <p>
+          <code>autoBlock</code> works by intercepting DOM API calls
+          (<code>document.createElement</code>, <code>Element.prototype.setAttribute</code>,
+          <code>window.Image</code>). Some tracking techniques are architecturally invisible to this
+          approach:
         </p>
 
         <ul>
           <li>
-            <strong><code>&lt;img&gt;</code> beacon pixels</strong> (e.g.
-            <code>facebook.com/tr</code>) — high false-positive risk for first-party images.
-            Block the parent loader script instead (the Meta Pixel JavaScript loader is in
-            the signature database and will be intercepted). Deferred to a future version.
+            <strong><code>fetch()</code> and <code>navigator.sendBeacon()</code> beacons</strong>
+            — Modern SDKs (Meta Pixel Advanced Matching, TikTok Events API) increasingly use
+            <code>fetch</code> with <code>keepalive: true</code> instead of
+            <code>&lt;img&gt;</code>. These requests bypass all DOM-level interception entirely.
+            Closing this gap would require a Service Worker or a
+            <code>window.fetch</code> monkey-patch, which carries significantly higher breakage risk
+            and is deferred to a future version. This is a <strong>known gap</strong> in v6's pixel
+            coverage.
           </li>
           <li>
-            <strong><code>document.write</code> ad injection</strong> — legacy DoubleClick /
-            old AdSense use <code>document.write('&lt;script src="..."&gt;')</code>. Wrapping
-            <code>document.write</code> carries a real page-rendering breakage risk and is
-            deferred to a future version.
+            <strong><code>srcset</code> attribute</strong> — The override filters on
+            <code>src</code> only; <code>srcset</code>-based requests are not intercepted. No known
+            major tracker uses <code>srcset</code> for pixel firing.
+          </li>
+          <li>
+            <strong><code>innerHTML</code>-injected <code>&lt;img src&gt;</code></strong>
+            — HTML injected via <code>innerHTML</code> or <code>insertAdjacentHTML</code> bypasses
+            the <code>createElement</code> wrapper; the native HTML parser does not route through
+            <code>Element.prototype.setAttribute</code>. In practice, any script that injects pixels
+            this way is itself blocked first by the script-level proxy — so the pixel injection
+            never runs. The gap is limited to scripts that loaded before the bootstrap.
+          </li>
+          <li>
+            <strong>Scripts and pixels loaded before the bootstrap</strong> — Any resource placed in
+            the HTML before the bootstrap snippet has already been fetched. Enable
+            <code>debug: true</code> to surface these in the console.
+          </li>
+          <li>
+            <strong><code>document.write</code> ad injection</strong> — Legacy DoubleClick / old
+            AdSense. Deferred (high page-rendering breakage risk).
           </li>
         </ul>
 
         <h3>Google tags and Consent Mode v2</h3>
 
         <p>
-          <code>autoBlock</code> does <strong>not</strong> DOM-block Google Tag Manager or
-          GA4. Those services are intentionally passed through:
+          <code>autoBlock</code> does <strong>not</strong> DOM-block Google Tag Manager or GA4.
+          Those services are intentionally passed through:
         </p>
         <ul>
-          <li>Cookyay's bootstrap already fires <code>gtag('consent','default',{all denied})</code>
-              synchronously before any Google tag loads, so GTM/GA4 degrade gracefully —
-              they load but collect no data until the visitor grants consent.</li>
-          <li>DOM-blocking GTM would prevent the banner from sending
-              <code>gtag('consent','update','granted')</code> signals, because GTM
-              would never have loaded to receive them.</li>
+          <li>
+            Cookyay's bootstrap already fires
+            <code>gtag('consent','default',{all denied})</code> synchronously before any Google tag
+            loads, so GTM/GA4 degrade gracefully — they load but collect no data until the visitor
+            grants consent.
+          </li>
+          <li>
+            DOM-blocking GTM would prevent the banner from sending
+            <code>gtag('consent','update','granted')</code> signals, because GTM would never have
+            loaded to receive them.
+          </li>
         </ul>
         <p>
-          Non-Google trackers in the signature database (Hotjar, Meta Pixel loader, Stripe,
-          Sentry, PostHog, Intercom, and ~45 others) are still auto-blocked.
+          Non-Google trackers in the signature database (Hotjar, Meta Pixel loader, Stripe, Sentry,
+          PostHog, Intercom, and others) are still auto-blocked.
         </p>
 
         <h3>Auto-block and declarative blocking together</h3>
 
         <p>
-          The scanner's <a href="#scanner-auto-detection"><code>suggestedBlocking[]</code></a>
-          snippets and <code>autoBlock: true</code> are complementary, not mutually exclusive:
+          The scanner's
+          <a href="#scanner-auto-detection"><code>suggestedBlocking[]</code></a> snippets and
+          <code>autoBlock: true</code> are complementary, not mutually exclusive:
         </p>
 
         <table>
@@ -982,28 +1227,33 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
               <td>Most explicit; zero runtime overhead; works back to v1</td>
             </tr>
             <tr>
-              <td><code>autoBlock: true</code></td>
+              <td><code>autoBlock: true</code> (v6)</td>
               <td>No</td>
               <td>Yes (intercepted at <code>createElement</code>)</td>
-              <td>Google tags excluded; <code>&lt;img&gt;</code> pixels not covered</td>
+              <td>
+                Scripts, iframes, and <code>&lt;img&gt;</code> pixels; Google tags excluded;
+                <code>fetch</code>/<code>sendBeacon</code> beacons not covered
+              </td>
             </tr>
           </tbody>
         </table>
 
         <p>
-          For best coverage on sites that use GTM: paste declarative rules from the scanner
-          for scripts in your static HTML, and enable <code>autoBlock: true</code> to also
-          catch tags injected by GTM at runtime.
+          For best coverage on sites that use GTM: paste declarative rules from the scanner for
+          scripts in your static HTML, and enable <code>autoBlock: true</code> to also catch tags
+          and pixels injected by GTM at runtime.
         </p>
 
         <div class="callout callout-note">
-          <strong>Debug mode</strong> — Enable <code>debug: true</code> to see auto-block
-          decisions in the browser console:
-          <code>[Cookyay] auto-blocked &lt;script&gt; src="https://static.hotjar.com/…" (service: hotjar, category: analytics)</code>.
+          <strong>Debug mode</strong> — Enable <code>debug: true</code> to see auto-block decisions
+          in the browser console:
+          <code
+            >[Cookyay] auto-blocked &lt;img&gt; src="https://www.facebook.com/tr?…" (service:
+            meta-pixel, category: marketing)</code
+          >. Also surfaces install-order warnings when a known tracker loaded before the bootstrap.
           Turn off in production.
         </div>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            8. GTM INTEGRATION
@@ -1013,13 +1263,13 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
 
         <p>
           Cookyay's UI bundle fires <code>gtag('consent','update',{...})</code> directly from
-          page-level JavaScript — outside GTM's dataLayer queue — so it does <em>not</em> have
-          the common "update too late" race condition that affects GTM Custom HTML tags.
+          page-level JavaScript — outside GTM's dataLayer queue — so it does <em>not</em> have the
+          common "update too late" race condition that affects GTM Custom HTML tags.
         </p>
 
         <p>
-          For most GTM sites, no extra configuration is needed beyond placing the bootstrap
-          snippet before the GTM container snippet in <code>&lt;head&gt;</code>:
+          For most GTM sites, no extra configuration is needed beyond placing the bootstrap snippet
+          before the GTM container snippet in <code>&lt;head&gt;</code>:
         </p>
 
         <pre><code class="language-markup">&lt;head&gt;
@@ -1033,13 +1283,33 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
         <h3>Consent Mode v2 signal map</h3>
         <table>
           <thead>
-            <tr><th>Banner category</th><th>Consent Mode v2 signals</th></tr>
+            <tr>
+              <th>Banner category</th>
+              <th>Consent Mode v2 signals</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td><code>necessary</code></td><td><code>functionality_storage</code> + <code>security_storage</code> (always granted)</td></tr>
-            <tr><td><code>functional</code></td><td><code>personalization_storage</code></td></tr>
-            <tr><td><code>analytics</code></td><td><code>analytics_storage</code></td></tr>
-            <tr><td><code>marketing</code></td><td><code>ad_storage</code> + <code>ad_user_data</code> + <code>ad_personalization</code></td></tr>
+            <tr>
+              <td><code>necessary</code></td>
+              <td>
+                <code>functionality_storage</code> + <code>security_storage</code> (always granted)
+              </td>
+            </tr>
+            <tr>
+              <td><code>functional</code></td>
+              <td><code>personalization_storage</code></td>
+            </tr>
+            <tr>
+              <td><code>analytics</code></td>
+              <td><code>analytics_storage</code></td>
+            </tr>
+            <tr>
+              <td><code>marketing</code></td>
+              <td>
+                <code>ad_storage</code> + <code>ad_user_data</code> +
+                <code>ad_personalization</code>
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -1052,11 +1322,10 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
         <div class="callout callout-note">
           <strong>GTM tag template</strong>
           A first-party GTM <code>.tpl</code> tag template using GTM's
-          <code>updateConsentState()</code> Sandbox API is planned for v2. It eliminates
-          the residual dataLayer-queue window for fully GTM-managed pages.
+          <code>updateConsentState()</code> Sandbox API is planned for v2. It eliminates the
+          residual dataLayer-queue window for fully GTM-managed pages.
         </div>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            8. GPC BEHAVIOR
@@ -1066,17 +1335,24 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
 
         <p>
           Cookyay automatically detects the
-          <a href="https://globalprivacycontrol.org/" target="_blank" rel="noopener">Global Privacy Control (GPC)</a>
-          signal (<code>navigator.globalPrivacyControl === true</code>) and treats it as an
-          opt-out from <code>functional</code>, <code>analytics</code>, and
+          <a href="https://globalprivacycontrol.org/" target="_blank" rel="noopener"
+            >Global Privacy Control (GPC)</a
+          >
+          signal (<code>navigator.globalPrivacyControl === true</code>) and treats it as an opt-out
+          from <code>functional</code>, <code>analytics</code>, and
           <code>marketing</code> categories.
         </p>
 
         <h3>What happens when GPC is detected</h3>
         <ol>
-          <li>The bootstrap snippet reads <code>navigator.globalPrivacyControl</code> synchronously.</li>
+          <li>
+            The bootstrap snippet reads <code>navigator.globalPrivacyControl</code> synchronously.
+          </li>
           <li>Consent Mode v2 signals are fired with all non-necessary categories denied.</li>
-          <li>The consent banner is suppressed — the visitor's browser has already expressed their preference.</li>
+          <li>
+            The consent banner is suppressed — the visitor's browser has already expressed their
+            preference.
+          </li>
           <li>
             A small toast message is shown confirming the signal was honored:
             <em>"Your privacy preference (Global Privacy Control) was detected and applied."</em>
@@ -1085,17 +1361,17 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
 
         <div class="callout callout-note">
           <strong>Why show a toast?</strong>
-          As of January 1, 2026, California's CCPA regulations require explicit on-page
-          confirmation when a GPC signal is honored. The toast satisfies this requirement.
-          Override the message via the <code>strings.gpcNoticeText</code> config key.
+          As of January 1, 2026, California's CCPA regulations require explicit on-page confirmation
+          when a GPC signal is honored. The toast satisfies this requirement. Override the message
+          via the <code>strings.gpcNoticeText</code> config key.
         </div>
 
         <h3>GPC overrides stored consent</h3>
         <p>
-          If a visitor previously accepted marketing cookies and later enables GPC in their
-          browser, Cookyay detects the live GPC signal on each page load and overrides the
-          stored consent. Stored consent does not override a live GPC signal — this is required
-          for CCPA opt-out purposes.
+          If a visitor previously accepted marketing cookies and later enables GPC in their browser,
+          Cookyay detects the live GPC signal on each page load and overrides the stored consent.
+          Stored consent does not override a live GPC signal — this is required for CCPA opt-out
+          purposes.
         </p>
 
         <h3>Testing GPC locally</h3>
@@ -1105,12 +1381,16 @@ Object.defineProperty(navigator, 'globalPrivacyControl', { value: true })
 location.reload()</code></pre>
         <p>
           Or use the
-          <a href="https://chromewebstore.google.com/detail/global-privacy-control-gp/njhijllicanbaodbjfbhpgfnjndbcgai" target="_blank" rel="noopener">
+          <a
+            href="https://chromewebstore.google.com/detail/global-privacy-control-gp/njhijllicanbaodbjfbhpgfnjndbcgai"
+            target="_blank"
+            rel="noopener"
+          >
             Global Privacy Control extension
-          </a> for Chrome/Edge.
+          </a>
+          for Chrome/Edge.
         </p>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            9. WITHDRAWAL & RE-PROMPT
@@ -1121,32 +1401,38 @@ location.reload()</code></pre>
         <h3>Withdrawal (revoking consent)</h3>
         <p>
           Visitors can change their consent choices at any time via the
-          <strong>"Cookie settings"</strong> link auto-injected in the bottom-left corner,
-          or any element with <code>data-cookyay-open</code> attribute, or via
+          <strong>"Cookie settings"</strong> link auto-injected in the bottom-left corner, or any
+          element with <code>data-cookyay-open</code> attribute, or via
           <code>Cookyay.openPreferences()</code>.
         </p>
 
-        <p>
-          When a visitor revokes a previously-granted category:
-        </p>
+        <p>When a visitor revokes a previously-granted category:</p>
         <ol>
-          <li>The new consent record is written to the <code>cookyay_consent</code> cookie and localStorage.</li>
+          <li>
+            The new consent record is written to the <code>cookyay_consent</code> cookie and
+            localStorage.
+          </li>
           <li>A <code>cookyay:change</code> event is dispatched on <code>document</code>.</li>
-          <li>Your <code>clearOnWithdraw</code> callback is called with the list of revoked category IDs.</li>
+          <li>
+            Your <code>clearOnWithdraw</code> callback is called with the list of revoked category
+            IDs.
+          </li>
           <li>
             A "reload required" prompt is shown:
-            <em>"Your preferences have been saved. Scripts that already ran this session
-            keep running until you reload the page."</em>
+            <em
+              >"Your preferences have been saved. Scripts that already ran this session keep running
+              until you reload the page."</em
+            >
           </li>
         </ol>
 
         <div class="callout callout-note">
           <strong>Why a reload prompt?</strong>
-          Once a marketing or analytics script has executed (e.g. Meta Pixel has initialized),
-          its in-memory state cannot be erased without a full page reload. The reload prompt is
-          honest — it tells visitors their change will take effect after reload rather than
-          silently failing to clean up. This matches GDPR Article 7(3)'s "as easy as giving
-          consent" requirement while being truthful about technical constraints.
+          Once a marketing or analytics script has executed (e.g. Meta Pixel has initialized), its
+          in-memory state cannot be erased without a full page reload. The reload prompt is honest —
+          it tells visitors their change will take effect after reload rather than silently failing
+          to clean up. This matches GDPR Article 7(3)'s "as easy as giving consent" requirement
+          while being truthful about technical constraints.
         </div>
 
         <h3>Clearing your own cookies on withdrawal</h3>
@@ -1164,33 +1450,31 @@ location.reload()</code></pre>
 
         <div class="callout callout-warn">
           <strong>⚠ Third-party script state</strong>
-          Third-party scripts (Google Analytics, Meta Pixel, etc.) write cookies and
-          localStorage entries directly. Cookyay can clear first-party cookies via
-          <code>clearOnWithdraw</code> but cannot clean up storage written by third-party
-          code. A page reload is the only reliable remedy.
+          Third-party scripts (Google Analytics, Meta Pixel, etc.) write cookies and localStorage
+          entries directly. Cookyay can clear first-party cookies via
+          <code>clearOnWithdraw</code> but cannot clean up storage written by third-party code. A
+          page reload is the only reliable remedy.
         </div>
 
         <h3>Policy-version re-prompt</h3>
         <p>
-          When you add new cookie categories or materially change data processing, bump
-          the <code>policyVersion</code> in your config:
+          When you add new cookie categories or materially change data processing, bump the
+          <code>policyVersion</code> in your config:
         </p>
         <pre><code class="language-javascript">Cookyay.init({ policyVersion: '2025-06-01' /* was '2025-01-01' */ })</code></pre>
         <p>
           On the next page load, visitors whose stored consent was recorded under a different
-          <code>policyVersion</code> will see the banner again. Their previous choices are
-          discarded and they must consent fresh. This is required by GDPR when purposes change
-          materially.
+          <code>policyVersion</code> will see the banner again. Their previous choices are discarded
+          and they must consent fresh. This is required by GDPR when purposes change materially.
         </p>
 
         <h3>Consent expiry re-prompt</h3>
         <p>
           Consent expires after 365 days by default (configurable via
-          <code>cookie.expiryDays</code>). When the cookie expires the visitor will see the
-          banner again on their next visit.
+          <code>cookie.expiryDays</code>). When the cookie expires the visitor will see the banner
+          again on their next visit.
         </p>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            10. SSR COOKIE READING
@@ -1200,15 +1484,13 @@ location.reload()</code></pre>
 
         <p>
           Cookyay's consent record is stored in a <code>SameSite=Lax</code> cookie named
-          <code>cookyay_consent</code>. This cookie is sent to your server on every request,
-          which means you can read it server-side to conditionally render markup, skip
-          injecting analytics scripts, or implement server-driven consent checks.
+          <code>cookyay_consent</code>. This cookie is sent to your server on every request, which
+          means you can read it server-side to conditionally render markup, skip injecting analytics
+          scripts, or implement server-driven consent checks.
         </p>
 
         <h3>Cookie format</h3>
-        <p>
-          The cookie value is a URL-encoded JSON object with short keys for compactness:
-        </p>
+        <p>The cookie value is a URL-encoded JSON object with short keys for compactness:</p>
         <pre><code class="language-javascript">{
   "sv": 1,              // schema version
   "t": 1735689600,      // consent timestamp (Unix epoch seconds)
@@ -1250,20 +1532,19 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
 
         <div class="callout callout-note">
           <strong>Always validate the schema version</strong>
-          Check <code>sv === 1</code> before trusting the record. Future versions of Cookyay
-          may bump <code>sv</code>; the library re-prompts automatically for unknown versions,
-          but your server code should handle unknown versions gracefully (treat as no consent).
+          Check <code>sv === 1</code> before trusting the record. Future versions of Cookyay may
+          bump <code>sv</code>; the library re-prompts automatically for unknown versions, but your
+          server code should handle unknown versions gracefully (treat as no consent).
         </div>
 
         <h3>CLS prevention</h3>
         <p>
-          Reading the cookie on the server and conditionally including/excluding analytics
-          script tags prevents Cumulative Layout Shift (CLS) caused by scripts dynamically
-          appending DOM elements after load. The bootstrap snippet handles this for the
-          client-side path; SSR reading handles it for the initial HTML delivery.
+          Reading the cookie on the server and conditionally including/excluding analytics script
+          tags prevents Cumulative Layout Shift (CLS) caused by scripts dynamically appending DOM
+          elements after load. The bootstrap snippet handles this for the client-side path; SSR
+          reading handles it for the initial HTML delivery.
         </p>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            11. COMPLIANCE LIMITATIONS
@@ -1274,24 +1555,26 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
         <div class="callout callout-danger">
           <strong>Not legal advice</strong>
           This section describes what Cookyay does and does not do technically. Whether your
-          specific deployment is legally compliant is a question for qualified legal counsel,
-          not this library.
+          specific deployment is legally compliant is a question for qualified legal counsel, not
+          this library.
         </div>
 
         <h3>Client-side consent record — accountability limitation</h3>
 
         <p>
-          Cookyay stores the consent record in the <strong>visitor's browser only</strong>
-          (a <code>cookyay_consent</code> cookie + a mirrored localStorage entry). This is
-          sufficient for the visitor's experience, but it has a critical limitation for
-          controllers under GDPR:
+          Cookyay stores the consent record in the <strong>visitor's browser only</strong> (a
+          <code>cookyay_consent</code> cookie + a mirrored localStorage entry). This is sufficient
+          for the visitor's experience, but it has a critical limitation for controllers under GDPR:
         </p>
 
         <div class="callout callout-warn">
-          <strong>For full GDPR Art. 7 accountability, forward consent events to your own
-          backend.</strong> Client-side storage alone does not satisfy proof-of-consent
-          obligations if you are audited. A regulator asking "show me the consent record for
-          user X on date Y" cannot be answered from a browser-local record alone.
+          <strong
+            >For full GDPR Art. 7 accountability, forward consent events to your own
+            backend.</strong
+          >
+          Client-side storage alone does not satisfy proof-of-consent obligations if you are
+          audited. A regulator asking "show me the consent record for user X on date Y" cannot be
+          answered from a browser-local record alone.
         </div>
 
         <p>
@@ -1309,9 +1592,9 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
 })</code></pre>
 
         <p>
-          A native webhook is planned for v2. In v1, the event detail schema is
-          webhook-ready: it includes ISO-8601 timestamp, policy version, per-category choices,
-          and the schema version for future-proofing.
+          A native webhook is planned for v2. In v1, the event detail schema is webhook-ready: it
+          includes ISO-8601 timestamp, policy version, per-category choices, and the schema version
+          for future-proofing.
         </p>
 
         <h3>What Cookyay does</h3>
@@ -1329,39 +1612,38 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
         <h3>What Cookyay does not do</h3>
         <ul>
           <li>
-            <strong>No server-side consent log</strong> — client-side only (v1). For GDPR Art.
-            7(1) proof-of-consent, forward events to your own backend (see above).
+            <strong>No server-side consent log</strong> — client-side only (v1). For GDPR Art. 7(1)
+            proof-of-consent, forward events to your own backend (see above).
           </li>
           <li>
-            <strong>No IAB TCF certification</strong> — Cookyay is not a certified CMP under
-            IAB TCF. Sites requiring TCF should use a certified provider.
+            <strong>No IAB TCF certification</strong> — Cookyay is not a certified CMP under IAB
+            TCF. Sites requiring TCF should use a certified provider.
           </li>
           <li>
-            <strong>No geo-detection</strong> — the strictest-everywhere posture shows the
-            opt-in banner to all visitors regardless of location.
+            <strong>No geo-detection</strong> — the strictest-everywhere posture shows the opt-in
+            banner to all visitors regardless of location.
           </li>
           <li>
-            <strong>No built-in translations</strong> — English defaults with full string
-            override support. Supply your own translated strings via the
-            <code>strings</code> config.
+            <strong>No built-in translations</strong> — English defaults with full string override
+            support. Supply your own translated strings via the <code>strings</code> config.
           </li>
           <li>
-            <strong>No retroactive third-party cleanup</strong> — cookies and storage written
-            by already-executed third-party scripts cannot be erased without a page reload.
+            <strong>No retroactive third-party cleanup</strong> — cookies and storage written by
+            already-executed third-party scripts cannot be erased without a page reload.
           </li>
           <li>
-            <strong>No guarantee of compliance</strong> — this library implements standard
-            consent UX patterns; whether your deployment meets legal requirements depends on
-            your specific situation, jurisdiction, and how you configure and deploy the library.
+            <strong>No guarantee of compliance</strong> — this library implements standard consent
+            UX patterns; whether your deployment meets legal requirements depends on your specific
+            situation, jurisdiction, and how you configure and deploy the library.
           </li>
         </ul>
 
         <h3>"Do Not Sell or Share" link (CCPA)</h3>
         <p>
-          CCPA requires a persistent "Do Not Sell or Share My Personal Information" link on
-          every page. Cookyay's auto-injected "Cookie settings" link fulfills the withdrawal
-          mechanism but is <strong>not</strong> the same as a CCPA-required "Do Not Sell"
-          link. To satisfy CCPA, add an explicit link in your site footer and wire it to
+          CCPA requires a persistent "Do Not Sell or Share My Personal Information" link on every
+          page. Cookyay's auto-injected "Cookie settings" link fulfills the withdrawal mechanism but
+          is <strong>not</strong> the same as a CCPA-required "Do Not Sell" link. To satisfy CCPA,
+          add an explicit link in your site footer and wire it to
           <code>Cookyay.openPreferences()</code>:
         </p>
         <pre><code class="language-markup">&lt;footer&gt;
@@ -1370,15 +1652,20 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
   &lt;/a&gt;
 &lt;/footer&gt;</code></pre>
       </section>
-
-    </div><!-- /.page-wrap -->
+    </div>
+    <!-- /.page-wrap -->
 
     <footer class="site-footer">
       <p>
         <a href="https://github.com/landonia/cookyay" target="_blank" rel="noopener">GitHub</a> ·
         <a href="https://www.npmjs.com/package/cookyay" target="_blank" rel="noopener">npm</a> ·
-        <a href="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js" target="_blank" rel="noopener">jsDelivr</a> ·
-        Apache-2.0
+        <a
+          href="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js"
+          target="_blank"
+          rel="noopener"
+          >jsDelivr</a
+        >
+        · Apache-2.0
       </p>
       <p>
         <strong>Not legal advice.</strong> Cookyay helps implement consent UX patterns. Whether your
@@ -1397,9 +1684,7 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
             necessary: {},
             analytics: {
               label: 'Analytics',
-              services: [
-                { name: 'Example analytics service', cookies: ['_example_ga'] },
-              ],
+              services: [{ name: 'Example analytics service', cookies: ['_example_ga'] }],
             },
           },
           strings: {
@@ -1410,6 +1695,5 @@ const analyticsConsented = consent?.c?.a === true</code></pre>
         })
       })
     </script>
-
   </body>
 </html>

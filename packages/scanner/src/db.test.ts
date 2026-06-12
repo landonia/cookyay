@@ -17,7 +17,13 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import { describe, it, expect } from 'vitest'
-import { SERVICE_DB, DB_SCHEMA_VERSION, findServiceByCookie, findServiceByHost, findServiceByLocalStorage } from './db.js'
+import {
+  SERVICE_DB,
+  DB_SCHEMA_VERSION,
+  findServiceByCookie,
+  findServiceByHost,
+  findServiceByLocalStorage,
+} from './db.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SERVICES_YAML_PATH = join(__dirname, '..', 'data', 'services.yaml')
@@ -258,7 +264,9 @@ describe('validateDocument() — malformed inputs are rejected', () => {
   it('rejects an id with uppercase letters', () => {
     const errors = validateDocument({
       schemaVersion: 1,
-      services: [{ id: 'MyService', name: 'Test', category: 'analytics', requestHosts: ['example.com'] }],
+      services: [
+        { id: 'MyService', name: 'Test', category: 'analytics', requestHosts: ['example.com'] },
+      ],
     })
     expect(errors.length).toBeGreaterThan(0)
     expect(errors[0]).toMatch(/id/)
@@ -267,7 +275,9 @@ describe('validateDocument() — malformed inputs are rejected', () => {
   it('rejects a bad category value', () => {
     const errors = validateDocument({
       schemaVersion: 1,
-      services: [{ id: 'bad-cat', name: 'Bad Cat', category: 'unknown', requestHosts: ['example.com'] }],
+      services: [
+        { id: 'bad-cat', name: 'Bad Cat', category: 'unknown', requestHosts: ['example.com'] },
+      ],
     })
     expect(errors.length).toBeGreaterThan(0)
     expect(errors[0]).toMatch(/category/)
@@ -344,7 +354,12 @@ describe('validateDocument() — malformed inputs are rejected', () => {
     const errors = validateDocument({
       schemaVersion: 1,
       services: [
-        { id: 'minimal', name: 'Minimal Service', category: 'necessary', requestHosts: ['cdn.example.com'] },
+        {
+          id: 'minimal',
+          name: 'Minimal Service',
+          category: 'necessary',
+          requestHosts: ['cdn.example.com'],
+        },
       ],
     })
     expect(errors).toEqual([])
@@ -374,7 +389,9 @@ describe('validateDocument() — schemaVersion mismatch', () => {
   it('reports schemaVersion mismatch as a distinct error when version is wrong', () => {
     const errors = validateDocument({
       schemaVersion: 99,
-      services: [{ id: 'test', name: 'Test', category: 'analytics', requestHosts: ['example.com'] }],
+      services: [
+        { id: 'test', name: 'Test', category: 'analytics', requestHosts: ['example.com'] },
+      ],
     })
     expect(errors.length).toBeGreaterThan(0)
     // Error must mention "schemaVersion" so the contributor knows what to fix
@@ -387,7 +404,9 @@ describe('validateDocument() — schemaVersion mismatch', () => {
   it('reports schemaVersion mismatch when version is missing', () => {
     const errors = validateDocument({
       schemaVersion: undefined,
-      services: [{ id: 'test', name: 'Test', category: 'analytics', requestHosts: ['example.com'] }],
+      services: [
+        { id: 'test', name: 'Test', category: 'analytics', requestHosts: ['example.com'] },
+      ],
     })
     expect(errors.length).toBeGreaterThan(0)
     expect(errors[0]).toMatch(/schemaVersion/)
@@ -405,7 +424,9 @@ describe('validateDocument() — schemaVersion mismatch', () => {
   it('does NOT report schemaVersion error when version is correct (1)', () => {
     const errors = validateDocument({
       schemaVersion: 1,
-      services: [{ id: 'ok', name: 'OK Service', category: 'necessary', requestHosts: ['example.com'] }],
+      services: [
+        { id: 'ok', name: 'OK Service', category: 'necessary', requestHosts: ['example.com'] },
+      ],
     })
     expect(errors.filter((e) => e.includes('schemaVersion'))).toHaveLength(0)
   })
@@ -586,10 +607,7 @@ describe('SERVICE_DB — compiled database internal consistency', () => {
         (svc.requestPaths?.length ?? 0) > 0 ||
         (svc.scriptUrlGlobs?.length ?? 0) > 0 ||
         (svc.iframeSrcGlobs?.length ?? 0) > 0
-      expect(
-        hasSignal,
-        `compiled curated entry "${svc.id}" has no match signal`,
-      ).toBe(true)
+      expect(hasSignal, `compiled curated entry "${svc.id}" has no match signal`).toBe(true)
     }
   })
 
@@ -716,7 +734,10 @@ describe('CURATED_SIGNAL_TABLE — data-driven per-service matching (task 005)',
     ({ id, localStorageSample }) => {
       if (!localStorageSample) return // skip rows with no localStorage sample
       const result = findServiceByLocalStorage(localStorageSample)
-      expect(result, `localStorage key "${localStorageSample}" should match service "${id}"`).not.toBeNull()
+      expect(
+        result,
+        `localStorage key "${localStorageSample}" should match service "${id}"`,
+      ).not.toBeNull()
       expect(result!.service.id).toBe(id)
       // Single localStorage signal → medium (task 006: same reasoning as cookie above)
       expect(result!.confidence).toBe('medium')

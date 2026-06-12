@@ -13,7 +13,12 @@
 import { describe, it, expect } from 'vitest'
 import { classify } from './classifier.js'
 import { emitConfig, deriveBlockingHost, renderSnippet } from './config-emitter.js'
-import { findServiceByCookie, findServiceByHost, findServiceByRequest, findServiceByLocalStorage } from './db.js'
+import {
+  findServiceByCookie,
+  findServiceByHost,
+  findServiceByRequest,
+  findServiceByLocalStorage,
+} from './db.js'
 import type { RawFindings } from './types.js'
 import type { ServiceDefinition } from './db.js'
 
@@ -166,10 +171,7 @@ describe('findServiceByRequest', () => {
 
   // Cross-host false-positive guard: a /tr-prefixed path on an UNRELATED host must NOT match meta-pixel
   it('does NOT match Meta Pixel for /tr path on an unrelated host (cross-host false-positive guard)', () => {
-    const result = findServiceByRequest(
-      'https://cdn.example.com/track.js',
-      'cdn.example.com',
-    )
+    const result = findServiceByRequest('https://cdn.example.com/track.js', 'cdn.example.com')
     expect(result).toBeNull()
   })
 
@@ -184,29 +186,20 @@ describe('findServiceByRequest', () => {
 
   // AC: reCAPTCHA path hit — www.google.com/recaptcha/ should match
   it('matches reCAPTCHA via www.google.com/recaptcha/ — path-match hit', () => {
-    const result = findServiceByRequest(
-      'https://www.google.com/recaptcha/api.js',
-      'www.google.com',
-    )
+    const result = findServiceByRequest('https://www.google.com/recaptcha/api.js', 'www.google.com')
     expect(result).not.toBeNull()
     expect(result!.service.id).toBe('recaptcha')
   })
 
   // AC: a URL to www.google.com that does NOT start with /recaptcha/ must NOT match reCAPTCHA
   it('does NOT match reCAPTCHA for www.google.com without /recaptcha/ path (path-mismatch miss)', () => {
-    const result = findServiceByRequest(
-      'https://www.google.com/maps/api/js',
-      'www.google.com',
-    )
+    const result = findServiceByRequest('https://www.google.com/maps/api/js', 'www.google.com')
     expect(result).toBeNull()
   })
 
   // Cross-host false-positive guard: /recaptcha/ path on a non-Google host must NOT match reCAPTCHA
   it('does NOT match reCAPTCHA for /recaptcha/ path on a non-Google host (cross-host false-positive guard)', () => {
-    const result = findServiceByRequest(
-      'https://other.com/recaptcha/foo',
-      'other.com',
-    )
+    const result = findServiceByRequest('https://other.com/recaptcha/foo', 'other.com')
     expect(result).toBeNull()
   })
 
@@ -331,7 +324,9 @@ describe('classify() — cookie classification', () => {
     })
 
     const classified = classify(findings)
-    expect(classified.unclassified.some((u) => u.name === '__mystery_cookie' && u.kind === 'cookie')).toBe(true)
+    expect(
+      classified.unclassified.some((u) => u.name === '__mystery_cookie' && u.kind === 'cookie'),
+    ).toBe(true)
   })
 
   it('does not place consent cookie in unclassified', () => {
@@ -477,7 +472,11 @@ describe('classify() — third-party request classification', () => {
     const classified = classify(findings)
     // No service match — should be in unclassified
     expect(classified.requests).toHaveLength(0)
-    expect(classified.unclassified.some((u) => u.name === 'www.facebook.com' && u.kind === 'request-host')).toBe(true)
+    expect(
+      classified.unclassified.some(
+        (u) => u.name === 'www.facebook.com' && u.kind === 'request-host',
+      ),
+    ).toBe(true)
   })
 
   it('classifies reCAPTCHA www.google.com/recaptcha/ by path', () => {
@@ -591,7 +590,9 @@ describe('classify() — script classification', () => {
     })
 
     const classified = classify(findings)
-    expect(classified.unclassified.some((u) => u.name === '/js/my-custom-lib.js' && u.kind === 'script')).toBe(true)
+    expect(
+      classified.unclassified.some((u) => u.name === '/js/my-custom-lib.js' && u.kind === 'script'),
+    ).toBe(true)
   })
 })
 
@@ -755,8 +756,12 @@ describe('emitConfig()', () => {
 
     expect(config.categories.analytics).toBeDefined()
     expect(config.categories.marketing).toBeDefined()
-    expect(config.categories.analytics!.services.some((s) => s._meta.serviceId === 'ga4')).toBe(true)
-    expect(config.categories.marketing!.services.some((s) => s._meta.serviceId === 'meta-pixel')).toBe(true)
+    expect(config.categories.analytics!.services.some((s) => s._meta.serviceId === 'ga4')).toBe(
+      true,
+    )
+    expect(
+      config.categories.marketing!.services.some((s) => s._meta.serviceId === 'meta-pixel'),
+    ).toBe(true)
   })
 
   it('confidence annotations appear on each service', () => {
@@ -874,7 +879,12 @@ describe('classify + emitConfig round-trip', () => {
             { src: '/fixtures/stubs/pixel.js', blocked: true, category: 'marketing' },
           ],
           iframes: [
-            { src: null, dataSrc: '/fixtures/stubs/ytplayer.html', blocked: true, category: 'marketing' },
+            {
+              src: null,
+              dataSrc: '/fixtures/stubs/ytplayer.html',
+              blocked: true,
+              category: 'marketing',
+            },
           ],
           noscripts: [],
         },
@@ -1249,8 +1259,11 @@ describe('classify() — two-signal confidence upgrade (task 006)', () => {
 describe('deriveBlockingHost()', () => {
   it('returns the first requestHosts entry when present', () => {
     const svc: ServiceDefinition = {
-      id: 'test', name: 'Test', category: 'analytics',
-      cookies: [], localStorage: [],
+      id: 'test',
+      name: 'Test',
+      category: 'analytics',
+      cookies: [],
+      localStorage: [],
       requestHosts: ['cdn.example.com', 'api.example.com'],
       source: 'curated',
     }
@@ -1259,8 +1272,11 @@ describe('deriveBlockingHost()', () => {
 
   it('extracts the host from the first requestPaths entry when requestHosts is empty', () => {
     const svc: ServiceDefinition = {
-      id: 'test', name: 'Test', category: 'marketing',
-      cookies: [], localStorage: [],
+      id: 'test',
+      name: 'Test',
+      category: 'marketing',
+      cookies: [],
+      localStorage: [],
       requestHosts: [],
       requestPaths: ['facebook.com/tr'],
       source: 'curated',
@@ -1270,7 +1286,9 @@ describe('deriveBlockingHost()', () => {
 
   it('returns null for a cookie-only service with no hosts', () => {
     const svc: ServiceDefinition = {
-      id: 'test', name: 'Test', category: 'analytics',
+      id: 'test',
+      name: 'Test',
+      category: 'analytics',
       cookies: [{ name: '_test', wildcard: false }],
       localStorage: [],
       requestHosts: [],
@@ -1281,8 +1299,11 @@ describe('deriveBlockingHost()', () => {
 
   it('returns a host from scriptUrlGlobs when requestHosts and requestPaths are absent', () => {
     const svc: ServiceDefinition = {
-      id: 'test', name: 'Test', category: 'analytics',
-      cookies: [], localStorage: [],
+      id: 'test',
+      name: 'Test',
+      category: 'analytics',
+      cookies: [],
+      localStorage: [],
       requestHosts: [],
       scriptUrlGlobs: ['https://cdn.example.com/script.js'],
       source: 'curated',
@@ -1294,8 +1315,11 @@ describe('deriveBlockingHost()', () => {
 describe('renderSnippet()', () => {
   it('renders a script snippet with src attribute for services with no iframe globs', () => {
     const svc: ServiceDefinition = {
-      id: 'test', name: 'Test', category: 'analytics',
-      cookies: [], localStorage: [],
+      id: 'test',
+      name: 'Test',
+      category: 'analytics',
+      cookies: [],
+      localStorage: [],
       requestHosts: ['cdn.example.com'],
       source: 'curated',
     }
@@ -1308,8 +1332,11 @@ describe('renderSnippet()', () => {
 
   it('renders an iframe snippet with data-src for services with iframeSrcGlobs', () => {
     const svc: ServiceDefinition = {
-      id: 'youtube', name: 'YouTube', category: 'marketing',
-      cookies: [], localStorage: [],
+      id: 'youtube',
+      name: 'YouTube',
+      category: 'marketing',
+      cookies: [],
+      localStorage: [],
       requestHosts: ['youtube.com'],
       iframeSrcGlobs: ['https://www.youtube.com/embed/*'],
       source: 'curated',
@@ -1323,8 +1350,11 @@ describe('renderSnippet()', () => {
 
   it('uses scriptUrlGlobs URL when provided (stripping trailing wildcard)', () => {
     const svc: ServiceDefinition = {
-      id: 'gtm', name: 'Google Tag Manager', category: 'analytics',
-      cookies: [], localStorage: [],
+      id: 'gtm',
+      name: 'Google Tag Manager',
+      category: 'analytics',
+      cookies: [],
+      localStorage: [],
       requestHosts: ['googletagmanager.com'],
       scriptUrlGlobs: ['https://www.googletagmanager.com/gtm.js*'],
       source: 'curated',
@@ -1344,9 +1374,21 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
           ],
-          storage: [], requests: [], scripts: [], iframes: [], noscripts: [],
+          storage: [],
+          requests: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
@@ -1364,14 +1406,28 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
           ],
-          storage: [], requests: [], scripts: [], iframes: [], noscripts: [],
+          storage: [],
+          requests: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
     const config = emitConfig(classify(findings))
-    const entry = config.suggestedBlocking.find((e) => e.services.some((s) => s === 'ga4' || s === 'ua'))
+    const entry = config.suggestedBlocking.find((e) =>
+      e.services.some((s) => s === 'ga4' || s === 'ua'),
+    )
     expect(entry).toBeDefined()
     expect(typeof entry!.host).toBe('string')
     expect(entry!.host.length).toBeGreaterThan(0)
@@ -1392,16 +1448,28 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
           ],
-          storage: [], requests: [], scripts: [], iframes: [], noscripts: [],
+          storage: [],
+          requests: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
     const config = emitConfig(classify(findings))
     // GA4 detected → should produce a blocking entry with an analytics script snippet
-    const analyticsEntry = config.suggestedBlocking.find((e) =>
-      e.category === 'analytics' && e.services.includes('ga4')
+    const analyticsEntry = config.suggestedBlocking.find(
+      (e) => e.category === 'analytics' && e.services.includes('ga4'),
     )
     expect(analyticsEntry).toBeDefined()
     expect(analyticsEntry!.snippet).toContain('type="text/plain"')
@@ -1422,12 +1490,30 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
-            { name: '_gid', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
+            {
+              name: '_gid',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
           ],
           storage: [],
           requests: [],
-          scripts: [], iframes: [], noscripts: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
@@ -1452,16 +1538,52 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
-            { name: '_fbp', domain: '.facebook.com', path: '/', expires: 9999999999, secure: true, sameSite: 'None', firstParty: false },
-            { name: '_hjid', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
+            {
+              name: '_fbp',
+              domain: '.facebook.com',
+              path: '/',
+              expires: 9999999999,
+              secure: true,
+              sameSite: 'None',
+              firstParty: false,
+            },
+            {
+              name: '_hjid',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
           ],
           storage: [],
           requests: [
-            { url: 'https://static.hotjar.com/c/hotjar.js', host: 'static.hotjar.com', resourceType: 'script', firstParty: false },
-            { url: 'https://connect.facebook.net/en_US/fbevents.js', host: 'connect.facebook.net', resourceType: 'script', firstParty: false },
+            {
+              url: 'https://static.hotjar.com/c/hotjar.js',
+              host: 'static.hotjar.com',
+              resourceType: 'script',
+              firstParty: false,
+            },
+            {
+              url: 'https://connect.facebook.net/en_US/fbevents.js',
+              host: 'connect.facebook.net',
+              resourceType: 'script',
+              firstParty: false,
+            },
           ],
-          scripts: [], iframes: [], noscripts: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
@@ -1493,9 +1615,21 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
           ],
-          storage: [], requests: [], scripts: [], iframes: [], noscripts: [],
+          storage: [],
+          requests: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
@@ -1516,9 +1650,21 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
           ],
-          storage: [], requests: [], scripts: [], iframes: [], noscripts: [],
+          storage: [],
+          requests: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
@@ -1539,18 +1685,23 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
           storage: [],
           requests: [
             // Hotjar detected only via request host (no cookie yet)
-            { url: 'https://static.hotjar.com/c/hotjar.js', host: 'static.hotjar.com', resourceType: 'script', firstParty: false },
+            {
+              url: 'https://static.hotjar.com/c/hotjar.js',
+              host: 'static.hotjar.com',
+              resourceType: 'script',
+              firstParty: false,
+            },
           ],
-          scripts: [], iframes: [], noscripts: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
     const config = emitConfig(classify(findings))
     // Hotjar's requestHosts are static.hotjar.com and hotjar.com
     // → should produce a blocking entry
-    const hotjarEntry = config.suggestedBlocking.find((e) =>
-      e.services.includes('hotjar')
-    )
+    const hotjarEntry = config.suggestedBlocking.find((e) => e.services.includes('hotjar'))
     expect(hotjarEntry).toBeDefined()
     expect(hotjarEntry!.snippet).toContain('type="text/plain"')
     expect(hotjarEntry!.snippet).toContain('data-category="analytics"')
@@ -1566,14 +1717,37 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
-            { name: '_fbp', domain: '.facebook.com', path: '/', expires: 9999999999, secure: true, sameSite: 'None', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
+            {
+              name: '_fbp',
+              domain: '.facebook.com',
+              path: '/',
+              expires: 9999999999,
+              secure: true,
+              sameSite: 'None',
+              firstParty: false,
+            },
           ],
           storage: [],
           requests: [
-            { url: 'https://connect.facebook.net/en_US/fbevents.js', host: 'connect.facebook.net', resourceType: 'script', firstParty: false },
+            {
+              url: 'https://connect.facebook.net/en_US/fbevents.js',
+              host: 'connect.facebook.net',
+              resourceType: 'script',
+              firstParty: false,
+            },
           ],
-          scripts: [], iframes: [], noscripts: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })
@@ -1608,10 +1782,30 @@ describe('emitConfig() — suggestedBlocking[] (task 007)', () => {
         {
           url: 'http://example.com/page',
           cookies: [
-            { name: '_ga', domain: 'example.com', path: '/', expires: 9999999999, secure: false, sameSite: 'Lax', firstParty: false },
-            { name: '_fbp', domain: '.facebook.com', path: '/', expires: 9999999999, secure: true, sameSite: 'None', firstParty: false },
+            {
+              name: '_ga',
+              domain: 'example.com',
+              path: '/',
+              expires: 9999999999,
+              secure: false,
+              sameSite: 'Lax',
+              firstParty: false,
+            },
+            {
+              name: '_fbp',
+              domain: '.facebook.com',
+              path: '/',
+              expires: 9999999999,
+              secure: true,
+              sameSite: 'None',
+              firstParty: false,
+            },
           ],
-          storage: [], requests: [], scripts: [], iframes: [], noscripts: [],
+          storage: [],
+          requests: [],
+          scripts: [],
+          iframes: [],
+          noscripts: [],
         },
       ],
     })

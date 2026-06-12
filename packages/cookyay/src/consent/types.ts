@@ -21,7 +21,7 @@ export interface ConsentRecord {
 // Short keys used in the cookie payload for compactness
 export interface CookiePayload {
   sv: number
-  t: number   // Unix epoch seconds — authoritative consent timestamp
+  t: number // Unix epoch seconds — authoritative consent timestamp
   pv: string
   bv: string
   c: { n: boolean; f: boolean; a: boolean; m: boolean }

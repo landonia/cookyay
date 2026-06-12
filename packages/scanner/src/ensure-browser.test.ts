@@ -228,8 +228,6 @@ describe('resolvePlaywrightCli', () => {
   it('throws when the resolved cli.js path does not exist', () => {
     // existsSync returns false → the "Playwright CLI not found" guard triggers.
     vi.mocked(existsSync).mockReturnValue(false)
-    expect(() => resolvePlaywrightCli(import.meta.url)).toThrow(
-      /Playwright CLI not found/,
-    )
+    expect(() => resolvePlaywrightCli(import.meta.url)).toThrow(/Playwright CLI not found/)
   })
 })

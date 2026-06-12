@@ -162,7 +162,12 @@ services:
     requestHosts:
       - linkedin.com
       - snap.licdn.com
-    requestPaths: []
+    requestPaths:
+      ## px.ads.linkedin.com is the dedicated LinkedIn Ads pixel host.
+      ## /collect is the Insight Tag beacon endpoint (host+path uniquely identifies
+      ## the tracking-pixel; px.ads.linkedin.com alone is narrow but /collect
+      ## scopes it further to avoid matching the pixel partner API at other paths).
+      - px.ads.linkedin.com/collect
     scriptUrlGlobs: []
     iframeSrcGlobs: []
 
@@ -335,7 +340,11 @@ services:
     requestHosts:
       - static.ads-twitter.com
       - analytics.twitter.com
-    requestPaths: []
+    requestPaths:
+      ## analytics.twitter.com/i/adsct is the X (Twitter) conversion pixel beacon endpoint.
+      ## analytics.twitter.com is already in requestHosts; /i/adsct scopes the path-level
+      ## match to the pixel beacon event, not other analytics.twitter.com paths.
+      - analytics.twitter.com/i/adsct
     scriptUrlGlobs: []
     iframeSrcGlobs: []
 
@@ -396,7 +405,11 @@ services:
     requestHosts:
       - analytics.tiktok.com
       - tiktok.com
-    requestPaths: []
+    requestPaths:
+      ## analytics.tiktok.com/i18n/pixel/ is the TikTok Pixel event ingest endpoint.
+      ## Path prefix uniquely scopes the match to pixel beacons rather than the full
+      ## analytics.tiktok.com domain (which also serves other TikTok SDK endpoints).
+      - analytics.tiktok.com/i18n/pixel/
     scriptUrlGlobs: []
     iframeSrcGlobs: []
 
@@ -469,7 +482,11 @@ services:
       - sc-analytics.appspot.com
       - tr.snapchat.com
       - static.ads.snapchat.com
-    requestPaths: []
+    requestPaths:
+      ## tr.snapchat.com/p is the Snapchat Pixel beacon endpoint.
+      ## tr.snapchat.com is already in requestHosts but /p scopes the path-level
+      ## match to the pixel fire event, not other tr.snapchat.com paths (e.g. health checks).
+      - tr.snapchat.com/p
     scriptUrlGlobs: []
     iframeSrcGlobs: []
 
@@ -493,7 +510,11 @@ services:
     requestHosts:
       - ct.pinterest.com
       - s.pinimg.com
-    requestPaths: []
+    requestPaths:
+      ## ct.pinterest.com/v3/ is the Pinterest Tag conversion event beacon endpoint.
+      ## ct.pinterest.com is already in requestHosts; /v3/ anchors the path-level
+      ## match to the API version prefix for the pixel beacon.
+      - ct.pinterest.com/v3/
     scriptUrlGlobs: []
     iframeSrcGlobs: []
 
@@ -513,7 +534,11 @@ services:
     requestHosts:
       - alb.reddit.com
       - www.redditstatic.com
-    requestPaths: []
+    requestPaths:
+      ## alb.reddit.com/rp.gif is the Reddit Pixel <img> beacon endpoint.
+      ## alb.reddit.com is already in requestHosts; /rp.gif precisely scopes the
+      ## path-level match to the pixel beacon GIF and nothing else on the ALB host.
+      - alb.reddit.com/rp.gif
     scriptUrlGlobs: []
     iframeSrcGlobs: []
 
@@ -533,7 +558,11 @@ services:
     requestHosts:
       - q.quora.com
       - s.quora.com
-    requestPaths: []
+    requestPaths:
+      ## q.quora.com/qe is the Quora conversion pixel beacon endpoint.
+      ## q.quora.com is already in requestHosts; /qe scopes the path-level
+      ## match to the pixel beacon event, not other q.quora.com paths (e.g. /qevents.js).
+      - q.quora.com/qe
     scriptUrlGlobs: []
     iframeSrcGlobs: []
 

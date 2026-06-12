@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: bootstrap-first diagnostic (dev mode)</title>
+    <!--
+      IMPORTANT: The tracker script is placed BEFORE the Cookyay bootstrap on purpose.
+      This is the "bad install order" scenario the diagnostic is designed to detect.
+
+      WARNING: Do NOT reorder these tags. The tracker must appear BEFORE bootstrap.js
+      so that it loads before the proxy is installed. Auto-formatters or prettifiers
+      must not reorder <head> children here.
+      [goals.md §Bootstrap-first mitigation, research/test-strategist.md §F2, §Gotchas]
+    -->
+
+    <!--
+      Tracker BEFORE bootstrap — intentional bad install order.
+      This <img> loads before the Cookyay proxy is installed, so it cannot be
+      intercepted. The diagnostic should detect it via performance.getEntriesByType()
+      and/or the DOM scan and emit a console.warn (when debug:true).
+    -->
+    <img
+      src="https://www.facebook.com/tr?id=BOOTSTRAP_FIRST_FIXTURE&ev=PageView"
+      width="1"
+      height="1"
+      alt=""
+      id="pre-bootstrap-pixel"
+      style="display:none"
+    />
+
+    <!--
+      Cookyay bootstrap — AFTER the tracker (bad order, as intended for this fixture).
+    -->
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Bootstrap-first diagnostic fixture (dev mode)</h1>
+    <p>
+      A known tracker (<code>facebook.com/tr</code>) was placed <strong>before</strong>
+      the Cookyay bootstrap in <code>&lt;head&gt;</code>. With <code>debug:true</code>,
+      the diagnostic should fire a <code>console.warn</code> naming the service.
+    </p>
+    <p>
+      The install-order warning should contain:
+      <code>INSTALL ORDER WARNING</code>
+    </p>
+
+    <script type="module">
+      import { init } from '/packages/cookyay/dist/index.js'
+
+      // debug:true — enables the bootstrap-first diagnostic
+      // [autoblock-diagnostic.ts, api.ts §config.debug gate]
+      init({
+        policyVersion: 'bootstrap-first-fixture-v1',
+        debug: true,
+        autoBlock: true,
+        categories: {
+          marketing: {
+            label: 'Marketing',
+            services: [{ name: 'Meta Pixel', cookies: ['_fbp'] }],
+          },
+        },
+      })
+    </script>
+  </body>
+</html>

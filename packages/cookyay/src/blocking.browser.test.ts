@@ -4,11 +4,19 @@
 //   - A script executes after category grant via clone-and-reinsert
 //   - The original element retains type="text/plain" (type is never mutated)
 //   - Already-granted (state=executed) elements are not re-executed
+//   - A granted auto-detected <img> pixel has its src promoted (task 003 AC6)
 //
 // Requires: @vitest/browser + playwright chromium (see vitest.browser.config.ts)
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { STATE_EXECUTED, _resetBlocker, grant, scanBlocked } from './blocking.js'
+import {
+  STATE_BLOCKED,
+  STATE_EXECUTED,
+  _resetBlocker,
+  enqueueAutoDetected,
+  grant,
+  scanBlocked,
+} from './blocking.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,7 +50,7 @@ function addSrcScript(category: string, body: string): { el: HTMLScriptElement; 
 }
 
 function wait(ms = 50): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +142,7 @@ describe('script execution in real browser', () => {
     // Pre-mark as executed
     s.setAttribute('data-cookyay-state', STATE_EXECUTED)
 
-    scanBlocked()  // should skip
+    scanBlocked() // should skip
     grant('analytics')
     await wait()
 
@@ -175,7 +183,7 @@ describe('script execution in real browser', () => {
     addInlineScript('marketing', `window['${flag}'] = true`)
 
     scanBlocked()
-    grant('analytics')   // different category
+    grant('analytics') // different category
     await wait()
 
     expect((window as unknown as Record<string, unknown>)[flag]).toBe(false)
@@ -259,5 +267,131 @@ describe('src= script execution in real browser', () => {
 
     // Confirm the original is still type=text/plain
     expect(el.getAttribute('type')).toBe('text/plain')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Auto-detected <img> pixel — fire-on-grant (task 003 AC6)
+//
+// These tests verify in real Chromium that the _injectImg() path actually
+// promotes the stored src onto the <img> element when its category is granted.
+//
+// The "network request is issued" part of the acceptance bar requires a
+// Playwright e2e fixture (task 005). Here we assert the DOM-observable
+// outcome: img.src is assigned (which would cause a real network GET in a
+// non-test context).
+// ---------------------------------------------------------------------------
+
+describe('auto-detected img pixel — src promoted in real browser (task 003 AC6)', () => {
+  // Clean up any test img elements after each test
+  afterEach(() => {
+    _resetBlocker()
+    for (const el of document.querySelectorAll('[data-test-blocking]')) {
+      el.remove()
+    }
+  })
+
+  it('a held auto-detected <img> pixel has its src promoted after marketing grant', async () => {
+    // Build an img element that simulates what the proxy leaves behind:
+    // data-cookyay-state="blocked", data-cookyay-auto="true", src NOT set.
+    const img = document.createElement('img')
+    img.setAttribute('data-cookyay-state', STATE_BLOCKED)
+    img.setAttribute('data-cookyay-auto', 'true')
+    img.setAttribute('data-category', 'marketing')
+    img.setAttribute('data-test-blocking', 'true')
+    // Pixel dimensions — typical tracking pixel setup
+    img.width = 1
+    img.height = 1
+    img.style.display = 'none'
+    document.body.appendChild(img)
+
+    // Wire into the blocking queue via enqueueAutoDetected (the task 003 path)
+    const pixelUrl = 'https://www.facebook.com/tr?id=123&ev=PageView&noscript=1'
+    enqueueAutoDetected(img, pixelUrl, 'marketing')
+
+    // Before grant: data-src set, src empty, state still blocked
+    expect(img.getAttribute('data-src')).toBe(pixelUrl)
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_BLOCKED)
+
+    // Grant the marketing category — _injectImg() fires via setTimeout(fn, 0)
+    grant('marketing')
+    await wait(50)
+
+    // After grant: data-src removed, img.src is the pixel URL, state=executed
+    expect(img.getAttribute('data-src')).toBeNull()
+    // In real Chromium, src is normalised to an absolute URL
+    expect(img.src).toContain('facebook.com/tr')
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+  })
+
+  it('no new <img> element is created — _injectImg is in-place, not clone-and-reinsert', async () => {
+    const img = document.createElement('img')
+    img.setAttribute('data-cookyay-state', STATE_BLOCKED)
+    img.setAttribute('data-cookyay-auto', 'true')
+    img.setAttribute('data-category', 'marketing')
+    img.setAttribute('data-test-blocking', 'true')
+    document.body.appendChild(img)
+
+    const pixelUrl = 'https://www.facebook.com/tr?id=789&ev=ViewContent'
+    enqueueAutoDetected(img, pixelUrl, 'marketing')
+
+    const imgsBefore = document.body.querySelectorAll('[data-test-blocking]').length
+    grant('marketing')
+    await wait(50)
+
+    // Only one test img element — no clone was created
+    const imgsAfter = document.body.querySelectorAll('[data-test-blocking]').length
+    expect(imgsAfter).toBe(imgsBefore)
+    expect(img.src).toContain('facebook.com/tr')
+  })
+
+  it('_injectImg sets STATE_EXECUTED before src assignment (re-interception guard)', async () => {
+    // In a real browser, the ordering (STATE_EXECUTED set BEFORE src=)
+    // is critical: if the proxy is active, it checks STATE_EXECUTED and skips
+    // already-injected elements. We verify the resulting state here.
+    const img = document.createElement('img')
+    img.setAttribute('data-cookyay-state', STATE_BLOCKED)
+    img.setAttribute('data-cookyay-auto', 'true')
+    img.setAttribute('data-category', 'analytics')
+    img.setAttribute('data-test-blocking', 'true')
+    document.body.appendChild(img)
+
+    const pixelUrl = 'https://connect.facebook.net/en_US/fbevents.js'
+    enqueueAutoDetected(img, pixelUrl, 'analytics')
+
+    grant('analytics')
+    await wait(50)
+
+    // STATE_EXECUTED is set — the proxy would skip this element on any future
+    // src assignment, preventing re-interception.
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+    expect(img.src).toContain('facebook.net')
+  })
+
+  it('pixel fires exactly once on grant — fire-once semantics (AC4)', async () => {
+    const img = document.createElement('img')
+    img.setAttribute('data-cookyay-state', STATE_BLOCKED)
+    img.setAttribute('data-cookyay-auto', 'true')
+    img.setAttribute('data-category', 'marketing')
+    img.setAttribute('data-test-blocking', 'true')
+    document.body.appendChild(img)
+
+    const pixelUrl = 'https://www.facebook.com/tr?id=111&ev=Purchase'
+    enqueueAutoDetected(img, pixelUrl, 'marketing')
+
+    // First grant
+    grant('marketing')
+    await wait(50)
+
+    const srcAfterFirst = img.src
+    expect(srcAfterFirst).toContain('facebook.com/tr')
+
+    // Second grant — queue already drained; _injectImg checks STATE_EXECUTED
+    grant('marketing')
+    await wait(50)
+
+    // src did not change — no second inject
+    expect(img.src).toBe(srcAfterFirst)
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
   })
 })

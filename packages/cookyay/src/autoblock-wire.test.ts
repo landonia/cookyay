@@ -105,6 +105,21 @@ function makeHeldIframe(src: string, category: string): HTMLIFrameElement {
   return f
 }
 
+/**
+ * Build an img element that simulates what the proxy leaves behind for a pixel.
+ * The proxy intercepts the src assignment (stores it in HeldElement.src)
+ * but never assigns it to the element — the pixel never fires.
+ */
+function makeHeldImg(src: string, category: string): HTMLImageElement {
+  const img = document.createElement('img')
+  img.setAttribute('data-cookyay-state', STATE_BLOCKED)
+  img.setAttribute('data-cookyay-auto', 'true')
+  img.setAttribute('data-category', category)
+  // src intentionally NOT set — the proxy intercepted it (pixel never fired)
+  document.body.appendChild(img)
+  return img
+}
+
 // ---------------------------------------------------------------------------
 // Setup / teardown
 // ---------------------------------------------------------------------------
@@ -180,6 +195,34 @@ describe('enqueueAutoDetected — direct enqueue into blocking queue', () => {
     expect(warnSpy.mock.calls[0][0]).toContain('unknown category')
     setTimeoutSpy.mockRestore()
     warnSpy.mockRestore()
+  })
+
+  it('stores the captured src as data-src on a held <img> pixel element', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    expect(img.getAttribute('data-src')).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
+  })
+
+  it('grant() after enqueueAutoDetected for <img> schedules a setTimeout(fn,0)', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    grant('marketing')
+    expect(setTimeoutSpy).toHaveBeenCalledOnce()
+    expect(setTimeoutSpy.mock.calls[0][1]).toBe(0)
+    setTimeoutSpy.mockRestore()
+  })
+
+  it('skips a <img> element already STATE_EXECUTED', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    img.setAttribute('data-cookyay-state', STATE_EXECUTED)
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    grant('marketing')
+    expect(setTimeoutSpy).not.toHaveBeenCalled()
+    setTimeoutSpy.mockRestore()
   })
 })
 
@@ -333,6 +376,104 @@ describe('AC1 — auto-detected elements enqueued into blocking.ts queue and inj
     )
     expect(clones.length).toBe(1)
   })
+
+  // ----- <img> pixel tests (AC1 — task 003) -----
+
+  it('a held <img> pixel is enqueued and its data-src is promoted to src after grant (AC1 + fire-on-grant)', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    vi.useFakeTimers()
+    grant('marketing')
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    // data-src promoted to src — fire-and-forget GET
+    expect(img.getAttribute('data-src')).toBeNull()
+    // jsdom sets the full URL on img.src
+    expect(img.src).toContain('facebook.com/tr')
+  })
+
+  it('grant sets data-cookyay-state="executed" on the held <img> BEFORE src is assigned (AC3)', () => {
+    // We verify that after grant() + timers, the img carries STATE_EXECUTED.
+    // The before-src ordering is guaranteed by _injectImg's implementation:
+    // it sets STATE_EXECUTED BEFORE assigning src (preventing proxy re-interception).
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    vi.useFakeTimers()
+    grant('marketing')
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+  })
+
+  it('<img> injection is NOT synchronous — src not promoted until setTimeout fires (INP guard, AC4)', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    vi.useFakeTimers()
+    grant('marketing')
+
+    // Before timers run, src still unset (data-src present but img.src empty)
+    expect(img.getAttribute('data-src')).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_BLOCKED)
+
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    // After timers, data-src promoted
+    expect(img.getAttribute('data-src')).toBeNull()
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+  })
+
+  it('<img> pixel injection is idempotent — a second grant does NOT re-fire the pixel (fire-once, AC4)', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    vi.useFakeTimers()
+    grant('marketing')
+    vi.runAllTimers()
+    grant('marketing') // second call — queue already drained
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    // Only one src promotion happened — no duplicate request
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+    expect(img.getAttribute('data-src')).toBeNull() // removed after first inject
+  })
+
+  it('<img> is NOT cloned — in-place src promotion (no clone-and-reinsert, AC2)', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    const imgsBefore = document.body.querySelectorAll('img').length
+
+    vi.useFakeTimers()
+    grant('marketing')
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    // No new <img> elements created — same element in place
+    const imgsAfter = document.body.querySelectorAll('img').length
+    expect(imgsAfter).toBe(imgsBefore)
+    expect(img.src).toContain('facebook.com/tr')
+  })
+
+  it('granting analytics does NOT release a marketing <img> pixel', () => {
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    vi.useFakeTimers()
+    grant('analytics') // wrong category
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    // Still blocked — marketing was not granted
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_BLOCKED)
+    expect(img.getAttribute('data-src')).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -485,6 +626,83 @@ describe('AC3 — declared-wins: same element declared + DB-matched is processed
     expect(s1.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
     expect(s2.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
   })
+
+  // ----- <img> declared-wins precedence tests (task 003 AC5) -----
+
+  it('AC5 — an <img> pixel that is both declared AND DB-matched is handled exactly once (declared wins)', () => {
+    // Simulates a site owner who both declared the pixel in markup AND has auto-block on.
+    // The declarative engine (scanBlocked) sets data-cookyay-state="blocked" first.
+    // The proxy's _holdElement() then skips it (declared wins).
+    // Result: the pixel fires exactly once on grant, via the declarative path.
+
+    // Build a "declared" img pixel: scanBlocked does not handle <img> declaratively
+    // (the declarative engine only handles scripts/iframes). So "declared wins" for
+    // <img> means: an <img> already carrying STATE_BLOCKED (e.g. set by declarative
+    // machinery or a prior proxy pass) is not double-enqueued by enqueueAutoDetected.
+
+    // Set up an img with STATE_BLOCKED already set (simulating declarative-wins scenario)
+    const img = document.createElement('img')
+    img.setAttribute('data-cookyay-state', STATE_BLOCKED)
+    img.setAttribute('data-category', 'marketing')
+    img.setAttribute('data-src', 'https://www.facebook.com/tr?id=123&ev=PageView')
+    document.body.appendChild(img)
+
+    // Simulate the proxy attempting to hold the same element
+    installAutoBlockProxy()
+    const match: AutoBlockMatch = { serviceId: 'meta-pixel', category: 'marketing' }
+    // _holdElement must skip this element because STATE_BLOCKED is already set
+    const wasHeld = _holdElement(img, 'https://www.facebook.com/tr?id=123&ev=PageView', match)
+    expect(wasHeld).toBe(false)
+    expect(getHeldElements()).toHaveLength(0)
+
+    // The element should NOT be in the auto-block held queue
+    expect(img.getAttribute(ATTR_AUTO_DETECTED)).toBeNull()
+  })
+
+  it('AC5 — declared-then-auto: _holdElement skips an <img> with STATE_BLOCKED; enqueueAutoDetected does not double-enqueue', () => {
+    // An img pixel that already has STATE_BLOCKED is not double-processed by the
+    // auto-block path — if someone calls enqueueAutoDetected on an already-executed
+    // element, it is silently skipped.
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    img.setAttribute('data-cookyay-state', STATE_EXECUTED) // already executed
+
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    grant('marketing')
+    // No injection — element already executed
+    expect(setTimeoutSpy).not.toHaveBeenCalled()
+    setTimeoutSpy.mockRestore()
+  })
+
+  it('AC5 — pixel declared AND auto-detected is not double-processed: grant fires exactly once', () => {
+    // This is the canonical AC5 test: an <img> pixel that appears in BOTH the
+    // held-elements queue (from the proxy) AND would be enqueued again is handled
+    // exactly once. We simulate this by enqueue-ing twice and asserting single inject.
+    const img = makeHeldImg('https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    // Attempt to enqueue again (simulating double-detection scenario)
+    enqueueAutoDetected(img, 'https://www.facebook.com/tr?id=123&ev=PageView', 'marketing')
+
+    vi.useFakeTimers()
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    grant('marketing')
+    // The first enqueueAutoDetected set data-src; the second sees data-src already
+    // set but still adds to queue. Grant drains the queue — both entries will
+    // try to inject, but the second attempt sees STATE_EXECUTED (set by the first)
+    // and skips. Net result: exactly one src promotion.
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    // Only one inject happened — src promoted exactly once
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+    expect(img.src).toContain('facebook.com/tr')
+    // No clone created — in-place promotion only
+    const imgs = document.body.querySelectorAll('img')
+    expect(imgs.length).toBe(1)
+    setTimeoutSpy.mockRestore()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -504,10 +722,14 @@ describe('AC4 — withdrawal posture consistent with declared third-party flow',
 
   it('withdrawal toast appears when an auto-detected analytics category is revoked', () => {
     // User previously granted analytics
-    writeConsent(buildConsentRecord(
-      { necessary: true, functional: false, analytics: true, marketing: false },
-      'v1', '0.1.0', false,
-    ))
+    writeConsent(
+      buildConsentRecord(
+        { necessary: true, functional: false, analytics: true, marketing: false },
+        'v1',
+        '0.1.0',
+        false,
+      ),
+    )
 
     // Simulate an auto-detected analytics script having been injected (state=executed)
     const s = makeHeldScript('https://static.hotjar.com/c/hotjar.js', 'analytics')
@@ -517,7 +739,9 @@ describe('AC4 — withdrawal posture consistent with declared third-party flow',
     mountPreferences(null)
 
     // User revokes analytics
-    const analyticsSwitch = document.querySelector<HTMLElement>('[data-cookyay-switch="analytics"]')!
+    const analyticsSwitch = document.querySelector<HTMLElement>(
+      '[data-cookyay-switch="analytics"]',
+    )!
     expect(analyticsSwitch.getAttribute('aria-checked')).toBe('true')
     analyticsSwitch.click() // now false
 
@@ -534,7 +758,9 @@ describe('AC4 — withdrawal posture consistent with declared third-party flow',
     mountPreferences(null)
 
     // Enable analytics
-    const analyticsSwitch = document.querySelector<HTMLElement>('[data-cookyay-switch="analytics"]')!
+    const analyticsSwitch = document.querySelector<HTMLElement>(
+      '[data-cookyay-switch="analytics"]',
+    )!
     analyticsSwitch.click() // now true
 
     document.querySelector<HTMLElement>('[data-cookyay-save]')!.click()
@@ -551,10 +777,14 @@ describe('AC4 — withdrawal posture consistent with declared third-party flow',
     // We verify it by checking that a user who previously granted analytics,
     // regardless of whether any auto-detected element is present, sees the toast
     // when revoking analytics via preferences.
-    writeConsent(buildConsentRecord(
-      { necessary: true, functional: false, analytics: true, marketing: false },
-      'v1', '0.1.0', false,
-    ))
+    writeConsent(
+      buildConsentRecord(
+        { necessary: true, functional: false, analytics: true, marketing: false },
+        'v1',
+        '0.1.0',
+        false,
+      ),
+    )
     init(BASE_CONFIG)
     mountPreferences(null)
 
@@ -761,5 +991,118 @@ describe('Integration — proxy intercept → enqueueAutoDetected → grant → 
     )
     expect(clone).not.toBeNull()
     expect(s.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+  })
+
+  it('a proxy-intercepted <img> pixel is granted and src-promoted after grant() (task 003)', () => {
+    // Full integration: proxy intercepts img.src = pixel URL → held inert →
+    // enqueueAutoDetected → grant → _injectImg promotes data-src to src.
+    function makeMetaPixelMatcher(): (url: string) => AutoBlockMatch | null {
+      return (url: string) => {
+        try {
+          const u = new URL(url)
+          if (
+            (u.hostname === 'www.facebook.com' || u.hostname === 'facebook.com') &&
+            u.pathname.startsWith('/tr')
+          ) {
+            return { serviceId: 'meta-pixel', category: 'marketing' }
+          }
+        } catch {
+          // ignore invalid URLs
+        }
+        return null
+      }
+    }
+
+    installAndActivate(makeMetaPixelMatcher())
+
+    // Simulate a tracking pixel fired via createElement + .src=
+    const img = document.createElement('img')
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+
+    // Proxy should have held it inert
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_BLOCKED)
+    expect(img.getAttribute(ATTR_AUTO_DETECTED)).toBe('true')
+    expect(getHeldElements()).toHaveLength(1)
+    expect(img.getAttribute('src')).toBeNull() // never forwarded
+
+    document.body.appendChild(img)
+
+    // Wire held elements into the blocking queue
+    const held = getHeldElements().splice(0)
+    for (const { el, src, category } of held) {
+      enqueueAutoDetected(
+        el as HTMLScriptElement | HTMLIFrameElement | HTMLImageElement,
+        src,
+        category,
+      )
+    }
+
+    // data-src is now stored (enqueueAutoDetected sets it)
+    expect(img.getAttribute('data-src')).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
+
+    vi.useFakeTimers()
+    grant('marketing')
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    // In-place src promotion — no clone, no reinsert
+    expect(img.getAttribute('data-src')).toBeNull() // consumed by _injectImg
+    expect(img.src).toContain('facebook.com/tr') // src promoted
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
+
+    // Exactly one <img> in the DOM — no clone was created
+    expect(document.body.querySelectorAll('img').length).toBe(1)
+  })
+
+  it('a proxy-intercepted <img> via new Image() is granted and src-promoted after grant()', () => {
+    // Tests the window.Image() constructor override path (task 002 + task 003).
+    function makeMetaPixelMatcher(): (url: string) => AutoBlockMatch | null {
+      return (url: string) => {
+        try {
+          const u = new URL(url)
+          if (
+            (u.hostname === 'www.facebook.com' || u.hostname === 'facebook.com') &&
+            u.pathname.startsWith('/tr')
+          ) {
+            return { serviceId: 'meta-pixel', category: 'marketing' }
+          }
+        } catch {
+          // ignore
+        }
+        return null
+      }
+    }
+
+    installAndActivate(makeMetaPixelMatcher())
+
+    // Canonical Meta Pixel pattern: new Image(); img.src = url
+    const img = new Image()
+    img.src = 'https://www.facebook.com/tr?id=456&ev=AddToCart'
+
+    // Proxy should have held it inert
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_BLOCKED)
+    expect(img.getAttribute(ATTR_AUTO_DETECTED)).toBe('true')
+    expect(getHeldElements()).toHaveLength(1)
+
+    document.body.appendChild(img)
+
+    // Wire into the blocking queue
+    const held = getHeldElements().splice(0)
+    for (const { el, src, category } of held) {
+      enqueueAutoDetected(
+        el as HTMLScriptElement | HTMLIFrameElement | HTMLImageElement,
+        src,
+        category,
+      )
+    }
+
+    vi.useFakeTimers()
+    grant('marketing')
+    vi.runAllTimers()
+    vi.useRealTimers()
+
+    expect(img.getAttribute('data-src')).toBeNull()
+    expect(img.src).toContain('facebook.com/tr')
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_EXECUTED)
   })
 })

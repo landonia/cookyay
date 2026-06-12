@@ -5,14 +5,7 @@
 // openPreferences() event, data-cookyay-open click delegation.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  _recordConsent,
-  _resetApi,
-  getConsent,
-  init,
-  onConsent,
-  openPreferences,
-} from './api.js'
+import { _recordConsent, _resetApi, getConsent, init, onConsent, openPreferences } from './api.js'
 import type { CategoryConfig, CookyayConfig } from './config.js'
 import { validateConfig } from './config.js'
 import { clearConsent, writeConsent, buildConsentRecord } from './consent/index.js'
@@ -186,18 +179,14 @@ describe('getConsent()', () => {
   })
 
   it('returns stored category choices', () => {
-    writeConsent(
-      buildConsentRecord(allGranted(), '1.0', '0.1.0', false),
-    )
+    writeConsent(buildConsentRecord(allGranted(), '1.0', '0.1.0', false))
     init(BASE_CONFIG)
     const consent = getConsent()
     expect(consent).toEqual(allGranted())
   })
 
   it('returns empty object when stored policyVersion does not match', () => {
-    writeConsent(
-      buildConsentRecord(allGranted(), 'old-version', '0.1.0', false),
-    )
+    writeConsent(buildConsentRecord(allGranted(), 'old-version', '0.1.0', false))
     init(BASE_CONFIG)
     expect(getConsent()).toEqual({})
   })
@@ -209,9 +198,7 @@ describe('getConsent()', () => {
 
 describe('onConsent() — immediate fire if already consented', () => {
   it('fires callback immediately when consent is already stored for that category', () => {
-    writeConsent(
-      buildConsentRecord(allGranted(), '1.0', '0.1.0', false),
-    )
+    writeConsent(buildConsentRecord(allGranted(), '1.0', '0.1.0', false))
     init(BASE_CONFIG)
 
     const cb = vi.fn()
@@ -221,9 +208,7 @@ describe('onConsent() — immediate fire if already consented', () => {
   })
 
   it('fires callback with false when category is denied in stored record', () => {
-    writeConsent(
-      buildConsentRecord(allDenied(), '1.0', '0.1.0', false),
-    )
+    writeConsent(buildConsentRecord(allDenied(), '1.0', '0.1.0', false))
     init(BASE_CONFIG)
 
     const cb = vi.fn()
@@ -463,10 +448,10 @@ describe('data-cookyay-open click delegation', () => {
 // ---------------------------------------------------------------------------
 
 describe('init() — DOM data-category cross-check', () => {
-  it('(a) warns when a blocked script has a typo\'d data-category', () => {
+  it("(a) warns when a blocked script has a typo'd data-category", () => {
     const s = document.createElement('script')
     s.setAttribute('type', 'text/plain')
-    s.setAttribute('data-category', 'analytcis')  // deliberate typo
+    s.setAttribute('data-category', 'analytcis') // deliberate typo
     document.body.appendChild(s)
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -476,10 +461,10 @@ describe('init() — DOM data-category cross-check', () => {
     expect(msgs.some((m) => m.includes('[Cookyay]') || m.includes('unknown category'))).toBe(true)
   })
 
-  it('(b) warns when an iframe has a typo\'d data-category', () => {
+  it("(b) warns when an iframe has a typo'd data-category", () => {
     const f = document.createElement('iframe')
     f.setAttribute('data-src', 'https://example.com/embed')
-    f.setAttribute('data-category', 'marketting')  // deliberate typo
+    f.setAttribute('data-category', 'marketting') // deliberate typo
     document.body.appendChild(f)
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})

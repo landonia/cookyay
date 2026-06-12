@@ -11,9 +11,7 @@
             "confidence": "low",
             "matchedBy": "declared-category",
             "serviceId": "script:/fixtures/stubs/ga4.js",
-            "pages": [
-              "FIXTURE_BASE/fixtures/blocking/all.html"
-            ]
+            "pages": ["FIXTURE_BASE/fixtures/blocking/all.html"]
           }
         }
       ]
@@ -28,9 +26,7 @@
             "confidence": "low",
             "matchedBy": "declared-category",
             "serviceId": "script:/fixtures/stubs/pixel.js",
-            "pages": [
-              "FIXTURE_BASE/fixtures/blocking/all.html"
-            ]
+            "pages": ["FIXTURE_BASE/fixtures/blocking/all.html"]
           }
         },
         {
@@ -40,9 +36,7 @@
             "confidence": "low",
             "matchedBy": "declared-category",
             "serviceId": "iframe:/fixtures/stubs/ytplayer.html",
-            "pages": [
-              "FIXTURE_BASE/fixtures/blocking/all.html"
-            ]
+            "pages": ["FIXTURE_BASE/fixtures/blocking/all.html"]
           }
         }
       ]
@@ -53,9 +47,7 @@
     {
       "kind": "script",
       "name": "/packages/cookyay/dist/bootstrap.js",
-      "pages": [
-        "FIXTURE_BASE/fixtures/blocking/all.html"
-      ],
+      "pages": ["FIXTURE_BASE/fixtures/blocking/all.html"],
       "_note": "Could not automatically classify this artifact. Review it and move it to the appropriate category in the config above, or add a script/iframe declaration to your HTML with data-category=\"<category>\"."
     }
   ],

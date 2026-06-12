@@ -15,12 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { _resetGpc } from './gpc.js'
 import { _resetApi, _recordConsent, init } from './api.js'
 import { _resetBanner } from './banner.js'
-import {
-  buildConsentRecord,
-  clearConsent,
-  readConsent,
-  writeConsent,
-} from './consent/index.js'
+import { buildConsentRecord, clearConsent, readConsent, writeConsent } from './consent/index.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -304,7 +299,7 @@ describe('AC2x: Explicit post-GPC consent choices persist across reloads', () =>
     // Step 2: user saves custom preferences while GPC is still live
     _recordConsent({ necessary: true, functional: false, analytics: true, marketing: false })
     const savedRecord = readConsent('v1')!
-    expect(savedRecord.gpc).toBe(true)           // gpc flag propagated
+    expect(savedRecord.gpc).toBe(true) // gpc flag propagated
     expect(savedRecord.categories.analytics).toBe(true)
 
     // Step 3: simulate reload — reset module state but keep cookie/storage intact
@@ -366,8 +361,8 @@ describe('AC2x: Explicit post-GPC consent choices persist across reloads', () =>
     setGpc(true)
     init(BASE_CONFIG)
 
-    expect(getToast()).toBeNull()     // no repeat toast
-    expect(getBanner()).toBeNull()    // banner suppressed
+    expect(getToast()).toBeNull() // no repeat toast
+    expect(getBanner()).toBeNull() // banner suppressed
     const reloadRecord = readConsent('v1')!
     expect(reloadRecord.categories.analytics).toBe(false)
   })

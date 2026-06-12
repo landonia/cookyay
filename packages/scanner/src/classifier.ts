@@ -125,13 +125,13 @@ function getOrCreate<K, V>(map: Map<K, V>, key: K, factory: () => V): V {
 
 export function classify(raw: RawFindings): ClassifiedFindings {
   // Maps for deduplication by key
-  const cookieMap = new Map<string, ClassifiedCookie>()           // key: `${name}@@${serviceId}`
-  const storageMap = new Map<string, ClassifiedStorage>()          // key: `${type}@@${key}`
-  const requestMap = new Map<string, ClassifiedRequest>()          // key: `${host}@@${serviceId}`
-  const scriptMap = new Map<string, ClassifiedScript>()            // key: `${src}`
-  const iframeMap = new Map<string, ClassifiedIframe>()            // key: `${src|dataSrc}`
-  const noscriptMap = new Map<string, NoscriptWarning>()           // key: normalized text
-  const unclassifiedMap = new Map<string, UnclassifiedArtifact>()  // key: `${kind}@@${name}`
+  const cookieMap = new Map<string, ClassifiedCookie>() // key: `${name}@@${serviceId}`
+  const storageMap = new Map<string, ClassifiedStorage>() // key: `${type}@@${key}`
+  const requestMap = new Map<string, ClassifiedRequest>() // key: `${host}@@${serviceId}`
+  const scriptMap = new Map<string, ClassifiedScript>() // key: `${src}`
+  const iframeMap = new Map<string, ClassifiedIframe>() // key: `${src|dataSrc}`
+  const noscriptMap = new Map<string, NoscriptWarning>() // key: normalized text
+  const unclassifiedMap = new Map<string, UnclassifiedArtifact>() // key: `${kind}@@${name}`
 
   // Cross-signal confidence tracking (task 006):
   // For each page, record which service IDs were matched by a cookie/storage
@@ -141,12 +141,15 @@ export function classify(raw: RawFindings): ClassifiedFindings {
   //
   // Map<pageUrl, Set<serviceId>> — populated during the cookie/storage loops,
   // checked against request matches at the bottom of each page iteration.
-  const pageCookieServices = new Map<string, Set<string>>()    // cookie/storage hits per page
-  const pageRequestServices = new Map<string, Set<string>>()   // request hits per page
+  const pageCookieServices = new Map<string, Set<string>>() // cookie/storage hits per page
+  const pageRequestServices = new Map<string, Set<string>>() // request hits per page
 
   function addPageSignal(map: Map<string, Set<string>>, page: string, serviceId: string): void {
     let s = map.get(page)
-    if (!s) { s = new Set(); map.set(page, s) }
+    if (!s) {
+      s = new Set()
+      map.set(page, s)
+    }
     s.add(serviceId)
   }
 
@@ -408,7 +411,11 @@ function tryExtractHost(src: string): string | null {
 function looksLikeTrackerNoscript(text: string): boolean {
   const lower = text.toLowerCase()
   return (
-    (lower.includes('<img') && (lower.includes('pixel') || lower.includes('fbq') || lower.includes('tr?') || lower.includes('gtm'))) ||
+    (lower.includes('<img') &&
+      (lower.includes('pixel') ||
+        lower.includes('fbq') ||
+        lower.includes('tr?') ||
+        lower.includes('gtm'))) ||
     lower.includes('<iframe') ||
     lower.includes('googletagmanager.com') ||
     lower.includes('facebook.com/tr') ||

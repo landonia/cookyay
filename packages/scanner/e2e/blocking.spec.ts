@@ -13,12 +13,13 @@ import { test, expect } from '@playwright/test'
 const ALL_PAGE = '/fixtures/blocking/all.html'
 
 // Synthetic window flags set by stub scripts — not on the standard Window type
-type StubWindow = Window & typeof globalThis & {
-  __analyticsInlineRan?: boolean
-  __ga4Ran?: boolean
-  __pixelRan?: boolean
-  __undeclaredRan?: boolean
-}
+type StubWindow = Window &
+  typeof globalThis & {
+    __analyticsInlineRan?: boolean
+    __ga4Ran?: boolean
+    __pixelRan?: boolean
+    __undeclaredRan?: boolean
+  }
 
 // Default-deny all external network; allow only 127.0.0.1 (the fixture server)
 test.beforeEach(async ({ page }) => {
@@ -84,7 +85,9 @@ test.describe('pre-consent blocking', () => {
     await expect(page.locator('[data-cookyay-placeholder]')).toBeVisible()
   })
 
-  test('undeclared-category script stays blocked even when other categories are granted', async ({ page }) => {
+  test('undeclared-category script stays blocked even when other categories are granted', async ({
+    page,
+  }) => {
     await page.goto(ALL_PAGE)
     await page.click('[data-cookyay-accept]')
 
@@ -191,7 +194,9 @@ test.describe('reject-all', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('granular consent', () => {
-  test('analytics grant executes only analytics scripts; marketing stays blocked', async ({ page }) => {
+  test('analytics grant executes only analytics scripts; marketing stays blocked', async ({
+    page,
+  }) => {
     await page.goto(ALL_PAGE)
     await page.click('[data-cookyay-manage]')
 
@@ -220,7 +225,9 @@ test.describe('granular consent', () => {
     expect(iframeSrc).toBeNull()
   })
 
-  test('marketing grant executes only marketing scripts; analytics stays blocked', async ({ page }) => {
+  test('marketing grant executes only marketing scripts; analytics stays blocked', async ({
+    page,
+  }) => {
     await page.goto(ALL_PAGE)
     await page.click('[data-cookyay-manage]')
 

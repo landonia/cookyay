@@ -12,12 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { _resetPreferences, mountPreferences } from './preferences.js'
 import { _resetApi, init } from './api.js'
 import { _resetBanner } from './banner.js'
-import {
-  buildConsentRecord,
-  clearConsent,
-  readConsent,
-  writeConsent,
-} from './consent/index.js'
+import { buildConsentRecord, clearConsent, readConsent, writeConsent } from './consent/index.js'
 
 // ---------------------------------------------------------------------------
 // Config fixture
@@ -411,7 +406,8 @@ describe('AC4: Save action', () => {
     init({ policyVersion: 'v1', categories: { analytics: { label: 'Analytics' } } })
     mountPreferences(null)
     // analytics has no services → no .cookyay-prefs__services under analytics section
-    const analyticsCatRow = getModal()!.querySelector('[data-cookyay-switch="analytics"]')!
+    const analyticsCatRow = getModal()!
+      .querySelector('[data-cookyay-switch="analytics"]')!
       .closest('.cookyay-prefs__category')!
     expect(analyticsCatRow.querySelector('.cookyay-prefs__services')).toBeNull()
   })

@@ -5,13 +5,7 @@
 // Script *execution* requires a real browser — see blocking.browser.test.ts.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  STATE_BLOCKED,
-  STATE_EXECUTED,
-  _resetBlocker,
-  grant,
-  scanBlocked,
-} from './blocking.js'
+import { STATE_BLOCKED, STATE_EXECUTED, _resetBlocker, grant, scanBlocked } from './blocking.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -193,7 +187,7 @@ describe('idempotency via data-cookyay-state', () => {
     // Calling twice should not push two entries; grant should only inject once
     makeScript()
     scanBlocked()
-    scanBlocked()  // second call
+    scanBlocked() // second call
 
     vi.useFakeTimers()
     grant('analytics')
@@ -226,8 +220,8 @@ describe('idempotency via data-cookyay-state', () => {
     scanBlocked()
 
     vi.useFakeTimers()
-    grant('analytics')     // drains queue
-    grant('analytics')     // second call — queue already drained
+    grant('analytics') // drains queue
+    grant('analytics') // second call — queue already drained
     vi.runAllTimers()
     vi.useRealTimers()
 

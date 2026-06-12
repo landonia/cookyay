@@ -90,8 +90,7 @@ export function _buildIndex(services: AutoBlockEntry[]): AutoBlockIndex {
     // Skip Google-owned services — Consent Mode v2 handles them.
     if (entry.google) continue
 
-    const requiresGlobMatch =
-      Array.isArray(entry.scriptUrlGlobs) && entry.scriptUrlGlobs.length > 0
+    const requiresGlobMatch = Array.isArray(entry.scriptUrlGlobs) && entry.scriptUrlGlobs.length > 0
 
     const indexed: IndexedEntry = { entry, requiresGlobMatch }
 
@@ -299,9 +298,7 @@ export function matchAutoBlock(url: string): AutoBlockMatch | null {
  * Create an isolated matcher function backed by a custom service list.
  * For unit testing only — not part of the public API.
  */
-export function _createMatcher(
-  services: AutoBlockEntry[],
-): (url: string) => AutoBlockMatch | null {
+export function _createMatcher(services: AutoBlockEntry[]): (url: string) => AutoBlockMatch | null {
   const index = _buildIndex(services)
   return function matchAutoBlockCustom(url: string): AutoBlockMatch | null {
     const host = _extractHost(url)

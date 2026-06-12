@@ -41,7 +41,13 @@ const INPUT_PATH = join(PKG_ROOT, 'data', 'services.yaml')
 const OUTPUT_PATH = join(PKG_ROOT, 'src', 'db-curated.generated.ts')
 // Client-safe slice for the runtime auto-block feature (v5)
 // [goals.md §Signature-DB delivery: inline a stripped client subset via codegen]
-const AUTOBLOCK_OUTPUT_PATH = join(WORKSPACE_ROOT, 'packages', 'cookyay', 'src', 'db-autoblock.generated.ts')
+const AUTOBLOCK_OUTPUT_PATH = join(
+  WORKSPACE_ROOT,
+  'packages',
+  'cookyay',
+  'src',
+  'db-autoblock.generated.ts',
+)
 const FINGERPRINTS_OUTPUT_PATH = join(WORKSPACE_ROOT, 'fixtures', 'service-fingerprints.json')
 
 // ---------------------------------------------------------------------------
@@ -102,7 +108,9 @@ function validateService(raw, index) {
   // skips these services and relies on Consent Mode v2 instead (DOM-blocking GTM/GA4
   // would suppress all CM v2 update signals).
   if (s.google !== undefined && typeof s.google !== 'boolean') {
-    throw new Error(`services[${index}] (${s.id}): google must be a boolean, got ${JSON.stringify(s.google)}`)
+    throw new Error(
+      `services[${index}] (${s.id}): google must be a boolean, got ${JSON.stringify(s.google)}`,
+    )
   }
   const google = s.google === true
 
@@ -144,7 +152,10 @@ function validateService(raw, index) {
     }
   }
 
-  // At least one match signal required
+  // At least one match signal required — every service must have at least one
+  // detectable signal for either the scanner (cookies/localStorage/requestHosts)
+  // or the runtime auto-block matcher (requestHosts/requestPaths/scriptUrlGlobs/
+  // iframeSrcGlobs).
   if (
     validatedCookies.length === 0 &&
     validatedStorage.length === 0 &&
@@ -155,7 +166,30 @@ function validateService(raw, index) {
   ) {
     throw new Error(
       `services[${index}] (${s.id}): must have at least one match signal ` +
-        `(cookies, localStorage, requestHosts, requestPaths, scriptUrlGlobs, or iframeSrcGlobs)`,
+        `(cookies, localStorage, requestHosts, requestPaths, scriptUrlGlobs, or iframeSrcGlobs).`,
+    )
+  }
+
+  // Pixel-class validation: any service whose id ends with "-pixel" is a tracking-pixel
+  // beacon entry intended for use with the v6 <img> interception. These entries MUST
+  // carry at least one requestPaths entry (host + path prefix, e.g. "facebook.com/tr").
+  //
+  // Rationale: the runtime <img> interceptor requires host+path precision to avoid
+  // blocking content images served from shared domains. A bare requestHosts entry
+  // is not sufficient — a host like "facebook.com" covers profile photos, share
+  // widgets, and much more besides the pixel endpoint. The path prefix scopes the
+  // match to the beacon endpoint exclusively. [goals.md §Signature DB expansion,
+  // research/runtime-interception-domain-expert.md §Recommendations 3]
+  //
+  // This check uses the ID suffix "-pixel" as the discriminant for pixel-class
+  // entries (no imgPixel/kind schema flag is introduced per v6 decision B).
+  if (typeof s.id === 'string' && s.id.endsWith('-pixel') && requestPaths.length === 0) {
+    throw new Error(
+      `services[${index}] (${s.id}): pixel-class entries (id ending in "-pixel") ` +
+        `must carry at least one requestPaths entry (host + path prefix, e.g. "facebook.com/tr"). ` +
+        `A bare requestHosts entry is not sufficient for <img> beacon interception — ` +
+        `the runtime interceptor requires host+path precision to avoid blocking non-tracking images. ` +
+        `Add a requestPaths entry (e.g. "analytics.example.com/pixel") to this service.`,
     )
   }
 

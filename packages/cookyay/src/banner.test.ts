@@ -138,7 +138,9 @@ describe('AC2: Dialog semantics', () => {
 
       const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })
       let prevented = false
-      tabEvent.preventDefault = () => { prevented = true }
+      tabEvent.preventDefault = () => {
+        prevented = true
+      }
       banner.dispatchEvent(tabEvent)
 
       expect(prevented).toBe(true)
@@ -158,7 +160,9 @@ describe('AC2: Dialog semantics', () => {
         bubbles: true,
       })
       let prevented = false
-      shiftTab.preventDefault = () => { prevented = true }
+      shiftTab.preventDefault = () => {
+        prevented = true
+      }
       banner.dispatchEvent(shiftTab)
 
       expect(prevented).toBe(true)
@@ -173,7 +177,9 @@ describe('AC2: Dialog semantics', () => {
 
       const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })
       let prevented = false
-      tabEvent.preventDefault = () => { prevented = true }
+      tabEvent.preventDefault = () => {
+        prevented = true
+      }
       banner.dispatchEvent(tabEvent)
 
       expect(prevented).toBe(false)

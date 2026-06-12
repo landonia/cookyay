@@ -31,7 +31,12 @@ const CONFIG = {
 }
 
 function allGranted() {
-  return { necessary: true as const, functional: true as const, analytics: true as const, marketing: true as const }
+  return {
+    necessary: true as const,
+    functional: true as const,
+    analytics: true as const,
+    marketing: true as const,
+  }
 }
 
 function wait(ms = 50): Promise<void> {
@@ -151,7 +156,7 @@ describe('grant-after-save executes blocked script (real browser)', () => {
     const modal = getModal()!
     modal.querySelector<HTMLElement>('[data-cookyay-switch="analytics"]')!.click()
     modal.querySelector<HTMLElement>('[data-cookyay-save]')!.click()
-    await wait(100)  // allow setTimeout(fn, 0) in grant() to fire
+    await wait(100) // allow setTimeout(fn, 0) in grant() to fire
 
     expect((window as unknown as Record<string, unknown>)[flag]).toBe(true)
   })
@@ -215,7 +220,7 @@ describe('cookyay:change on withdrawal in real browser', () => {
     document.removeEventListener('cookyay:change', onchange)
 
     expect(changeDetail).not.toBeNull()
-    const cats = (changeDetail!['categories'] as Record<string, boolean>)
+    const cats = changeDetail!['categories'] as Record<string, boolean>
     expect(cats['analytics']).toBe(false)
     expect(cats['necessary']).toBe(true)
   })

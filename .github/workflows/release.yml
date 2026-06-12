@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      id-token: write   # required for npm OIDC Trusted Publishing (no long-lived tokens)
+      id-token: write # required for npm OIDC Trusted Publishing (no long-lived tokens)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,8 +48,8 @@ jobs:
           # When changesets exist: open/update a "Version Packages" PR.
           # When the PR is merged: publish to npm via OIDC Trusted Publishing.
           publish: pnpm release
-          title: "chore: version packages"
-          commit: "chore: version packages"
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # No NPM_TOKEN or NODE_AUTH_TOKEN — authentication is via OIDC Trusted

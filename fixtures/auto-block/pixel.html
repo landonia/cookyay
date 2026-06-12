@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: auto-block pixel lifecycle</title>
+    <!--
+      Bootstrap MUST be first in <head>.
+      [goals.md §Interception mechanism: "Cookyay first in <head>" is a hard install requirement]
+
+      WARNING: Do NOT reorder <head> children — the bootstrap must load before any
+      third-party content to ensure the proxy is installed before pixels are injected.
+      Auto-formatting tools may break this constraint. [research/test-strategist.md §Gotchas]
+    -->
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+
+    <!--
+      IMPORTANT: All pixels/images are injected by JavaScript (see <body>) so that
+      the runtime proxy can intercept document.createElement('img') / img.src / new Image().
+      HTML-parser-injected <img src="..."> would execute before init() (init() is in a
+      type="module" block which is deferred). Dynamic injection is the real-world vector.
+
+      Content images (non-curated) that appear in HTML at parse time are a separate
+      concern tested via the static content-image case below.
+      [research/test-strategist.md §F3, §Gotchas]
+    -->
+  </head>
+  <body>
+    <h1>Auto-block fixture — pixel lifecycle (v6)</h1>
+    <p>
+      Proves the <code>&lt;img&gt;</code> beacon pixel auto-block lifecycle:
+      block-until-consent then fire-once on grant.
+    </p>
+
+    <h2>1. Meta Pixel img beacon (auto-blocked — network proof)</h2>
+    <div id="fb-pixel-status" class="status-box status-blocked">Meta Pixel: blocked</div>
+
+    <h2>2. Content image — NOT held (false-positive guard)</h2>
+    <!--
+      Non-curated content image: must NOT be intercepted by the proxy.
+      The src is set in HTML markup so the browser loads it during parsing
+      (before init() — this is intentional; it proves static img tags are not affected).
+      A network hit count of exactly 1 on load confirms it passed through.
+    -->
+    <img
+      id="content-img"
+      src="https://images.example.com/photo.jpg"
+      alt="Content image (should not be blocked)"
+      width="1"
+      height="1"
+    />
+    <div id="content-img-status" class="status-box status-blocked">Content image: loading…</div>
+
+    <h2>3. Google pixel — NOT held (skip-Google)</h2>
+    <div id="google-pixel-status" class="status-box status-blocked">Google pixel: checking…</div>
+
+    <h2>4. Declared wins — img pixel both declared AND DB-matched (handled exactly once)</h2>
+    <!--
+      This <img> has data-category="marketing" (declarative path owns it).
+      Its src would match the Meta Pixel requestPaths ("facebook.com/tr") in the DB.
+      The proxy must NOT set data-cookyay-auto on it (declared wins).
+      It is handled by the declarative blocking engine — no double-fire.
+    -->
+    <img
+      type="text/plain"
+      data-category="marketing"
+      data-src="https://www.facebook.com/tr?id=DECLARED&ev=PageView&declared=true"
+      id="declared-pixel"
+      width="1"
+      height="1"
+      alt=""
+    />
+    <div id="declared-pixel-status" class="status-box status-blocked">Declared pixel: blocked</div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      // ---------------------------------------------------------------------------
+      // Step 1: Initialise with autoBlock:true BEFORE injecting any third-party
+      // pixels. The proxy is installed synchronously by init() so subsequent
+      // document.createElement('img') / img.src = '...' / new Image() calls are
+      // intercepted.
+      // [autoblock-proxy.ts §installAutoBlockProxy, api.ts §init() autoBlock path]
+      // ---------------------------------------------------------------------------
+      init({
+        policyVersion: 'pixel-fixture-v1',
+        debug: true,
+        autoBlock: true,
+        categories: {
+          marketing: {
+            label: 'Marketing',
+            services: [
+              { name: 'Meta Pixel', cookies: ['_fbp'] },
+            ],
+          },
+        },
+      })
+
+      // ---------------------------------------------------------------------------
+      // Step 2: Inject tracking pixels dynamically AFTER init().
+      // The proxy's Phase 1 shim is already installed synchronously by init()
+      // (installAutoBlockProxy called synchronously), so all img.src / new Image()
+      // assignments below are trapped.
+      // [autoblock-proxy.ts §Two-phase install]
+      // ---------------------------------------------------------------------------
+
+      // 1. Meta Pixel via new Image() (canonical fire-and-forget pattern)
+      //    This is the pattern used by the real Meta Pixel: var img = new Image(); img.src = url
+      //    window.Image is also patched by the proxy to catch this path.
+      const fbPixel = new Image(1, 1)
+      fbPixel.id = 'autoblock-fb-pixel'
+      document.body.appendChild(fbPixel)
+      fbPixel.src = 'https://www.facebook.com/tr?id=FIXTURE&ev=PageView&noscript=1'
+
+      // Also test document.createElement path for completeness
+      const fbPixelViaCreate = document.createElement('img')
+      fbPixelViaCreate.id = 'autoblock-fb-pixel-create'
+      fbPixelViaCreate.src = 'https://www.facebook.com/tr?id=FIXTURE2&ev=ViewContent'
+
+      // 3. Google pixel via img (a google-owned pixel domain — should NOT be blocked)
+      //    Google's conversion pixel uses google.com — google:true services pass through.
+      //    We use a real Google-owned ad/conversion domain to prove the skip.
+      //    Note: googlesyndication.com is not in the DB as a Google pixel; we use
+      //    google.com/pagead/ path which would match google if it were in the DB,
+      //    but Google entries have google:true so the matcher returns null for them.
+      //    We use the GTM host (googletagmanager.com) which is known Google.
+      const googlePixel = document.createElement('img')
+      googlePixel.id = 'autoblock-google-pixel'
+      googlePixel.src = 'https://www.googletagmanager.com/collect?v=1&t=event'
+      document.body.appendChild(googlePixel)
+
+      // ---------------------------------------------------------------------------
+      // Status updates — GTM/Google pixel should NOT have data-cookyay-auto
+      // ---------------------------------------------------------------------------
+      setTimeout(() => {
+        const gEl = document.getElementById('autoblock-google-pixel')
+        const autoAttr = gEl?.getAttribute('data-cookyay-auto')
+        const statusEl = document.getElementById('google-pixel-status')
+        statusEl.textContent = 'Google pixel: auto attr=' + (autoAttr ?? 'absent') + ' (absent = correct)'
+        statusEl.className = 'status-box ' + (!autoAttr ? 'status-granted' : 'status-blocked')
+      }, 300)
+
+      // Content image status: if it loaded (or was aborted by route — either way
+      // it was NOT blocked by the proxy, so data-cookyay-auto must be absent)
+      setTimeout(() => {
+        const imgEl = document.getElementById('content-img')
+        const autoAttr = imgEl?.getAttribute('data-cookyay-auto')
+        const statusEl = document.getElementById('content-img-status')
+        statusEl.textContent = 'Content image: auto attr=' + (autoAttr ?? 'absent') + ' (absent = correct)'
+        statusEl.className = 'status-box ' + (!autoAttr ? 'status-granted' : 'status-blocked')
+      }, 300)
+
+      // Declared pixel status: proxy must NOT set data-cookyay-auto on it
+      setTimeout(() => {
+        const declEl = document.getElementById('declared-pixel')
+        const autoAttr = declEl?.getAttribute('data-cookyay-auto')
+        const stateAttr = declEl?.getAttribute('data-cookyay-state')
+        const statusEl = document.getElementById('declared-pixel-status')
+        statusEl.textContent = 'Declared pixel: auto=' + (autoAttr ?? 'absent') + ' state=' + (stateAttr ?? 'none')
+        statusEl.className = 'status-box ' + (!autoAttr ? 'status-granted' : 'status-blocked')
+      }, 300)
+
+      onConsent('marketing', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          const fbEl = document.getElementById('autoblock-fb-pixel')
+          const src = fbEl?.getAttribute('src') ?? fbEl?.src ?? ''
+          const statusEl = document.getElementById('fb-pixel-status')
+          statusEl.textContent = 'Meta Pixel: ' + (src ? 'src promoted ✓' : 'still blocked')
+          statusEl.className = 'status-box ' + (src ? 'status-granted' : 'status-blocked')
+        }, 150)
+      })
+    </script>
+  </body>
+</html>

@@ -60,8 +60,7 @@ export interface StringTable {
 
 export const DEFAULT_STRINGS: StringTable = {
   bannerTitle: 'We use cookies',
-  bannerDescription:
-    'This site uses cookies and similar technologies to improve your experience.',
+  bannerDescription: 'This site uses cookies and similar technologies to improve your experience.',
   acceptAllLabel: 'Accept all',
   rejectAllLabel: 'Reject all',
   managePreferencesLabel: 'Manage preferences',

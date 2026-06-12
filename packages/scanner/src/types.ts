@@ -24,15 +24,15 @@ export interface RequestRecord {
 }
 
 export interface ScriptRecord {
-  src: string | null    // null = inline script
-  blocked: boolean      // type="text/plain" declarative blocking
+  src: string | null // null = inline script
+  blocked: boolean // type="text/plain" declarative blocking
   category: string | null // data-category attribute value
 }
 
 export interface IframeRecord {
-  src: string | null    // live src attribute (null if blocked)
+  src: string | null // live src attribute (null if blocked)
   dataSrc: string | null // data-src declarative placeholder
-  blocked: boolean      // has data-src but no src
+  blocked: boolean // has data-src but no src
   category: string | null // data-category attribute value
 }
 
@@ -51,7 +51,7 @@ export interface PageFindings {
 }
 
 export interface RawFindings {
-  scannedAt: string    // ISO 8601
+  scannedAt: string // ISO 8601
   targetUrl: string
   pagesVisited: string[]
   pages: PageFindings[]

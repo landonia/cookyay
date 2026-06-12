@@ -385,7 +385,7 @@ describe('AC2 — matched elements held; non-matched pass through', () => {
 // AC3 — iframes intercepted; img pixels untouched; document.write NOT intercepted
 // ---------------------------------------------------------------------------
 
-describe('AC3 — iframes intercepted; img pixels and document.write NOT intercepted', () => {
+describe('AC3 — iframes intercepted; document.write NOT intercepted', () => {
   it('matched iframe: src is NOT set (held inert)', () => {
     installAndActivate(makeYoutubeMatcher())
     const f = document.createElement('iframe')
@@ -414,44 +414,184 @@ describe('AC3 — iframes intercepted; img pixels and document.write NOT interce
     expect(getHeldElements()).toHaveLength(0)
   })
 
-  it('img element: src is NOT intercepted (img pixel passes through)', () => {
-    // Install proxy with a matcher that would match facebook.com/tr
-    const matcher = (url: string): AutoBlockMatch | null => {
-      if (url.includes('facebook.com/tr')) {
-        return { serviceId: 'meta-pixel', category: 'marketing' }
-      }
-      return null
-    }
-    installAndActivate(matcher)
-
-    // img is NOT a script/iframe — the proxy MUST NOT intercept it
-    const img = document.createElement('img')
-    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
-    // img.src should be set normally (pixel passes through)
-    expect(img.src).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
-    // The held queue must be empty — img interception is out of scope
-    expect(getHeldElements()).toHaveLength(0)
-  })
-
-  it('img setAttribute src: passes through untouched', () => {
-    const matcher = (url: string): AutoBlockMatch | null => {
-      if (url.includes('facebook.com')) return { serviceId: 'meta-pixel', category: 'marketing' }
-      return null
-    }
-    installAndActivate(matcher)
-    const img = document.createElement('img')
-    img.setAttribute('src', 'https://www.facebook.com/tr?id=123&ev=PageView')
-    expect(img.getAttribute('src')).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
-    expect(getHeldElements()).toHaveLength(0)
-  })
-
   it('document.write is NOT overridden by the proxy', () => {
     installAndActivate(makeHotjarMatcher())
     // document.write should still be the native function reference
     // We can't call it in jsdom safely, but we can verify the proxy did not override it
     expect(typeof document.write).toBe('function')
     // The important check: our proxy does NOT monkey-patch document.write
-    // This is verified by the proxy source — we only patch createElement and setAttribute
+    // This is verified by the proxy source — we only patch createElement, setAttribute, and Image
+  })
+})
+
+// ---------------------------------------------------------------------------
+// AC1 (v6) — <img> interception: createElement + setAttribute + new Image()
+// ---------------------------------------------------------------------------
+
+/** A matcher that hits for Meta Pixel tracking endpoint (requestPaths-style). */
+function makeMetaPixelMatcher(): (url: string) => AutoBlockMatch | null {
+  return (url: string) => {
+    try {
+      const u = new URL(url)
+      if (
+        (u.hostname === 'www.facebook.com' || u.hostname === 'facebook.com') &&
+        u.pathname.startsWith('/tr')
+      ) {
+        return { serviceId: 'meta-pixel', category: 'marketing' }
+      }
+    } catch {
+      // invalid URL — no match
+    }
+    return null
+  }
+}
+
+describe('AC1 (v6 img) — <img> interception via createElement + setAttribute + new Image()', () => {
+  // --- createElement + .src= ---
+
+  it('matched pixel img: src is NOT set via createElement + .src= (held inert)', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = document.createElement('img')
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    // src must NOT be forwarded — element stays inert
+    expect(img.getAttribute('src')).toBeNull()
+    expect(img.src).toBe('')
+  })
+
+  it('matched pixel img: marked data-cookyay-state="blocked" and data-cookyay-auto="true"', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = document.createElement('img')
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_BLOCKED)
+    expect(img.getAttribute(ATTR_AUTO_DETECTED)).toBe('true')
+    expect(img.getAttribute('data-category')).toBe('marketing')
+  })
+
+  it('matched pixel img: registered in held queue with correct metadata', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = document.createElement('img')
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    const held = getHeldElements()
+    expect(held).toHaveLength(1)
+    expect(held[0].el).toBe(img)
+    expect(held[0].src).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
+    expect(held[0].category).toBe('marketing')
+    expect(held[0].serviceId).toBe('meta-pixel')
+  })
+
+  // --- createElement + setAttribute('src', ...) ---
+
+  it('matched pixel img: held inert via setAttribute path', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = document.createElement('img')
+    img.setAttribute('src', 'https://www.facebook.com/tr?id=123&ev=PageView')
+    expect(img.getAttribute('src')).toBeNull() // real setAttribute never called
+    expect(img.getAttribute('data-cookyay-state')).toBe(STATE_BLOCKED)
+    expect(getHeldElements()).toHaveLength(1)
+  })
+
+  it('idempotency: setAttribute + property setter dual-fire only holds once', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = document.createElement('img')
+    img.setAttribute('src', 'https://www.facebook.com/tr?id=123&ev=PageView')
+    // Try again via the property setter — already held, must be a no-op
+    img.src = 'https://www.facebook.com/tr?id=456&ev=AddToCart'
+    expect(getHeldElements()).toHaveLength(1)
+  })
+
+  // --- Content image false-positive guard ---
+
+  it('content image on a non-curated host/path passes through untouched (true-positive pixel vs false-positive content)', () => {
+    installAndActivate(makeMetaPixelMatcher())
+
+    // True-positive: tracking pixel — must be held
+    const pixel = document.createElement('img')
+    pixel.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    expect(pixel.getAttribute('src')).toBeNull()
+    expect(getHeldElements()).toHaveLength(1)
+
+    // False-positive guard: a content image on a non-curated host must pass through
+    const profilePhoto = document.createElement('img')
+    profilePhoto.src = 'https://cdn.example.com/profile-photo.jpg'
+    expect(profilePhoto.src).toBe('https://cdn.example.com/profile-photo.jpg')
+    expect(getHeldElements()).toHaveLength(1) // still only the pixel
+  })
+
+  it('facebook.com content image on a non-pixel path passes through (path prefix guard)', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = document.createElement('img')
+    // /photos/ is NOT the pixel endpoint — must NOT be held
+    img.src = 'https://www.facebook.com/photos/some-user-photo.jpg'
+    expect(img.src).toBe('https://www.facebook.com/photos/some-user-photo.jpg')
+    expect(getHeldElements()).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// AC2 — window.Image constructor override (new Image() pattern)
+// ---------------------------------------------------------------------------
+
+describe('AC2 — window.Image constructor override (new Image() canonical pixel pattern)', () => {
+  it('new Image() with a matched pixel src: src is NOT forwarded (held inert)', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = new Image()
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    // src must NOT be forwarded — element stays inert
+    expect(img.getAttribute('src')).toBeNull()
+    expect(img.src).toBe('')
+    expect(getHeldElements()).toHaveLength(1)
+  })
+
+  it('new Image() with a matched pixel src: held with correct metadata', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = new Image()
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    const held = getHeldElements()
+    expect(held).toHaveLength(1)
+    expect(held[0].el).toBe(img)
+    expect(held[0].src).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
+    expect(held[0].serviceId).toBe('meta-pixel')
+    expect(held[0].category).toBe('marketing')
+  })
+
+  it('new Image() with a non-matched src: src is forwarded normally', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = new Image()
+    img.src = 'https://cdn.example.com/avatar.png'
+    expect(img.src).toBe('https://cdn.example.com/avatar.png')
+    expect(getHeldElements()).toHaveLength(0)
+  })
+
+  it('new Image() prototype is preserved (instanceof HTMLImageElement)', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    const img = new Image()
+    expect(img).toBeInstanceOf(HTMLImageElement)
+  })
+
+  it('after _resetAutoBlockProxy, window.Image is restored to native', () => {
+    installAndActivate(makeMetaPixelMatcher())
+    _resetAutoBlockProxy()
+    // After reset, new Image() should work natively (no interception)
+    const img = new Image()
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    // Native: src is set normally
+    expect(img.src).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
+    expect(getHeldElements()).toHaveLength(0)
+  })
+
+  it('new Image() with matched pixel in Phase 1 (before activateMatcher): staged inert', () => {
+    installAutoBlockProxy() // Phase 1 only
+    const img = new Image()
+    img.src = 'https://www.facebook.com/tr?id=123&ev=PageView'
+    // Staged — src not yet forwarded
+    expect(img.getAttribute('src')).toBeNull()
+    expect(img.src).toBe('')
+    expect(getHeldElements()).toHaveLength(0) // in staging, not held yet
+
+    // Now activate the matcher — staged element is classified and held
+    activateMatcher(makeMetaPixelMatcher())
+    expect(getHeldElements()).toHaveLength(1)
+    expect(getHeldElements()[0].src).toBe('https://www.facebook.com/tr?id=123&ev=PageView')
   })
 })
 
@@ -720,9 +860,7 @@ describe('debug logging', () => {
     const debugLog = vi.fn()
     installAutoBlockProxy(debugLog)
     // The install itself logs a message
-    expect(debugLog).toHaveBeenCalledWith(
-      expect.stringContaining('auto-block proxy installed'),
-    )
+    expect(debugLog).toHaveBeenCalledWith(expect.stringContaining('auto-block proxy installed'))
   })
 
   it('does not call any log function when debugLog is null', () => {

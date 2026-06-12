@@ -12,9 +12,10 @@ const INDEX = '/fixtures/index.html'
 const ALL_PAGE = '/fixtures/blocking/all.html'
 
 // Synthetic flags from stub scripts
-type StubWindow = Window & typeof globalThis & {
-  __analyticsInlineRan?: boolean
-}
+type StubWindow = Window &
+  typeof globalThis & {
+    __analyticsInlineRan?: boolean
+  }
 
 // Default-deny all external network (test-strategist §Rec 3, §Finding 6)
 test.beforeEach(async ({ page }) => {
@@ -49,7 +50,9 @@ test('first visit: banner is shown and consent cookie is absent', async ({ page 
 // Accept flow
 // ---------------------------------------------------------------------------
 
-test('accept flow: banner dismissed, consent cookie written, re-open link visible', async ({ page }) => {
+test('accept flow: banner dismissed, consent cookie written, re-open link visible', async ({
+  page,
+}) => {
   await page.goto(INDEX)
 
   await page.click('[data-cookyay-accept]')
@@ -76,7 +79,9 @@ test('accept flow: banner dismissed, consent cookie written, re-open link visibl
 // Reject flow
 // ---------------------------------------------------------------------------
 
-test('reject flow: banner dismissed, consent cookie written with all optional denied', async ({ page }) => {
+test('reject flow: banner dismissed, consent cookie written with all optional denied', async ({
+  page,
+}) => {
   await page.goto(INDEX)
 
   await page.click('[data-cookyay-reject]')
@@ -101,7 +106,9 @@ test('reject flow: banner dismissed, consent cookie written with all optional de
 // Returning visitor
 // ---------------------------------------------------------------------------
 
-test('returning visitor: no banner shown when valid consent is already stored', async ({ page }) => {
+test('returning visitor: no banner shown when valid consent is already stored', async ({
+  page,
+}) => {
   // First visit — accept
   await page.goto(INDEX)
   await page.click('[data-cookyay-accept]')
@@ -187,12 +194,14 @@ test('withdrawal toast dismisses on close button click', async ({ page }) => {
 // Policy-version re-prompt
 // ---------------------------------------------------------------------------
 
-test('policy-version re-prompt: banner shown when stored consent has a different policy version', async ({ page }) => {
+test('policy-version re-prompt: banner shown when stored consent has a different policy version', async ({
+  page,
+}) => {
   // Pre-seed a consent cookie whose policyVersion differs from the fixture site's ('fixture-v1')
   const oldPayload = {
     sv: 1,
     t: 1700000000,
-    pv: 'old-policy',       // mismatch — fixture uses 'fixture-v1'
+    pv: 'old-policy', // mismatch — fixture uses 'fixture-v1'
     bv: '0.1.0',
     c: { n: true, f: true, a: true, m: true },
     gpc: false,
@@ -266,7 +275,9 @@ test('GPC visitor: second visit does not re-show GPC toast', async ({ page }) =>
 // Task 021 — regression: explicit post-GPC choices must persist across reloads
 // Repro: Brave (GPC default on) — saving Cookie settings was forgotten on reload
 // because the record was written with gpc:false, so _runGpc() overwrote it.
-test('GPC visitor: explicit preference choices persist after reload (task 021)', async ({ page }) => {
+test('GPC visitor: explicit preference choices persist after reload (task 021)', async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'globalPrivacyControl', {
       value: true,
@@ -300,8 +311,8 @@ test('GPC visitor: explicit preference choices persist after reload (task 021)',
     c: { a: boolean }
     gpc: boolean
   }
-  expect(payloadAfterSave.gpc).toBe(true)      // GPC-acknowledged
-  expect(payloadAfterSave.c.a).toBe(true)       // analytics granted
+  expect(payloadAfterSave.gpc).toBe(true) // GPC-acknowledged
+  expect(payloadAfterSave.c.a).toBe(true) // analytics granted
 
   // Reload — the explicit choices must survive
   await page.goto(ALL_PAGE)
@@ -320,5 +331,5 @@ test('GPC visitor: explicit preference choices persist after reload (task 021)',
     gpc: boolean
   }
   expect(payloadAfterReload.gpc).toBe(true)
-  expect(payloadAfterReload.c.a).toBe(true)    // analytics choice preserved
+  expect(payloadAfterReload.c.a).toBe(true) // analytics choice preserved
 })
