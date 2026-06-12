@@ -1,6 +1,6 @@
 {
   "name": "@cookyay/scanner",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "CLI cookie scanner for cookyay — crawls a site and emits a consent config",
   "license": "Apache-2.0",
   "repository": {
