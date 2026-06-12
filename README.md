@@ -19,7 +19,7 @@ Free, self-hosted cookie consent — zero-dependency banner library.
 - **Zero runtime dependencies** — vanilla TypeScript, no framework required
 - **< 20 KB min+gzip** — combined IIFE + inline bootstrap snippet
 - **Declarative script/iframe blocking** — block analytics/marketing until consented
-- **Runtime auto-block (`autoBlock: true`, v5)** — intercepts known third-party scripts/iframes at runtime from a bundled ~50-service signature database; no HTML changes needed
+- **Runtime auto-block (`autoBlock: true`, v5+)** — intercepts known third-party scripts, iframes, and (v6) `<img>` beacon pixels at runtime from a bundled signature database; no HTML changes needed; `fetch`/`sendBeacon` beacons are a known gap (DOM-level limit)
 - **Google Consent Mode v2** — fires default + update signals automatically
 - **GPC (Global Privacy Control)** — detected and honored with a visible toast
 - **Consent withdrawal** — surfaces a "reload required" prompt
@@ -76,7 +76,12 @@ path is convenient for prototyping.
 <script type="module">
   import Cookyay from 'https://cdn.jsdelivr.net/npm/cookyay@0.1/+esm'
 
-  Cookyay.init({ policyVersion: '2025-01-01', categories: { /* ... */ } })
+  Cookyay.init({
+    policyVersion: '2025-01-01',
+    categories: {
+      /* ... */
+    },
+  })
 </script>
 ```
 
@@ -108,7 +113,52 @@ Consent Mode signals until the deferred UI bundle loads).
 ```html
 <head>
   <!-- PART 1: Cookyay bootstrap — MUST be first in <head> -->
-  <script>"use strict";(()=>{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&&(a.functionality_storage="granted",a.security_storage="granted"),e.f&&(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&&(a.analytics_storage="granted"),e.m&&(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&&(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();</script>
+  <script>
+    'use strict'
+    ;(() => {
+      function o() {
+        return {
+          ad_storage: 'denied',
+          analytics_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          functionality_storage: 'denied',
+          personalization_storage: 'denied',
+          security_storage: 'denied',
+          wait_for_update: 500,
+        }
+      }
+      function i(a) {
+        let t = document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/)
+        if (t)
+          try {
+            let n = JSON.parse(decodeURIComponent(t[1]))
+            if (n?.sv !== 1 || !n?.c || typeof n.c != 'object') return
+            let e = n.c
+            ;(e.n && ((a.functionality_storage = 'granted'), (a.security_storage = 'granted')),
+              e.f &&
+                ((a.functionality_storage = 'granted'), (a.personalization_storage = 'granted')),
+              e.a && (a.analytics_storage = 'granted'),
+              e.m &&
+                ((a.ad_storage = 'granted'),
+                (a.ad_user_data = 'granted'),
+                (a.ad_personalization = 'granted')))
+          } catch {}
+      }
+      function r() {
+        ;(window.__COOKYAY || (window.__COOKYAY = { q: [], gpc: !1 }),
+          (window.__COOKYAY.gpc = !!navigator.globalPrivacyControl),
+          window.dataLayer || (window.dataLayer = []),
+          typeof window.gtag != 'function' &&
+            (window.gtag = function () {
+              window.dataLayer.push(arguments)
+            }))
+        let a = o()
+        ;(i(a), window.gtag('consent', 'default', a))
+      }
+      r()
+    })()
+  </script>
 
   <!-- Your analytics/GTM snippet goes HERE, after the bootstrap -->
   <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX"></script> -->
@@ -169,7 +219,8 @@ replace `src` with `data-src`.
 <iframe
   data-src="https://www.youtube-nocookie.com/embed/VIDEO_ID"
   data-category="marketing"
-  width="560" height="315"
+  width="560"
+  height="315"
   title="YouTube embed"
   allowfullscreen
 ></iframe>
@@ -224,28 +275,37 @@ disk space), the scanner prints a clear error and the manual fallback:
 
 ---
 
-## Runtime auto-block (v5)
+## Runtime auto-block (v5+)
 
-v5 adds `autoBlock` — a single boolean config flag that lets the banner intercept
-and hold known third-party scripts and iframes inert at runtime, *without* you
-hand-declaring each one in your HTML.
+`autoBlock` is a single boolean config flag that lets the banner intercept and
+hold known third-party trackers inert at runtime, _without_ you hand-declaring
+each one in your HTML.
 
 ```js
 Cookyay.init({
   policyVersion: '2026-01-01',
-  autoBlock: true,          // opt-in; default false
-  categories: { /* ... */ },
+  autoBlock: true, // opt-in; default false
+  categories: {
+    /* ... */
+  },
 })
 ```
 
 ### What it does
 
-When `autoBlock: true`, the banner's `document.createElement`/`setAttribute`
-proxy (installed in the synchronous bootstrap snippet) matches outgoing
-`<script>` and `<iframe>` element insertions against a bundled signature database
-of ~50 curated third-party services. Any match is held inert until the visitor
-grants consent to the matching category, then re-executed using the same
-grant/inject queue as declarative blocking.
+When `autoBlock: true`, the banner's proxy (installed in the synchronous
+bootstrap snippet) matches outgoing `<script>`, `<iframe>`, and **`<img>`
+beacon pixel** insertions against a bundled signature database of curated
+third-party services. Any match is held inert until the visitor grants consent
+to the matching category, then re-executed (scripts/iframes) or fired once
+(pixels) using the same grant/inject queue as declarative blocking.
+
+**v6 adds `<img>` beacon pixel coverage.** The proxy now also intercepts
+`new Image()` constructor calls and `<img>` `src` assignments for known
+tracking-pixel endpoints (Meta Pixel `facebook.com/tr`, LinkedIn Insight Tag,
+Pinterest Tag, Snapchat Pixel, TikTok Pixel, Reddit Pixel, and others in the
+curated DB). Pixel blocking is scoped strictly to curated host+path endpoints
+in the signature database — first-party images and image CDNs are never touched.
 
 Effective combinations:
 
@@ -253,41 +313,56 @@ Effective combinations:
   what you declare with `type="text/plain" data-category="..."`. Unchanged from
   v4. The signature database tree-shakes to zero in this mode (no bundle cost).
 - **`autoBlock: true`** — declarative + runtime: declared rules are applied first
-  (they always win); then any script/iframe not already declared is matched
-  against the signature database and auto-blocked if a known service is
-  recognised.
+  (they always win); then any script, iframe, or `<img>` pixel not already
+  declared is matched against the signature database and auto-blocked if a known
+  service is recognised.
 
 ### The non-negotiable install requirement
 
 > **The Cookyay bootstrap snippet MUST be the first `<script>` in `<head>`,
 > before every third-party tag — GTM, GA4, or anything else.**
 
-The bootstrap installs the `createElement`/`setAttribute` proxy synchronously.
-Any `<script src>` placed in the HTML *before* the bootstrap has already been
-fetched and parsed by the browser before the interceptor exists — it cannot be
-blocked, silently or otherwise. This is an architectural limit of DOM-level
-interception, not a bug.
+The bootstrap installs the proxy synchronously. Any `<script src>` or pixel
+placed in the HTML _before_ the bootstrap has already been fetched by the browser
+before the interceptor exists — it cannot be blocked. This is an architectural
+limit of DOM-level interception, not a bug.
 
-If you load GTM or GA4 before the Cookyay bootstrap, `autoBlock` will have no
-effect on those scripts. The only fix is load-order: Cookyay first.
+**Debug-mode diagnostic (v6):** Set `debug: true` in your `Cookyay.init()` call
+and the banner will warn you in the browser console if it detects that a known
+tracker loaded before the bootstrap — naming the specific service and its URL so
+you can fix the install order. Example:
 
-This requirement already exists for Google Consent Mode v2 correctness (see
-[Quickstart](https://cookyay.com/#quickstart)) — `autoBlock` adds a second,
-equally hard reason to enforce it.
+```
+[Cookyay] INSTALL ORDER WARNING: "Meta Pixel" (https://connect.facebook.net/en_US/fbevents.js) loaded before Cookyay bootstrap. Move Cookyay first in <head>.
+```
 
-### Scope boundaries (v5)
+This warning fires only when `debug: true` and costs zero bytes in production
+builds (dead-code-eliminated).
 
-`autoBlock` covers **scripts and iframes only**. These categories are explicitly
-out of scope and deferred to a future version:
+### Honest limits of DOM-level interception
 
-- **`<img>` beacon pixels** (e.g. `facebook.com/tr`) — Blocking these requires
-  wrapping `HTMLImageElement.src`, which carries a higher false-positive risk for
-  first-party images. Block the parent loader script instead (Meta Pixel's
-  loader, for example, is in the signature database).
-- **`document.write` ad injection** — Legacy ad networks (DoubleClick, old
-  AdSense) use `document.write('<script src="...">')`. Intercepting
-  `document.write` is possible but carries a real page-rendering breakage risk
-  and is deferred.
+`autoBlock` works by intercepting DOM API calls (`document.createElement`,
+`Element.prototype.setAttribute`, `window.Image`). Some tracking techniques are
+architecturally invisible to DOM-level interception:
+
+- **`fetch()` and `navigator.sendBeacon()` beacons** — Modern SDKs (Meta Pixel
+  Advanced Matching, TikTok Events API) use `fetch` with `keepalive: true`
+  instead of `<img>`. These network requests do not go through any DOM element
+  creation path and cannot be intercepted by `autoBlock`. This is a known gap;
+  closing it would require a Service Worker or a `window.fetch` monkey-patch
+  (high-risk scope creep, deferred).
+- **`srcset` attribute** — The `setAttribute` override filters on the `src`
+  attribute only; `srcset`-based image requests are not intercepted. No known
+  major tracker uses `srcset` for pixel firing.
+- **`innerHTML`-injected `<img src>`** — HTML injected via `innerHTML` or
+  `insertAdjacentHTML` bypasses the `createElement` wrapper; the native parser
+  does not route through `Element.prototype.setAttribute`. In practice, any
+  script that injects pixels via `innerHTML` is itself blocked by the
+  script-level proxy — so the pixel injection never runs.
+- **Scripts and pixels loaded before the bootstrap** — See the install
+  requirement above. The debug-mode diagnostic names these explicitly.
+- **`document.write` ad injection** — Legacy DoubleClick / old AdSense. Deferred
+  to a future version (high page-rendering breakage risk).
 
 ### Google tags and Consent Mode v2
 
@@ -313,14 +388,14 @@ copy-paste blocking snippets — one per detected third-party host.
 scanner tells you what it found; `autoBlock` blocks it at runtime without the
 HTML edits. They are complementary:
 
-| Approach | HTML changes required | Works with GTM-injected tags | Notes |
-|---|---|---|---|
-| Declarative (v1+) | Yes — paste scanner snippets | No (GTM fires dynamically) | Most explicit; zero runtime overhead |
-| `autoBlock: true` (v5) | No | Yes (intercepted at createElement) | Covers dynamic injection; Google tags excluded |
+| Approach               | HTML changes required        | Works with GTM-injected tags       | Notes                                                                                    |
+| ---------------------- | ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| Declarative (v1+)      | Yes — paste scanner snippets | No (GTM fires dynamically)         | Most explicit; zero runtime overhead                                                     |
+| `autoBlock: true` (v6) | No                           | Yes (intercepted at createElement) | Scripts, iframes, and `<img>` pixels; Google tags excluded; fetch/sendBeacon not covered |
 
 For best coverage on sites with GTM, use both: paste declarative rules from the
 scanner for scripts in your static HTML, and enable `autoBlock: true` to catch
-GTM-managed tags injected at runtime.
+GTM-managed tags and pixels injected at runtime.
 
 ---
 
@@ -381,7 +456,7 @@ npmjs.com for both packages:
    - **Repository owner:** your GitHub username or org
    - **Repository name:** `cookyay`
    - **Workflow filename:** `release.yml`
-   - **Environment:** *(leave blank)*
+   - **Environment:** _(leave blank)_
 3. Repeat for `@cookyay/scanner`.
 
 Then the standard Changesets workflow applies:
@@ -395,6 +470,7 @@ Then the standard Changesets workflow applies:
    Publishing (no long-lived npm tokens stored in CI).
 
 First/preview releases use the `next` dist-tag:
+
 ```bash
 pnpm changeset publish --tag next
 ```

@@ -306,6 +306,8 @@ test('detection: mixed-signals.html host-dedup — GA4 and UA share google-analy
   expect(gaAnalyticsEntry!.services).toContain('ua')
 
   // There must be exactly one entry for this host (dedup worked — not two separate entries)
-  const gaAnalyticsEntries = config.suggestedBlocking.filter((e) => e.host === 'google-analytics.com')
+  const gaAnalyticsEntries = config.suggestedBlocking.filter(
+    (e) => e.host === 'google-analytics.com',
+  )
   expect(gaAnalyticsEntries).toHaveLength(1)
 })

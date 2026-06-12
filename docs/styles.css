@@ -1,5 +1,9 @@
 /* Cookyay docs — minimal stylesheet */
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 :root {
   --brand: #2563eb;
@@ -54,7 +58,9 @@ body {
   font-size: 0.9rem;
 }
 
-.site-nav a:hover { color: var(--brand); }
+.site-nav a:hover {
+  color: var(--brand);
+}
 
 /* ── Layout ── */
 .page-wrap {
@@ -70,13 +76,30 @@ body {
   margin-bottom: 2rem;
 }
 
-.hero h1 { margin: 0 0 0.5rem; font-size: 2.2rem; }
-.hero p { margin: 0; color: var(--muted); font-size: 1.1rem; }
+.hero h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2.2rem;
+}
+.hero p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
 
-.badges { margin-top: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.badges {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 /* display:block removes the inline baseline gap that otherwise makes the
    <a>-wrapped npm badge taller than the bare <img> badges and misaligns them. */
-.badges img { display: block; height: 20px; width: auto; }
+.badges img {
+  display: block;
+  height: 20px;
+  width: auto;
+}
 
 /* ── Section headings ── */
 h2 {
@@ -87,9 +110,15 @@ h2 {
   border-top: 1px solid var(--border);
 }
 
-h2:first-of-type { border-top: none; }
+h2:first-of-type {
+  border-top: none;
+}
 
-h3 { font-size: 1.15rem; margin-top: 1.75rem; margin-bottom: 0.5rem; }
+h3 {
+  font-size: 1.15rem;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
 
 /* ── Code ── */
 pre {
@@ -121,7 +150,7 @@ pre code {
    its theme rules win unless we override here (styles.css loads after prism.css).
    We keep Prism's token colours but restore the page's grey box + border so
    block code matches the inline <code> and the rest of the design system. */
-pre[class*="language-"] {
+pre[class*='language-'] {
   background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -130,8 +159,12 @@ pre[class*="language-"] {
   font-size: 0.85rem;
   line-height: 1.5;
 }
-code[class*="language-"] { text-shadow: none; }
-pre[class*="language-"] code { text-shadow: none; }
+code[class*='language-'] {
+  text-shadow: none;
+}
+pre[class*='language-'] code {
+  text-shadow: none;
+}
 
 /* ── Callouts ── */
 .callout {
@@ -156,7 +189,10 @@ pre[class*="language-"] code { text-shadow: none; }
   border-color: var(--danger-border);
 }
 
-.callout strong:first-child { display: block; margin-bottom: 0.25rem; }
+.callout strong:first-child {
+  display: block;
+  margin-bottom: 0.25rem;
+}
 
 /* ── Tables ── */
 table {
@@ -204,12 +240,20 @@ td {
   columns: 2;
 }
 
-.toc li { margin-bottom: 0.25rem; }
-.toc a { color: var(--brand); }
+.toc li {
+  margin-bottom: 0.25rem;
+}
+.toc a {
+  color: var(--brand);
+}
 
 @media (max-width: 600px) {
-  .toc ol { columns: 1; }
-  h2 { font-size: 1.3rem; }
+  .toc ol {
+    columns: 1;
+  }
+  h2 {
+    font-size: 1.3rem;
+  }
 }
 
 /* ── Footer ── */
@@ -222,7 +266,9 @@ td {
   border-top: 1px solid var(--border);
 }
 
-.site-footer a { color: var(--brand); }
+.site-footer a {
+  color: var(--brand);
+}
 
 /* ── Demo section ── */
 .demo-box {
@@ -233,4 +279,8 @@ td {
   background: var(--bg-alt);
 }
 
-.demo-box p { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.9rem; }
+.demo-box p {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}

@@ -293,7 +293,9 @@ describe('timestamp persistence', () => {
     const result = readConsent(POLICY_V)
     // Epoch-second precision means the round-tripped ISO string may differ by
     // sub-second fractions — compare truncated to the second
-    const expected = new Date(Math.floor(new Date(record.timestamp).getTime() / 1000) * 1000).toISOString()
+    const expected = new Date(
+      Math.floor(new Date(record.timestamp).getTime() / 1000) * 1000,
+    ).toISOString()
     expect(result?.timestamp).toBe(expected)
   })
 

@@ -2,7 +2,7 @@
 slug: cookyay
 title: Cookyay — free, self-hosted cookie consent
 created: 2026-06-06
-active_version: v5
+active_version: v6
 status: active
 ---
 

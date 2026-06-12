@@ -184,9 +184,13 @@ export function showWithdrawalPrompt(): void {
   _toastEl = _buildToast()
 
   if (!document.body) {
-    document.addEventListener('DOMContentLoaded', () => {
-      if (_toastEl) document.body.appendChild(_toastEl)
-    }, { once: true })
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
+        if (_toastEl) document.body.appendChild(_toastEl)
+      },
+      { once: true },
+    )
   } else {
     document.body.appendChild(_toastEl)
   }

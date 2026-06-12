@@ -1,0 +1,17 @@
+# Dependencies & build output
+node_modules
+dist
+
+# Generated code — must match its generator's output, not Prettier's.
+# Formatting these would break codegen-determinism (next build re-emits them
+# unformatted and fails format:check).
+*.generated.ts
+
+# Vendored lockfile
+pnpm-lock.yaml
+
+# PM tool state — managed by the pm plugin, not hand-edited source.
+.pm
+
+# Test fixtures — content is asserted verbatim by hermetic e2e/browser tests.
+fixtures

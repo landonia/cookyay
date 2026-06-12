@@ -39,9 +39,7 @@ test('crawl() captures blocked analytics scripts from all.html', async () => {
   const page = findings.pages[0]
   expect(page).toBeDefined()
 
-  const blockedAnalytics = page.scripts.filter(
-    (s) => s.blocked && s.category === 'analytics',
-  )
+  const blockedAnalytics = page.scripts.filter((s) => s.blocked && s.category === 'analytics')
   // Inline analytics script + GA4 src script
   expect(blockedAnalytics.length).toBeGreaterThanOrEqual(2)
 
@@ -64,9 +62,7 @@ test('crawl() captures blocked marketing scripts from all.html', async () => {
   })
 
   const page = findings.pages[0]
-  const blockedMarketing = page.scripts.filter(
-    (s) => s.blocked && s.category === 'marketing',
-  )
+  const blockedMarketing = page.scripts.filter((s) => s.blocked && s.category === 'marketing')
   expect(blockedMarketing.length).toBeGreaterThanOrEqual(1)
 
   const pixelScript = blockedMarketing.find((s) => s.src?.includes('pixel'))
@@ -142,9 +138,7 @@ test('crawl() follows same-origin links up to the configured depth', async () =>
   expect(visitedAll).toBe(true)
 
   // Blocked scripts should be found across pages
-  const allBlockedScripts = findings.pages.flatMap((p) =>
-    p.scripts.filter((s) => s.blocked),
-  )
+  const allBlockedScripts = findings.pages.flatMap((p) => p.scripts.filter((s) => s.blocked))
   expect(allBlockedScripts.length).toBeGreaterThan(0)
 })
 

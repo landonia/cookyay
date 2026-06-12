@@ -105,9 +105,7 @@ export async function main(): Promise<void> {
 
   const { url, depth, maxPages, timeout, output, configOut } = parsed
 
-  console.error(
-    `Scanning ${url}  (depth: ${depth}, max-pages: ${maxPages}, timeout: ${timeout}ms)`,
-  )
+  console.error(`Scanning ${url}  (depth: ${depth}, max-pages: ${maxPages}, timeout: ${timeout}ms)`)
 
   const findings = await crawl({ url, depth, maxPages, timeout })
 
@@ -143,8 +141,8 @@ export async function main(): Promise<void> {
     if (classified.noscriptWarnings.length > 0) {
       console.error(
         `\nWarning: ${classified.noscriptWarnings.length} <noscript> fallback tag(s) detected.` +
-        ` These bypass script blocking and must be removed from your HTML for GDPR/CCPA compliance.` +
-        ` See _noscriptWarnings in the config output for details.`,
+          ` These bypass script blocking and must be removed from your HTML for GDPR/CCPA compliance.` +
+          ` See _noscriptWarnings in the config output for details.`,
       )
     }
 
@@ -156,7 +154,7 @@ export async function main(): Promise<void> {
     )
     console.error(
       `Classification complete: ${totalServices} service(s) across ${cats.length} categories; ` +
-      `${config._unclassified.length} unclassified artifact(s).`,
+        `${config._unclassified.length} unclassified artifact(s).`,
     )
   }
 

@@ -14,9 +14,9 @@ import type {
 
 export interface CrawlOptions {
   url: string
-  depth?: number    // same-origin link follow depth (default 2)
+  depth?: number // same-origin link follow depth (default 2)
   maxPages?: number // hard page cap (default 20)
-  timeout?: number  // per-navigation timeout in ms (default 30_000)
+  timeout?: number // per-navigation timeout in ms (default 30_000)
 }
 
 function normalizeUrl(raw: string): string {
@@ -147,9 +147,7 @@ export async function crawl(opts: CrawlOptions): Promise<RawFindings> {
   const context = await browser.newContext()
 
   const visited = new Set<string>()
-  const queue: Array<{ url: string; depth: number }> = [
-    { url: normalizeUrl(url), depth: 0 },
-  ]
+  const queue: Array<{ url: string; depth: number }> = [{ url: normalizeUrl(url), depth: 0 }]
   const pages: PageFindings[] = []
 
   try {
@@ -158,12 +156,7 @@ export async function crawl(opts: CrawlOptions): Promise<RawFindings> {
       if (visited.has(item.url)) continue
       visited.add(item.url)
 
-      const { findings, links } = await collectPage(
-        context,
-        item.url,
-        targetOrigin,
-        timeout,
-      )
+      const { findings, links } = await collectPage(context, item.url, targetOrigin, timeout)
       pages.push(findings)
 
       if (item.depth < depth) {

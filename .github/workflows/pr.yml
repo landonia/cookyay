@@ -107,6 +107,11 @@ jobs:
       - name: Run E2E tests
         run: pnpm --filter @cookyay/scanner exec playwright test
 
+      - name: Browser-mode unit tests (cookyay)
+        # vitest browser-mode specs (*.browser.test.ts) are excluded from `pnpm test`;
+        # run them here where Playwright Chromium is already installed.
+        run: pnpm --filter cookyay test:browser
+
   accessibility:
     name: Accessibility — axe + keyboard + equal-prominence
     runs-on: ubuntu-latest

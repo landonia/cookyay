@@ -76,11 +76,7 @@ async function setupRoutes({ page }: { page: import('@playwright/test').Page }):
   // Hotjar analytics stub
   const hotjarStub = readStub('hotjar.js')
   // Meta Pixel marketing stub (sets __pixelAutoRan — different from declared __pixelRan)
-  const pixelAutoStub = [
-    ';(function(){',
-    '  window.__pixelAutoRan = true;',
-    '})();',
-  ].join('\n')
+  const pixelAutoStub = [';(function(){', '  window.__pixelAutoRan = true;', '})();'].join('\n')
   // YouTube embed stub (HTML)
   const ytStub = readStub('yt-embed.html')
   // Same-origin script: served by fixture server, no route needed
@@ -145,7 +141,9 @@ async function setupRoutes({ page }: { page: import('@playwright/test').Page }):
 test.describe('pre-consent: auto-detected scripts/iframes are held', () => {
   test.beforeEach(setupRoutes)
 
-  test('auto-detected Hotjar analytics script is held before consent (flag absent)', async ({ page }) => {
+  test('auto-detected Hotjar analytics script is held before consent (flag absent)', async ({
+    page,
+  }) => {
     await page.goto(AUTO_BLOCK_PAGE)
     await expect(page.locator('#cookyay-banner')).toBeVisible()
 
@@ -161,7 +159,9 @@ test.describe('pre-consent: auto-detected scripts/iframes are held', () => {
     expect(stateAttr).toBe('blocked')
   })
 
-  test('auto-detected Meta Pixel marketing script is held before consent (flag absent)', async ({ page }) => {
+  test('auto-detected Meta Pixel marketing script is held before consent (flag absent)', async ({
+    page,
+  }) => {
     await page.goto(AUTO_BLOCK_PAGE)
     await expect(page.locator('#cookyay-banner')).toBeVisible()
 
@@ -172,7 +172,9 @@ test.describe('pre-consent: auto-detected scripts/iframes are held', () => {
     expect(autoAttr).toBe('true')
   })
 
-  test('auto-detected YouTube marketing iframe is held before consent (src absent)', async ({ page }) => {
+  test('auto-detected YouTube marketing iframe is held before consent (src absent)', async ({
+    page,
+  }) => {
     await page.goto(AUTO_BLOCK_PAGE)
     await expect(page.locator('#cookyay-banner')).toBeVisible()
 
@@ -231,7 +233,9 @@ test.describe('post-grant: auto-detected elements execute after category grant',
     expect(await page.evaluate(() => (window as StubWindow).__pixelAutoRan)).toBe(true)
   })
 
-  test('granting marketing promotes iframe src (YouTube embed becomes visible)', async ({ page }) => {
+  test('granting marketing promotes iframe src (YouTube embed becomes visible)', async ({
+    page,
+  }) => {
     await page.goto(AUTO_BLOCK_PAGE)
     await expect(page.locator('#cookyay-banner')).toBeVisible()
 
@@ -247,7 +251,9 @@ test.describe('post-grant: auto-detected elements execute after category grant',
     expect(src).toContain('youtube.com/embed/')
   })
 
-  test('granular analytics grant executes only analytics scripts; marketing stays held', async ({ page }) => {
+  test('granular analytics grant executes only analytics scripts; marketing stays held', async ({
+    page,
+  }) => {
     await page.goto(AUTO_BLOCK_PAGE)
     await expect(page.locator('#cookyay-banner')).toBeVisible()
 
@@ -298,7 +304,9 @@ test.describe('post-grant: auto-detected elements execute after category grant',
 test.describe('coexistence: declared element + DB-matchable URL handled exactly once', () => {
   test.beforeEach(setupRoutes)
 
-  test('declared data-category wins over auto-block; script executes exactly once after grant', async ({ page }) => {
+  test('declared data-category wins over auto-block; script executes exactly once after grant', async ({
+    page,
+  }) => {
     await page.goto(AUTO_BLOCK_PAGE)
     await expect(page.locator('#cookyay-banner')).toBeVisible()
 

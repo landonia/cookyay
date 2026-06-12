@@ -4,14 +4,62 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Cookyay vs CookieYes — Honest comparison</title>
-    <meta name="description" content="An honest feature-by-feature comparison of Cookyay (free, self-hosted) versus CookieYes (SaaS). Covers banner, script blocking, Consent Mode v2, GPC, scanner, consent log, geo-targeting, TCF, pricing." />
+    <meta
+      name="description"
+      content="An honest feature-by-feature comparison of Cookyay (free, self-hosted) versus CookieYes (SaaS). Covers banner, script blocking, Consent Mode v2, GPC, scanner, consent log, geo-targeting, TCF, pricing."
+    />
 
     <!--
       ══════════════════════════════════════════════════════════════
       STEP 1 OF 2 — COOKYAY BOOTSTRAP (inline, synchronous, <1 KB)
       ══════════════════════════════════════════════════════════════
     -->
-    <script>"use strict";(()=>{function o(){return{ad_storage:"denied",analytics_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",functionality_storage:"denied",personalization_storage:"denied",security_storage:"denied",wait_for_update:500}}function i(a){let t=document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/);if(t)try{let n=JSON.parse(decodeURIComponent(t[1]));if(n?.sv!==1||!n?.c||typeof n.c!="object")return;let e=n.c;e.n&&(a.functionality_storage="granted",a.security_storage="granted"),e.f&&(a.functionality_storage="granted",a.personalization_storage="granted"),e.a&&(a.analytics_storage="granted"),e.m&&(a.ad_storage="granted",a.ad_user_data="granted",a.ad_personalization="granted")}catch{}}function r(){window.__COOKYAY||(window.__COOKYAY={q:[],gpc:!1}),window.__COOKYAY.gpc=!!navigator.globalPrivacyControl,window.dataLayer||(window.dataLayer=[]),typeof window.gtag!="function"&&(window.gtag=function(){window.dataLayer.push(arguments)});let a=o();i(a),window.gtag("consent","default",a)}r();})();</script>
+    <script>
+      'use strict'
+      ;(() => {
+        function o() {
+          return {
+            ad_storage: 'denied',
+            analytics_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            functionality_storage: 'denied',
+            personalization_storage: 'denied',
+            security_storage: 'denied',
+            wait_for_update: 500,
+          }
+        }
+        function i(a) {
+          let t = document.cookie.match(/(?:^|;\s*)cookyay_consent=([^;]+)/)
+          if (t)
+            try {
+              let n = JSON.parse(decodeURIComponent(t[1]))
+              if (n?.sv !== 1 || !n?.c || typeof n.c != 'object') return
+              let e = n.c
+              ;(e.n && ((a.functionality_storage = 'granted'), (a.security_storage = 'granted')),
+                e.f &&
+                  ((a.functionality_storage = 'granted'), (a.personalization_storage = 'granted')),
+                e.a && (a.analytics_storage = 'granted'),
+                e.m &&
+                  ((a.ad_storage = 'granted'),
+                  (a.ad_user_data = 'granted'),
+                  (a.ad_personalization = 'granted')))
+            } catch {}
+        }
+        function r() {
+          ;(window.__COOKYAY || (window.__COOKYAY = { q: [], gpc: !1 }),
+            (window.__COOKYAY.gpc = !!navigator.globalPrivacyControl),
+            window.dataLayer || (window.dataLayer = []),
+            typeof window.gtag != 'function' &&
+              (window.gtag = function () {
+                window.dataLayer.push(arguments)
+              }))
+          let a = o()
+          ;(i(a), window.gtag('consent', 'default', a))
+        }
+        r()
+      })()
+    </script>
 
     <script
       src="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js"
@@ -23,21 +71,50 @@
     <link rel="stylesheet" href="styles.css" />
     <style>
       /* Comparison table — extra column styles */
-      .compare-table th:first-child { width: 32%; }
-      .compare-table .col-cookyay  { background: #eff6ff; }
-      .compare-table .col-cookieyesfree { background: #f9fafb; }
-      .compare-table .col-cookieyespro  { background: #f9fafb; }
-      .compare-table thead th.col-cookyay { background: #dbeafe; color: #1e3a8a; }
+      .compare-table th:first-child {
+        width: 32%;
+      }
+      .compare-table .col-cookyay {
+        background: #eff6ff;
+      }
+      .compare-table .col-cookieyesfree {
+        background: #f9fafb;
+      }
+      .compare-table .col-cookieyespro {
+        background: #f9fafb;
+      }
+      .compare-table thead th.col-cookyay {
+        background: #dbeafe;
+        color: #1e3a8a;
+      }
 
-      .tick   { color: #16a34a; font-weight: 700; }
-      .cross  { color: #dc2626; font-weight: 700; }
-      .partial { color: #d97706; font-weight: 700; }
+      .tick {
+        color: #16a34a;
+        font-weight: 700;
+      }
+      .cross {
+        color: #dc2626;
+        font-weight: 700;
+      }
+      .partial {
+        color: #d97706;
+        font-weight: 700;
+      }
 
-      .compare-table td, .compare-table th { font-size: 0.875rem; }
+      .compare-table td,
+      .compare-table th {
+        font-size: 0.875rem;
+      }
 
-      .note-row td { background: var(--bg-alt); font-size: 0.8rem; color: var(--muted); }
+      .note-row td {
+        background: var(--bg-alt);
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
 
-      .neighbors-table td:first-child { font-weight: 600; }
+      .neighbors-table td:first-child {
+        font-weight: 600;
+      }
 
       /* Hero variant for this page */
       .hero-compare {
@@ -45,8 +122,14 @@
         border-bottom: 1px solid var(--border);
         margin-bottom: 2rem;
       }
-      .hero-compare h1 { margin: 0 0 0.5rem; font-size: 2rem; }
-      .hero-compare p  { margin: 0.25rem 0; color: var(--muted); }
+      .hero-compare h1 {
+        margin: 0 0 0.5rem;
+        font-size: 2rem;
+      }
+      .hero-compare p {
+        margin: 0.25rem 0;
+        color: var(--muted);
+      }
 
       .date-stamp {
         display: inline-block;
@@ -55,11 +138,12 @@
         margin-top: 0.5rem;
       }
 
-      .cannot-list li { margin-bottom: 0.5rem; }
+      .cannot-list li {
+        margin-bottom: 0.5rem;
+      }
     </style>
   </head>
   <body>
-
     <nav class="site-nav" aria-label="Site navigation">
       <a href="index.html" class="logo">Cookyay</a>
       <a href="index.html#quickstart">Quickstart</a>
@@ -67,32 +151,35 @@
       <a href="index.html#script-blocking">Blocking</a>
       <a href="index.html#scanner">Scanner</a>
       <a href="index.html#compliance">Compliance</a>
-      <a href="compare.html" aria-current="page" style="color:var(--brand);font-weight:600">vs CookieYes</a>
+      <a href="compare.html" aria-current="page" style="color: var(--brand); font-weight: 600"
+        >vs CookieYes</a
+      >
       <a href="https://github.com/landonia/cookyay" target="_blank" rel="noopener">GitHub ↗</a>
     </nav>
 
     <div class="page-wrap">
-
       <!-- ── Hero ── -->
       <header class="hero-compare">
         <h1>Cookyay vs CookieYes — An honest comparison</h1>
         <p>
-          Can you drop your CookieYes subscription and switch to Cookyay? This page gives you
-          a factual answer — including the cases where the answer is <strong>no</strong>.
+          Can you drop your CookieYes subscription and switch to Cookyay? This page gives you a
+          factual answer — including the cases where the answer is <strong>no</strong>.
         </p>
         <p class="date-stamp">
           Feature data sourced from CookieYes.com pricing and feature pages.
           <span id="comparison-date">Last reviewed: June 2026.</span>
           CookieYes pricing and features may change; verify at
-          <a href="https://www.cookieyes.com/pricing/" target="_blank" rel="noopener">cookieyes.com/pricing</a>
+          <a href="https://www.cookieyes.com/pricing/" target="_blank" rel="noopener"
+            >cookieyes.com/pricing</a
+          >
           before making decisions.
         </p>
 
-        <div class="callout callout-note" style="margin-top:1.25rem">
+        <div class="callout callout-note" style="margin-top: 1.25rem">
           <strong>Not legal advice.</strong>
           This comparison covers technical features. Whether either tool makes your specific
-          deployment legally compliant depends on your jurisdiction, your site's data flows,
-          and how you configure and deploy the library. Consult qualified legal counsel.
+          deployment legally compliant depends on your jurisdiction, your site's data flows, and how
+          you configure and deploy the library. Consult qualified legal counsel.
         </div>
       </header>
 
@@ -107,7 +194,6 @@
         </ol>
       </nav>
 
-
       <!-- ══════════════════════════════════════════════════════
            1. FEATURE TABLE
            ══════════════════════════════════════════════════════ -->
@@ -115,202 +201,336 @@
         <h2 id="feature-table-heading">Feature-by-feature comparison</h2>
 
         <p>
-          The table below compares Cookyay v5 against CookieYes's free plan and paid plans
-          (Basic / Pro, as of June 2026). CookieYes plan labels vary — "Free" is the
-          no-credit-card tier; paid tiers unlock the features marked below.
+          The table below compares Cookyay v6 against CookieYes's free plan and paid plans (Basic /
+          Pro, as of June 2026). CookieYes plan labels vary — "Free" is the no-credit-card tier;
+          paid tiers unlock the features marked below.
         </p>
 
-        <div style="overflow-x:auto">
+        <div style="overflow-x: auto">
           <table class="compare-table" aria-label="Cookyay vs CookieYes feature comparison">
             <thead>
               <tr>
                 <th scope="col">Feature</th>
-                <th scope="col" class="col-cookyay">Cookyay (v5 / free/self-hosted)</th>
+                <th scope="col" class="col-cookyay">Cookyay (v6 / free/self-hosted)</th>
                 <th scope="col" class="col-cookieyesfree">CookieYes Free</th>
                 <th scope="col" class="col-cookieyespro">CookieYes Paid</th>
               </tr>
             </thead>
             <tbody>
-
               <!-- ── Banner UI ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Banner &amp; consent UI
                 </td>
               </tr>
               <tr>
                 <td>Opt-in consent banner</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Non-modal by default; modal flag available</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Non-modal by default; modal flag available
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Granular category toggles (necessary / functional / analytics / marketing)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Four built-in categories; services declared per-category</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Four built-in categories; services declared
+                  per-category
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Preferences modal / second layer</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Focus-trapped modal; keyboard-navigable; Escape does not record consent</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Focus-trapped modal; keyboard-navigable; Escape does
+                  not record consent
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Persistent "Cookie settings" re-open link</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Auto-injected; can be disabled via <code>autoOpenLink: false</code></td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Auto-injected; can be disabled via
+                  <code>autoOpenLink: false</code>
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Equal-prominence Accept / Decline buttons</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Enforced in default CSS; both buttons same size, same contrast</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Enforced in default CSS; both buttons same size, same
+                  contrast
+                </td>
                 <td><span class="partial">~</span> Layout varies by template</td>
-                <td><span class="partial">~</span> Configurable; GDPR compliance is user's responsibility</td>
+                <td>
+                  <span class="partial">~</span> Configurable; GDPR compliance is user's
+                  responsibility
+                </td>
               </tr>
               <tr>
                 <td>Keyboard and screen-reader accessibility (WCAG 2.1 AA)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> <code>role="switch"</code> toggles, focus trap, axe-core CI gate</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> <code>role="switch"</code> toggles, focus trap,
+                  axe-core CI gate
+                </td>
                 <td><span class="partial">~</span> Not independently verified</td>
                 <td><span class="partial">~</span> Not independently verified</td>
               </tr>
               <tr>
                 <td>Custom banner text / i18n</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Every user-visible and ARIA string overridable via <code>strings</code> config; English defaults</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Every user-visible and ARIA string overridable via
+                  <code>strings</code> config; English defaults
+                </td>
                 <td><span class="tick">✓</span> Built-in 30+ language auto-detection</td>
                 <td><span class="tick">✓</span> Built-in 30+ languages</td>
               </tr>
               <tr class="note-row">
                 <td colspan="4">
-                  Note: Cookyay ships English-only defaults. Supply translated strings via <code>strings</code> config for other languages —
-                  no bundled locales. CookieYes auto-detects browser language and serves a translated banner without configuration.
+                  Note: Cookyay ships English-only defaults. Supply translated strings via
+                  <code>strings</code> config for other languages — no bundled locales. CookieYes
+                  auto-detects browser language and serves a translated banner without
+                  configuration.
                 </td>
               </tr>
               <tr>
                 <td>Banner theming / branding</td>
-                <td class="col-cookyay"><span class="partial">~</span> CSS custom properties exposed; no visual theme builder</td>
+                <td class="col-cookyay">
+                  <span class="partial">~</span> CSS custom properties exposed; no visual theme
+                  builder
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span> Visual editor</td>
               </tr>
               <tr>
                 <td>Bundle size (banner library)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> &lt;20 KB min+gzip (CI-gated); two-part bootstrap: &lt;1 KB inline + deferred UI</td>
-                <td><span class="partial">~</span> Loaded from CookieYes CDN; size not published</td>
-                <td><span class="partial">~</span> Loaded from CookieYes CDN; size not published</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> &lt;20 KB min+gzip (CI-gated); two-part bootstrap:
+                  &lt;1 KB inline + deferred UI
+                </td>
+                <td>
+                  <span class="partial">~</span> Loaded from CookieYes CDN; size not published
+                </td>
+                <td>
+                  <span class="partial">~</span> Loaded from CookieYes CDN; size not published
+                </td>
               </tr>
               <tr>
                 <td>Zero runtime dependencies</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Vanilla TS; no npm runtime deps</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Vanilla TS; no npm runtime deps
+                </td>
                 <td>N/A (hosted service)</td>
                 <td>N/A (hosted service)</td>
               </tr>
 
               <!-- ── Script blocking ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Script &amp; tracker blocking
                 </td>
               </tr>
               <tr>
                 <td>Declarative script blocking (<code>type="text/plain"</code> pattern)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Site owner declares every blocked script/iframe in HTML; bootstrap intercepts on load</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Site owner declares every blocked script/iframe in
+                  HTML; bootstrap intercepts on load
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Iframe blocking with placeholder</td>
-                <td class="col-cookyay"><span class="tick">✓</span> <code>data-src</code> pattern; placeholder prevents layout collapse</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> <code>data-src</code> pattern; placeholder prevents
+                  layout collapse
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Re-execute scripts on consent grant</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Node clone + re-append; idempotent (<code>data-cookyay-state</code> guard)</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Node clone + re-append; idempotent (<code
+                    >data-cookyay-state</code
+                  >
+                  guard)
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
-                <td>Auto-detection of known third-party scripts</td>
-                <td class="col-cookyay"><span class="tick">✓</span> <code>autoBlock: true</code> intercepts ~50 known third-party scripts/iframes at runtime without HTML changes; scanner CLI also emits copy-paste blocking snippets for declarative use. Caveats: scripts/iframes only; Google tags (GTM/GA4) excluded (handled via Consent Mode v2 instead).</td>
-                <td><span class="tick">✓</span> Scans and auto-blocks known trackers without HTML changes</td>
+                <td>Auto-detection of known third-party scripts and pixels</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> <code>autoBlock: true</code> intercepts known
+                  third-party scripts, iframes, and (v6) <code>&lt;img&gt;</code> beacon pixels at
+                  runtime without HTML changes; scanner CLI also emits copy-paste blocking snippets.
+                  Caveats: Google tags (GTM/GA4) excluded (Consent Mode v2 instead);
+                  <code>fetch()</code>/<code>sendBeacon()</code> beacons not intercepted (DOM-level
+                  limit).
+                </td>
+                <td>
+                  <span class="tick">✓</span> Scans and auto-blocks known trackers without HTML
+                  changes
+                </td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr class="note-row">
                 <td colspan="4">
-                  As of v5, the <code>cookyay</code> banner includes runtime auto-block via the <code>autoBlock: true</code>
-                  config flag. When enabled, the banner installs a synchronous <code>document.createElement</code>
-                  proxy that intercepts script and iframe insertions and holds known third-party services inert until
-                  the visitor consents — no changes to your page HTML required. The proxy is installed in the &lt;1 KB
-                  bootstrap snippet (which must remain the first <code>&lt;script&gt;</code> in
-                  <code>&lt;head&gt;</code>). <strong>Google tags (GTM, GA4) are intentionally not DOM-blocked</strong>;
-                  they degrade gracefully under Consent Mode v2 denied defaults instead.
-                  The <code>@cookyay/scanner</code> CLI also auto-detects ~50 known third parties and emits a
-                  <code>suggestedBlocking[]</code> array for declarative use (paste-ready HTML snippets, one per
-                  blocking host, with host-deduplication). The scanner and runtime auto-block share the same
-                  signature database — scan-time and run-time verdicts match.
-                  See <a href="index.html#scanner-auto-detection">auto-detection workflow</a> and the
+                  As of v6, the <code>cookyay</code> banner includes runtime auto-block via the
+                  <code>autoBlock: true</code>
+                  config flag. When enabled, the banner installs a synchronous proxy that intercepts
+                  script, iframe, and
+                  <strong><code>&lt;img&gt;</code> beacon pixel</strong> insertions and holds known
+                  third-party services inert until the visitor consents — no changes to your page
+                  HTML required. The proxy is installed in the &lt;1 KB bootstrap snippet (which
+                  must remain the first <code>&lt;script&gt;</code> in <code>&lt;head&gt;</code>).
+                  <strong>Google tags (GTM, GA4) are intentionally not DOM-blocked</strong>; they
+                  degrade gracefully under Consent Mode v2 denied defaults instead.
+                  <strong>Known gap:</strong> <code>fetch()</code> and
+                  <code>navigator.sendBeacon()</code> beacons (used by modern Meta Pixel Advanced
+                  Matching, TikTok, etc.) are not intercepted by DOM-level auto-block — these
+                  network requests are architecturally invisible to this approach. Blocking them
+                  would require a Service Worker or <code>window.fetch</code> monkey-patch
+                  (deferred). The <code>@cookyay/scanner</code> CLI auto-detects known third parties
+                  and emits a <code>suggestedBlocking[]</code> array for declarative use
+                  (paste-ready HTML snippets, one per blocking host, with host-deduplication). The
+                  scanner and runtime auto-block share the same signature database — scan-time and
+                  run-time verdicts match. See
+                  <a href="index.html#scanner-auto-detection">auto-detection workflow</a> and the
                   <a href="index.html#autoblock">runtime auto-block docs</a>.
                 </td>
               </tr>
 
               <!-- ── Consent Mode v2 ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Google Consent Mode v2
                 </td>
               </tr>
               <tr>
                 <td>Consent Mode v2 default signals (all denied before any Google tag loads)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Synchronous inline bootstrap fires defaults before GTM/GA4 loads; correct ordering guaranteed</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Synchronous inline bootstrap fires defaults before
+                  GTM/GA4 loads; correct ordering guaranteed
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
-                <td>All four mandatory signals (<code>ad_storage</code>, <code>analytics_storage</code>, <code>ad_user_data</code>, <code>ad_personalization</code>)</td>
+                <td>
+                  All four mandatory signals (<code>ad_storage</code>,
+                  <code>analytics_storage</code>, <code>ad_user_data</code>,
+                  <code>ad_personalization</code>)
+                </td>
                 <td class="col-cookyay"><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Consent Mode update on user action</td>
-                <td class="col-cookyay"><span class="tick">✓</span> <code>gtag('consent','update',...)</code> fired on grant/deny</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> <code>gtag('consent','update',...)</code> fired on
+                  grant/deny
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
-                <td>Returning visitor: consent restored to Consent Mode pre-paint (no CLS flash)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Bootstrap reads <code>cookyay_consent</code> cookie synchronously and restores signals</td>
+                <td>
+                  Returning visitor: consent restored to Consent Mode pre-paint (no CLS flash)
+                </td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Bootstrap reads <code>cookyay_consent</code> cookie
+                  synchronously and restores signals
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
 
               <!-- ── GPC ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Global Privacy Control (GPC) — CCPA
                 </td>
               </tr>
               <tr>
                 <td>Detect <code>navigator.globalPrivacyControl</code></td>
-                <td class="col-cookyay"><span class="tick">✓</span> Detected synchronously in bootstrap, before banner renders</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Detected synchronously in bootstrap, before banner
+                  renders
+                </td>
                 <td><span class="cross">✗</span> Not implemented as of June 2026</td>
                 <td><span class="cross">✗</span> Not implemented as of June 2026</td>
               </tr>
               <tr>
                 <td>Honor GPC: suppress non-necessary scripts, store pre-denied consent record</td>
-                <td class="col-cookyay"><span class="tick">✓</span> GPC flag stored in consent record; all non-necessary categories denied</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> GPC flag stored in consent record; all non-necessary
+                  categories denied
+                </td>
                 <td><span class="cross">✗</span></td>
                 <td><span class="cross">✗</span></td>
               </tr>
               <tr>
                 <td>Visible GPC confirmation toast (CCPA Jan 2026 reg)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Toast displayed when GPC signal is detected, per updated CCPA regulations</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Toast displayed when GPC signal is detected, per
+                  updated CCPA regulations
+                </td>
                 <td><span class="cross">✗</span></td>
                 <td><span class="cross">✗</span></td>
               </tr>
               <tr>
                 <td>Persistent "Do Not Sell or Share" link</td>
-                <td class="col-cookyay"><span class="partial">~</span> The auto-injected "Cookie settings" link opens the preferences modal; a separate CCPA-named link must be added manually by the site owner (see docs)</td>
+                <td class="col-cookyay">
+                  <span class="partial">~</span> The auto-injected "Cookie settings" link opens the
+                  preferences modal; a separate CCPA-named link must be added manually by the site
+                  owner (see docs)
+                </td>
                 <td><span class="tick">✓</span> Injected automatically</td>
                 <td><span class="tick">✓</span></td>
               </tr>
@@ -318,158 +538,274 @@
                 <td colspan="4">
                   GPC honoring is a genuine differentiator for Cookyay. As of June 2026,
                   vanilla-cookieconsent and CookieYes do not detect or act on the GPC signal.
-                  Cookyay is among the first open-source consent tools to implement the
-                  January 2026 CCPA confirmation requirement.
+                  Cookyay is among the first open-source consent tools to implement the January 2026
+                  CCPA confirmation requirement.
                 </td>
               </tr>
 
               <!-- ── Consent record ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Consent record &amp; storage
                 </td>
               </tr>
               <tr>
                 <td>Consent stored in visitor's browser (cookie + localStorage)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> <code>cookyay_consent</code> cookie (SameSite=Lax) + localStorage mirror; schema: <code>sv, t, pv, bv, c, gpc</code></td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> <code>cookyay_consent</code> cookie (SameSite=Lax) +
+                  localStorage mirror; schema: <code>sv, t, pv, bv, c, gpc</code>
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
-                <td>Consent record includes: timestamp, policy version, per-category choices, banner version</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Webhook-ready schema from v1</td>
+                <td>
+                  Consent record includes: timestamp, policy version, per-category choices, banner
+                  version
+                </td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Webhook-ready schema from v1
+                </td>
                 <td><span class="partial">~</span> Timestamp + categories stored</td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Server-side / centralized consent log (queryable by the site owner)</td>
-                <td class="col-cookyay"><span class="cross">✗</span> Client-side only in v1. Site owners can forward consent events to their own backend via the <code>cookyay:consent</code> CustomEvent — no hosted infrastructure provided by Cookyay</td>
-                <td><span class="tick">✓</span> Hosted consent log (30-day free; longer on paid)</td>
+                <td class="col-cookyay">
+                  <span class="cross">✗</span> Client-side only in v1. Site owners can forward
+                  consent events to their own backend via the
+                  <code>cookyay:consent</code> CustomEvent — no hosted infrastructure provided by
+                  Cookyay
+                </td>
+                <td>
+                  <span class="tick">✓</span> Hosted consent log (30-day free; longer on paid)
+                </td>
                 <td><span class="tick">✓</span> Full consent log with export</td>
               </tr>
               <tr class="note-row">
                 <td colspan="4">
-                  <strong>Important:</strong> GDPR Art. 7(1) places the burden of proof on the site owner (the "controller"), not the visitor.
-                  A browser-local consent record is evidence of the visitor's experience, but cannot be queried when a regulator asks
-                  "show me the consent record for user X." CookieYes's hosted log addresses this; Cookyay does not (by design — no hosted infrastructure).
-                  See <a href="index.html#compliance">Compliance limitations</a> for how to forward Cookyay events to your own backend.
+                  <strong>Important:</strong> GDPR Art. 7(1) places the burden of proof on the site
+                  owner (the "controller"), not the visitor. A browser-local consent record is
+                  evidence of the visitor's experience, but cannot be queried when a regulator asks
+                  "show me the consent record for user X." CookieYes's hosted log addresses this;
+                  Cookyay does not (by design — no hosted infrastructure). See
+                  <a href="index.html#compliance">Compliance limitations</a> for how to forward
+                  Cookyay events to your own backend.
                 </td>
               </tr>
               <tr>
                 <td>Policy-version re-prompt (re-show banner when cookie policy changes)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Stored <code>policyVersion</code> compared on every load; mismatch triggers re-prompt</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Stored <code>policyVersion</code> compared on every
+                  load; mismatch triggers re-prompt
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Consent record expiry</td>
-                <td class="col-cookyay"><span class="tick">✓</span> 12 months by default (configurable)</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> 12 months by default (configurable)
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
 
               <!-- ── Withdrawal ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Withdrawal &amp; re-prompt
                 </td>
               </tr>
               <tr>
                 <td>Consent withdrawal (revoke previously granted categories)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Via preferences modal; Consent Mode update to <code>denied</code> fired immediately</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Via preferences modal; Consent Mode update to
+                  <code>denied</code> fired immediately
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>Page-reload prompt on withdrawal (required for already-executed scripts)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> "Reload required" prompt shown; already-loaded third-party scripts cannot be stopped mid-session without reload</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> "Reload required" prompt shown; already-loaded
+                  third-party scripts cannot be stopped mid-session without reload
+                </td>
                 <td><span class="partial">~</span> Behavior varies</td>
                 <td><span class="partial">~</span></td>
               </tr>
 
               <!-- ── CLI scanner ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Cookie scanner
                 </td>
               </tr>
               <tr>
                 <td>Cookie / tracker discovery tool</td>
-                <td class="col-cookyay"><span class="tick">✓</span> <code>@cookyay/scanner</code> — Playwright-based CLI; crawls your site locally, classifies cookies, emits ready-to-use config JSON with confidence annotations</td>
-                <td><span class="tick">✓</span> Hosted SaaS scanner (scans from CookieYes servers)</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> <code>@cookyay/scanner</code> — Playwright-based CLI;
+                  crawls your site locally, classifies cookies, emits ready-to-use config JSON with
+                  confidence annotations
+                </td>
+                <td>
+                  <span class="tick">✓</span> Hosted SaaS scanner (scans from CookieYes servers)
+                </td>
                 <td><span class="tick">✓</span> More frequent auto-rescans on paid</td>
               </tr>
               <tr>
                 <td>Runs locally (no data sent to a third party during scan)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Playwright headless browser runs on your machine; nothing leaves your network</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Playwright headless browser runs on your machine;
+                  nothing leaves your network
+                </td>
                 <td><span class="cross">✗</span> CookieYes servers crawl your public URL</td>
                 <td><span class="cross">✗</span></td>
               </tr>
               <tr>
                 <td>Scans pages behind authentication / local dev server</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Scanner runs locally; can reach <code>localhost</code> or authenticated pages</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Scanner runs locally; can reach
+                  <code>localhost</code> or authenticated pages
+                </td>
                 <td><span class="cross">✗</span> Requires a public URL</td>
                 <td><span class="cross">✗</span></td>
               </tr>
               <tr>
                 <td>Automatic periodic re-scanning</td>
-                <td class="col-cookyay"><span class="cross">✗</span> Manual CLI run (schedule via your own CI/cron)</td>
+                <td class="col-cookyay">
+                  <span class="cross">✗</span> Manual CLI run (schedule via your own CI/cron)
+                </td>
                 <td><span class="partial">~</span> Monthly on free</td>
                 <td><span class="tick">✓</span> Frequent auto-rescans</td>
               </tr>
               <tr>
                 <td>Cookie categorization database</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Open Cookie Database (1,100+ entries) + curated ~50 known services (GA4, Google Ads, Meta Pixel, YouTube, reCAPTCHA, Hotjar, Intercom, Stripe, Sentry, PostHog, and more)</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Open Cookie Database (1,100+ entries) + curated ~50
+                  known services (GA4, Google Ads, Meta Pixel, YouTube, reCAPTCHA, Hotjar, Intercom,
+                  Stripe, Sentry, PostHog, and more)
+                </td>
                 <td><span class="tick">✓</span> Proprietary database</td>
                 <td><span class="tick">✓</span></td>
               </tr>
 
               <!-- ── Geo / TCF / Dashboard ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Geo-targeting, TCF, dashboard
                 </td>
               </tr>
               <tr>
                 <td>Geo-detection (show banner only to EU/CA visitors, hide from others)</td>
-                <td class="col-cookyay"><span class="cross">✗</span> Deliberate non-goal: strictest-everywhere posture; all visitors see the opt-in banner</td>
+                <td class="col-cookyay">
+                  <span class="cross">✗</span> Deliberate non-goal: strictest-everywhere posture;
+                  all visitors see the opt-in banner
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
                 <td>IAB Transparency and Consent Framework (TCF) certification</td>
-                <td class="col-cookyay"><span class="cross">✗</span> Not in scope for Cookyay; TCF is designed for adtech platforms and requires vendor registration</td>
+                <td class="col-cookyay">
+                  <span class="cross">✗</span> Not in scope for Cookyay; TCF is designed for adtech
+                  platforms and requires vendor registration
+                </td>
                 <td><span class="partial">~</span> Partial; not IAB-certified CMP</td>
                 <td><span class="tick">✓</span> (higher-tier plans)</td>
               </tr>
               <tr>
                 <td>Web dashboard (consent rate analytics, banner performance)</td>
-                <td class="col-cookyay"><span class="cross">✗</span> No hosted infrastructure; no dashboard</td>
+                <td class="col-cookyay">
+                  <span class="cross">✗</span> No hosted infrastructure; no dashboard
+                </td>
                 <td><span class="tick">✓</span> Basic</td>
                 <td><span class="tick">✓</span> Full analytics</td>
               </tr>
               <tr>
                 <td>Multi-domain / multi-site management</td>
-                <td class="col-cookyay"><span class="partial">~</span> Each site deploys its own config; no shared management plane</td>
+                <td class="col-cookyay">
+                  <span class="partial">~</span> Each site deploys its own config; no shared
+                  management plane
+                </td>
                 <td><span class="tick">✓</span></td>
                 <td><span class="tick">✓</span></td>
               </tr>
 
               <!-- ── Hosting / pricing ── -->
               <tr>
-                <td colspan="4" style="background:var(--bg-alt);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+                <td
+                  colspan="4"
+                  style="
+                    background: var(--bg-alt);
+                    font-weight: 700;
+                    font-size: 0.8rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--muted);
+                  "
+                >
                   Distribution &amp; pricing
                 </td>
               </tr>
               <tr>
                 <td>Cost</td>
-                <td class="col-cookyay"><span class="tick">✓</span> <strong>Free forever, no limits</strong>. Apache-2.0 open source. Serve from npm / jsDelivr (free CDN) or self-host.</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> <strong>Free forever, no limits</strong>. Apache-2.0
+                  open source. Serve from npm / jsDelivr (free CDN) or self-host.
+                </td>
                 <td>Free tier: limited features, "Powered by CookieYes" branding</td>
-                <td>Paid plans from ~$10–$25/month/domain (pricing varies; verify at cookieyes.com)</td>
+                <td>
+                  Paid plans from ~$10–$25/month/domain (pricing varies; verify at cookieyes.com)
+                </td>
               </tr>
               <tr>
                 <td>Self-hostable script (no call-home, no third-party CDN required)</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Serve <code>dist/index.iife.js</code> and <code>dist/bootstrap.js</code> from your own server or any public CDN</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Serve <code>dist/index.iife.js</code> and
+                  <code>dist/bootstrap.js</code> from your own server or any public CDN
+                </td>
                 <td><span class="cross">✗</span> Script must load from CookieYes CDN</td>
                 <td><span class="cross">✗</span></td>
               </tr>
@@ -481,7 +817,9 @@
               </tr>
               <tr>
                 <td>Open source / auditable code</td>
-                <td class="col-cookyay"><span class="tick">✓</span> Apache-2.0; full source on GitHub</td>
+                <td class="col-cookyay">
+                  <span class="tick">✓</span> Apache-2.0; full source on GitHub
+                </td>
                 <td><span class="cross">✗</span> Proprietary</td>
                 <td><span class="cross">✗</span></td>
               </tr>
@@ -491,18 +829,16 @@
                 <td><span class="cross">✗</span> Consent data stored on CookieYes servers</td>
                 <td><span class="cross">✗</span></td>
               </tr>
-
             </tbody>
           </table>
         </div>
 
-        <p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem">
+        <p style="font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem">
           Symbols: <span class="tick">✓</span> supported &nbsp;·&nbsp;
           <span class="cross">✗</span> not supported &nbsp;·&nbsp;
           <span class="partial">~</span> partial / conditional
         </p>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            2. WHAT COOKYAY CANNOT DO
@@ -511,91 +847,93 @@
         <h2 id="cannot-do-heading">What Cookyay cannot do</h2>
 
         <p>
-          Honesty is the point. Here is what Cookyay deliberately does not do, and why.
-          If any of these are hard requirements for your site, you should use a different tool.
+          Honesty is the point. Here is what Cookyay deliberately does not do, and why. If any of
+          these are hard requirements for your site, you should use a different tool.
         </p>
 
         <ul class="cannot-list">
-
           <li>
             <strong>No server-side consent log.</strong> Cookyay stores consent in the visitor's
-            browser only (<code>cookyay_consent</code> cookie + localStorage). If a regulator
-            asks "show me the consent record for user X on date Y," Cookyay gives you no way
-            to answer — the data lives only in that user's browser and is inaccessible to you.
-            For full GDPR Art. 7(1) accountability, you must forward consent events to your
-            own backend. The <code>cookyay:consent</code> CustomEvent payload includes timestamp,
-            policy version, and per-category choices — enough to build an audit trail if you
-            handle the forwarding. See <a href="index.html#compliance">Compliance limitations</a>
+            browser only (<code>cookyay_consent</code> cookie + localStorage). If a regulator asks
+            "show me the consent record for user X on date Y," Cookyay gives you no way to answer —
+            the data lives only in that user's browser and is inaccessible to you. For full GDPR
+            Art. 7(1) accountability, you must forward consent events to your own backend. The
+            <code>cookyay:consent</code> CustomEvent payload includes timestamp, policy version, and
+            per-category choices — enough to build an audit trail if you handle the forwarding. See
+            <a href="index.html#compliance">Compliance limitations</a>
             for the forwarding snippet. CookieYes (paid) hosts this log for you.
           </li>
 
           <li>
-            <strong>No IAB TCF certification.</strong> Cookyay is not a certified Transparency
-            and Consent Framework CMP. If your site surfaces IAB-registered vendor lists or
-            relies on TCF consent strings (common for adtech and programmatic advertising
-            networks), Cookyay is the wrong tool. TCF requires ongoing vendor list management,
-            consent string encoding, and registration with IAB Europe — well outside the scope
-            of a lean self-hosted library.
+            <strong>No IAB TCF certification.</strong> Cookyay is not a certified Transparency and
+            Consent Framework CMP. If your site surfaces IAB-registered vendor lists or relies on
+            TCF consent strings (common for adtech and programmatic advertising networks), Cookyay
+            is the wrong tool. TCF requires ongoing vendor list management, consent string encoding,
+            and registration with IAB Europe — well outside the scope of a lean self-hosted library.
           </li>
 
           <li>
-            <strong>No geo-detection.</strong> Cookyay shows the opt-in consent banner to
-            every visitor, everywhere — including US visitors who may not be subject to GDPR.
-            This is a deliberate design choice (the "strictest everywhere" posture) that
-            simplifies implementation and avoids IP geolocation infrastructure. If you need
-            to show a lighter experience (or no banner at all) to non-EU/CA visitors,
-            Cookyay cannot do this.
+            <strong>No geo-detection.</strong> Cookyay shows the opt-in consent banner to every
+            visitor, everywhere — including US visitors who may not be subject to GDPR. This is a
+            deliberate design choice (the "strictest everywhere" posture) that simplifies
+            implementation and avoids IP geolocation infrastructure. If you need to show a lighter
+            experience (or no banner at all) to non-EU/CA visitors, Cookyay cannot do this.
           </li>
 
           <li>
-            <strong>No hosted dashboard.</strong> There is no web UI showing consent rates,
-            banner performance, or site analytics. Cookyay ships no infrastructure — you
-            are the operator. If you need visibility into how many visitors accepted or
-            declined, you must build that from the forwarded consent events.
+            <strong>No hosted dashboard.</strong> There is no web UI showing consent rates, banner
+            performance, or site analytics. Cookyay ships no infrastructure — you are the operator.
+            If you need visibility into how many visitors accepted or declined, you must build that
+            from the forwarded consent events.
           </li>
 
           <li>
-            <strong>Runtime auto-block covers scripts and iframes only.</strong>
-            The v5 <code>autoBlock: true</code> flag intercepts known third-party
-            <code>&lt;script&gt;</code> and <code>&lt;iframe&gt;</code> insertions.
-            Two categories are explicitly out of scope and deferred to a future version:
-            <strong><code>&lt;img&gt;</code> beacon pixels</strong>
-            (e.g. <code>facebook.com/tr</code> — block the parent loader script instead;
-            it is in the signature database) and
+            <strong>Runtime auto-block has known coverage gaps.</strong>
+            The v6 <code>autoBlock: true</code> flag intercepts known third-party
+            <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, and
+            <code>&lt;img&gt;</code> beacon pixel insertions. The following are explicitly out of
+            scope:
+            <strong><code>fetch()</code> and <code>navigator.sendBeacon()</code> beacons</strong> —
+            modern SDKs (Meta Pixel Advanced Matching, TikTok Events API) use
+            <code>fetch</code> with <code>keepalive: true</code> instead of
+            <code>&lt;img&gt;</code>, and these requests bypass DOM-level interception entirely;
+            closing this gap requires a Service Worker or fetch monkey-patch (deferred). Also
+            excluded: <strong><code>srcset</code>-based image requests</strong> (no major tracker
+            uses <code>srcset</code> for pixel firing),
+            <strong><code>innerHTML</code>-injected <code>&lt;img src&gt;</code></strong>
+            (the parser path bypasses the proxy, but the injecting script is blocked first), and
             <strong><code>document.write</code> ad injection</strong>
-            (legacy DoubleClick/old AdSense — high page-breakage risk).
-            Additionally, <strong>Google tags (GTM/GA4) are intentionally not
-            DOM-blocked</strong> — Consent Mode v2 degrades them gracefully instead;
-            DOM-blocking GTM would prevent consent update signals from firing.
+            (legacy DoubleClick/old AdSense — high page-breakage risk, deferred). Additionally,
+            <strong>Google tags (GTM/GA4) are intentionally not DOM-blocked</strong> — Consent Mode
+            v2 degrades them gracefully instead; DOM-blocking GTM would prevent consent update
+            signals from firing.
           </li>
 
           <li>
             <strong>Auto-block requires "Cookyay first in <code>&lt;head&gt;</code>".</strong>
-            The runtime interception proxy is installed by the synchronous bootstrap snippet.
-            Any <code>&lt;script src&gt;</code> placed in the HTML <em>before</em> the bootstrap
-            cannot be blocked — the browser has already dispatched its fetch before the proxy
-            exists. This is an architectural limit of DOM-level interception.
-            CookieYes can block scripts placed anywhere on the page.
+            The runtime interception proxy is installed by the synchronous bootstrap snippet. Any
+            <code>&lt;script src&gt;</code> placed in the HTML <em>before</em> the bootstrap cannot
+            be blocked — the browser has already dispatched its fetch before the proxy exists. This
+            is an architectural limit of DOM-level interception. CookieYes can block scripts placed
+            anywhere on the page.
           </li>
 
           <li>
             <strong>No built-in translations.</strong> Cookyay ships English text by default.
             Translated strings must be supplied by the site owner via the <code>strings</code>
             config object. There are no bundled locale files and no automatic browser-language
-            detection. CookieYes auto-detects the visitor's browser language and serves a
-            translated banner.
+            detection. CookieYes auto-detects the visitor's browser language and serves a translated
+            banner.
           </li>
 
           <li>
             <strong>No guarantee of legal compliance.</strong> Cookyay implements the technical
-            consent UX patterns described by GDPR, CCPA, and related regulations. Whether
-            your specific deployment is compliant depends on your jurisdiction, your site's
-            data flows, and how you configure the library. This is not legal advice.
+            consent UX patterns described by GDPR, CCPA, and related regulations. Whether your
+            specific deployment is compliant depends on your jurisdiction, your site's data flows,
+            and how you configure the library. This is not legal advice.
           </li>
-
         </ul>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            3. OPEN-SOURCE NEIGHBORS
@@ -604,11 +942,11 @@
         <h2 id="neighbors-heading">Open-source neighbors</h2>
 
         <p>
-          Cookyay is not the only open-source option. Two libraries cover significant
-          overlap and are worth knowing:
+          Cookyay is not the only open-source option. Two libraries cover significant overlap and
+          are worth knowing:
         </p>
 
-        <div style="overflow-x:auto">
+        <div style="overflow-x: auto">
           <table class="neighbors-table" aria-label="Open-source CMP comparison">
             <thead>
               <tr>
@@ -621,7 +959,11 @@
             <tbody>
               <tr>
                 <td>
-                  <a href="https://github.com/orestbida/cookieconsent" target="_blank" rel="noopener">
+                  <a
+                    href="https://github.com/orestbida/cookieconsent"
+                    target="_blank"
+                    rel="noopener"
+                  >
                     vanilla-cookieconsent v3
                   </a>
                   <br />(orestbida)
@@ -629,18 +971,18 @@
                 <td>
                   Banner UI, opt-in/opt-out per category, all Consent Mode v2 signals (7 signals,
                   superset of the 4 mandatory), <code>onConsent</code>/<code>onChange</code>
-                  callbacks, declarative script blocking, 20+ bundled locales, ARIA-accessible.
-                  ~24 KB min+gzip.
+                  callbacks, declarative script blocking, 20+ bundled locales, ARIA-accessible. ~24
+                  KB min+gzip.
                 </td>
                 <td>
-                  No GPC signal detection or honoring. No CLI scanner. No two-part
-                  bootstrap (Consent Mode defaults ordering is user's responsibility).
-                  Slightly over the 20 KB budget Cookyay targets.
+                  No GPC signal detection or honoring. No CLI scanner. No two-part bootstrap
+                  (Consent Mode defaults ordering is user's responsibility). Slightly over the 20 KB
+                  budget Cookyay targets.
                 </td>
                 <td>
-                  Sites that need built-in multi-language support and are comfortable
-                  handling Consent Mode load ordering themselves. The most mature and
-                  widely deployed open-source option.
+                  Sites that need built-in multi-language support and are comfortable handling
+                  Consent Mode load ordering themselves. The most mature and widely deployed
+                  open-source option.
                 </td>
               </tr>
               <tr>
@@ -650,17 +992,17 @@
                   </a>
                 </td>
                 <td>
-                  Per-service script blocking, i18n with bundled translations,
-                  declarative config, actively maintained.
+                  Per-service script blocking, i18n with bundled translations, declarative config,
+                  actively maintained.
                 </td>
                 <td>
-                  No Google Consent Mode v2 support. No GPC honoring. No CLI scanner.
-                  No two-part bootstrap. Config schema is more verbose than Cookyay's.
+                  No Google Consent Mode v2 support. No GPC honoring. No CLI scanner. No two-part
+                  bootstrap. Config schema is more verbose than Cookyay's.
                 </td>
                 <td>
-                  Sites that need granular per-service blocking with rich translations
-                  but don't rely on Google Analytics/Ads (where Consent Mode v2 matters
-                  for revenue signal quality).
+                  Sites that need granular per-service blocking with rich translations but don't
+                  rely on Google Analytics/Ads (where Consent Mode v2 matters for revenue signal
+                  quality).
                 </td>
               </tr>
             </tbody>
@@ -668,20 +1010,19 @@
         </div>
 
         <p>
-          If you only need banner UI + Consent Mode v2 and don't care about GPC or a local
-          scanner, <strong>vanilla-cookieconsent v3 is the more mature choice</strong> — it
-          has a larger user base, more themes, and built-in translations. Cookyay's
-          differentiators are: the two-part bootstrap (Consent Mode ordering handled
-          automatically), GPC detection and honoring (unique among these three as of June 2026),
-          the local CLI scanner (runs against localhost and authenticated pages, with
-          auto-detection of ~50 known third parties and copy-paste blocking snippets),
-          runtime auto-block via <code>autoBlock: true</code> (v5 — intercepts known
-          third-party scripts/iframes without HTML changes, same ~50-service database as
-          the scanner), and the strictest-everywhere posture as an explicit design principle
-          rather than an option.
+          If you only need banner UI + Consent Mode v2 and don't care about GPC or a local scanner,
+          <strong>vanilla-cookieconsent v3 is the more mature choice</strong> — it has a larger user
+          base, more themes, and built-in translations. Cookyay's differentiators are: the two-part
+          bootstrap (Consent Mode ordering handled automatically), GPC detection and honoring
+          (unique among these three as of June 2026), the local CLI scanner (runs against localhost
+          and authenticated pages, with auto-detection of ~50 known third parties and copy-paste
+          blocking snippets), runtime auto-block via <code>autoBlock: true</code> (v6 — intercepts
+          known third-party scripts, iframes, and <code>&lt;img&gt;</code> beacon pixels without
+          HTML changes; same signature database as the scanner; honest about
+          <code>fetch</code>/<code>sendBeacon</code> gaps), and the strictest-everywhere posture as
+          an explicit design principle rather than an option.
         </p>
       </section>
-
 
       <!-- ══════════════════════════════════════════════════════
            4. WHEN TO SWITCH
@@ -693,22 +1034,30 @@
         <ul>
           <li>You are a developer comfortable editing HTML and running CLI tools.</li>
           <li>
-            You want runtime auto-block without HTML changes: enable <code>autoBlock: true</code>
-            (v5) and known third-party scripts and iframes are intercepted automatically.
-            The bootstrap snippet must be first in <code>&lt;head&gt;</code> — the same
-            requirement that already exists for Consent Mode v2 ordering.
+            You want runtime auto-block without HTML changes: enable
+            <code>autoBlock: true</code> (v6) and known third-party scripts, iframes, and
+            <code>&lt;img&gt;</code> beacon pixels are intercepted automatically. The bootstrap
+            snippet must be first in <code>&lt;head&gt;</code> — the same requirement that already
+            exists for Consent Mode v2 ordering. Set <code>debug: true</code> to get a console
+            warning if any known tracker loaded before the bootstrap (v6 install-order diagnostic).
           </li>
           <li>
-            You want declarative blocking as well: run the scanner to auto-detect third parties
-            and paste the emitted snippets into your HTML. The scanner covers ~50 known services
-            and produces copy-paste-ready blocking rules — the setup cost is one CLI run + a
-            few HTML edits per site.
+            You want declarative blocking as well: run the scanner to auto-detect third parties and
+            paste the emitted snippets into your HTML. The scanner covers ~50 known services and
+            produces copy-paste-ready blocking rules — the setup cost is one CLI run + a few HTML
+            edits per site.
           </li>
-          <li>You do not need a hosted consent log — either because your risk profile is low
-              (small site, no DPO) or because you are willing to forward consent events to
-              your own backend.</li>
-          <li>You want full control over the script that runs on your site (self-hosted, auditable).</li>
-          <li>You want GPC to be honored automatically (Cookyay does this; CookieYes does not as of June 2026).</li>
+          <li>
+            You do not need a hosted consent log — either because your risk profile is low (small
+            site, no DPO) or because you are willing to forward consent events to your own backend.
+          </li>
+          <li>
+            You want full control over the script that runs on your site (self-hosted, auditable).
+          </li>
+          <li>
+            You want GPC to be honored automatically (Cookyay does this; CookieYes does not as of
+            June 2026).
+          </li>
           <li>You need the scanner to run against a local dev server or authenticated pages.</li>
           <li>Cost is a concern (Cookyay is free with no per-domain or per-pageview limits).</li>
         </ul>
@@ -716,33 +1065,33 @@
         <h3>You should stay on CookieYes (or a similar SaaS CMP) if:</h3>
         <ul>
           <li>
-            <strong>You need a server-side consent audit trail.</strong> If you are subject to
-            GDPR enforcement risk and need to demonstrate consent records to a regulator on
-            demand, CookieYes's hosted log is the practical solution. Cookyay requires you
-            to build and host this yourself.
+            <strong>You need a server-side consent audit trail.</strong> If you are subject to GDPR
+            enforcement risk and need to demonstrate consent records to a regulator on demand,
+            CookieYes's hosted log is the practical solution. Cookyay requires you to build and host
+            this yourself.
           </li>
           <li>
-            <strong>You need geo-targeted banner variants.</strong> Cookyay shows the opt-in
-            banner to everyone. If showing a lighter or no banner to US visitors is important
-            to your UX or business (e.g., SaaS with mostly North American traffic), you need
-            geo-detection that Cookyay does not have.
+            <strong>You need geo-targeted banner variants.</strong> Cookyay shows the opt-in banner
+            to everyone. If showing a lighter or no banner to US visitors is important to your UX or
+            business (e.g., SaaS with mostly North American traffic), you need geo-detection that
+            Cookyay does not have.
           </li>
           <li>
-            <strong>You need auto-blocking of scripts placed before the consent tool in HTML.</strong>
+            <strong
+              >You need auto-blocking of scripts placed before the consent tool in HTML.</strong
+            >
             Cookyay's runtime interception proxy is installed by the bootstrap snippet — any script
-            that appears in the HTML <em>before</em> the bootstrap cannot be intercepted (the browser
-            has already fetched it). If you cannot guarantee "Cookyay first in <code>&lt;head&gt;</code>"
-            (for example because a CMS injects GTM unconditionally at the top of the page),
-            auto-block cannot help for those scripts. CookieYes does not have this load-order
-            constraint.
+            that appears in the HTML <em>before</em> the bootstrap cannot be intercepted (the
+            browser has already fetched it). If you cannot guarantee "Cookyay first in
+            <code>&lt;head&gt;</code>" (for example because a CMS injects GTM unconditionally at the
+            top of the page), auto-block cannot help for those scripts. CookieYes does not have this
+            load-order constraint.
           </li>
-          <li>
-            <strong>You need IAB TCF compliance.</strong> Cookyay is not a TCF-certified CMP.
-          </li>
+          <li><strong>You need IAB TCF compliance.</strong> Cookyay is not a TCF-certified CMP.</li>
           <li>
             <strong>You need built-in translations without configuration.</strong>
-            Non-English sites where you cannot supply translated strings need a tool with
-            bundled locales.
+            Non-English sites where you cannot supply translated strings need a tool with bundled
+            locales.
           </li>
           <li>
             <strong>You manage many domains from a single dashboard.</strong>
@@ -752,22 +1101,26 @@
 
         <div class="callout callout-note">
           <strong>Bottom line</strong>
-          Cookyay is a developer tool, not a SaaS replacement. It covers the technical
-          consent mechanics — banner, blocking, Consent Mode v2, GPC — at zero marginal
-          cost, with full source transparency. The trade-off is that you own the
-          infrastructure decisions (consent log, multi-domain management, translations)
-          that CookieYes handles for you.
+          Cookyay is a developer tool, not a SaaS replacement. It covers the technical consent
+          mechanics — banner, blocking, Consent Mode v2, GPC — at zero marginal cost, with full
+          source transparency. The trade-off is that you own the infrastructure decisions (consent
+          log, multi-domain management, translations) that CookieYes handles for you.
         </div>
       </section>
-
-    </div><!-- /.page-wrap -->
+    </div>
+    <!-- /.page-wrap -->
 
     <footer class="site-footer">
       <p>
         <a href="https://github.com/landonia/cookyay" target="_blank" rel="noopener">GitHub</a> ·
         <a href="https://www.npmjs.com/package/cookyay" target="_blank" rel="noopener">npm</a> ·
-        <a href="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js" target="_blank" rel="noopener">jsDelivr</a> ·
-        Apache-2.0
+        <a
+          href="https://cdn.jsdelivr.net/npm/cookyay@0.1.2/dist/index.iife.js"
+          target="_blank"
+          rel="noopener"
+          >jsDelivr</a
+        >
+        · Apache-2.0
       </p>
       <p>
         <strong>Not legal advice.</strong> Cookyay helps implement consent UX patterns. Whether your
@@ -786,9 +1139,7 @@
             necessary: {},
             analytics: {
               label: 'Analytics',
-              services: [
-                { name: 'Example analytics service', cookies: ['_example_ga'] },
-              ],
+              services: [{ name: 'Example analytics service', cookies: ['_example_ga'] }],
             },
           },
           strings: {
@@ -799,6 +1150,5 @@
         })
       })
     </script>
-
   </body>
 </html>

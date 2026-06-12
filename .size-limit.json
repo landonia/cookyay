@@ -1,10 +1,7 @@
 [
   {
-    "name": "cookyay IIFE bundle (CDN, auto-block enabled — DB + matcher + proxy inlined, measured ~12 kB)",
-    "path": [
-      "packages/cookyay/dist/index.iife.js",
-      "packages/cookyay/dist/bootstrap.js"
-    ],
+    "name": "cookyay IIFE bundle (CDN, auto-block enabled — DB + matcher + proxy inlined, measured ~12.27 kB v6)",
+    "path": ["packages/cookyay/dist/index.iife.js", "packages/cookyay/dist/bootstrap.js"],
     "limit": "20 kB",
     "gzip": true
   },
@@ -15,17 +12,14 @@
     "gzip": true
   },
   {
-    "name": "cookyay ESM main (auto-block OFF — signature DB tree-shaken to zero, measured ~12 kB)",
+    "name": "cookyay ESM main (auto-block OFF — signature DB tree-shaken to zero, measured ~12.6 kB v6)",
     "path": "packages/cookyay/dist/index.js",
     "limit": "13 kB",
     "gzip": true
   },
   {
-    "name": "cookyay ESM bundle (auto-block ON — main + DB chunk combined, measured ~14 kB)",
-    "path": [
-      "packages/cookyay/dist/index.js",
-      "packages/cookyay/dist/autoblock-loader-*.js"
-    ],
+    "name": "cookyay ESM bundle (auto-block ON — main + DB chunk combined, measured ~15.01 kB v6)",
+    "path": ["packages/cookyay/dist/index.js", "packages/cookyay/dist/autoblock-loader-*.js"],
     "limit": "20 kB",
     "gzip": true
   }

@@ -24,12 +24,7 @@
 
 import { describe, it, expect } from 'vitest'
 import type { AutoBlockEntry } from './db-autoblock.types.js'
-import {
-  matchAutoBlock,
-  _createMatcher,
-  _matchGlob,
-  _buildIndex,
-} from './autoblock-matcher.js'
+import { matchAutoBlock, _createMatcher, _matchGlob, _buildIndex } from './autoblock-matcher.js'
 
 // ---------------------------------------------------------------------------
 // 1. Host match — representative services from the live DB

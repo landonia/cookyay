@@ -17,6 +17,11 @@ import {
   installAutoBlockProxy,
   _resetAutoBlockProxy,
 } from './autoblock-proxy.js'
+// Bootstrap-first diagnostic — dev-only, DCE-stripped from production builds.
+// Imported statically (it has no DB dependency); the function body itself is
+// guarded by `process.env.NODE_ENV !== 'production'` for zero production cost.
+// [task 004, goals.md §What's new in v6 — bootstrap-first diagnostic]
+import { runBootstrapDiagnostic } from './autoblock-diagnostic.js'
 
 type ConsentCallback = (granted: boolean) => void
 
@@ -293,6 +298,19 @@ export function init(config: CookyayConfig): void {
       // Replay grants for any category the visitor already consented to, so
       // auto-detected elements whose category was previously granted execute now.
       _replayStoredGrants()
+      // Bootstrap-first diagnostic: warn about known trackers that loaded before
+      // the Cookyay bootstrap (debug-only, zero bytes in production via DCE).
+      // Runs after activateMatcher() so the real matcher is available.
+      // The outer NODE_ENV guard lets esbuild DCE this entire block in the IIFE
+      // production build (define: 'process.env.NODE_ENV' → '"production"' in
+      // tsup.config.ts), removing the call, the import reference, and both
+      // exported functions from the minified IIFE. The inner config.debug guard
+      // is the runtime gate for non-production (ESM bundler) builds.
+      // `process` is typed via src/env.d.ts (minimal shim, no @types/node).
+      // [task 004, task 006, goals.md §Bootstrap-first mitigation, perf §3]
+      if (process.env.NODE_ENV !== 'production' && config.debug) {
+        runBootstrapDiagnostic(matcher)
+      }
     })
   }
 
@@ -387,10 +405,7 @@ export function openPreferences(): void {
  *
  * @internal Not part of the external public API.
  */
-export function _recordConsent(
-  categories: Record<CategoryId, boolean>,
-  gpc = false,
-): void {
+export function _recordConsent(categories: Record<CategoryId, boolean>, gpc = false): void {
   if (!_config) {
     _log('_recordConsent() called before init() — ignoring.')
     return

@@ -103,7 +103,14 @@ describe('parseArgs', () => {
     })
 
     it('parses `scan <url> [flags]` identically to the bare `<url> [flags]` form', () => {
-      const withVerb = parseArgs(['node', 'cookyay-scan', 'scan', 'https://example.com', '--depth', '1'])
+      const withVerb = parseArgs([
+        'node',
+        'cookyay-scan',
+        'scan',
+        'https://example.com',
+        '--depth',
+        '1',
+      ])
       const bare = parseArgs(['node', 'cookyay-scan', 'https://example.com', '--depth', '1'])
       expect(withVerb).toEqual(bare)
     })
@@ -128,7 +135,13 @@ describe('parseArgs', () => {
     })
 
     it('parses --timeout correctly', () => {
-      const result = parseArgs(['node', 'cookyay-scan', 'https://example.com', '--timeout', '10000'])
+      const result = parseArgs([
+        'node',
+        'cookyay-scan',
+        'https://example.com',
+        '--timeout',
+        '10000',
+      ])
       if (result && result !== 'help') {
         expect(result.timeout).toBe(10000)
       }
@@ -150,7 +163,13 @@ describe('parseArgs', () => {
     })
 
     it('parses --output correctly', () => {
-      const result = parseArgs(['node', 'cookyay-scan', 'https://example.com', '--output', 'out.json'])
+      const result = parseArgs([
+        'node',
+        'cookyay-scan',
+        'https://example.com',
+        '--output',
+        'out.json',
+      ])
       if (result && result !== 'help') {
         expect(result.output).toBe('out.json')
       }

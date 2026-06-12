@@ -47,13 +47,13 @@ export function buildConsentModeSignals(
 ): ConsentModeSignals {
   const g = (v: boolean): ConsentSignalValue => (v ? 'granted' : 'denied')
   return {
-    functionality_storage:   g(categories.necessary),
-    security_storage:        g(categories.necessary),
+    functionality_storage: g(categories.necessary),
+    security_storage: g(categories.necessary),
     personalization_storage: g(categories.functional),
-    analytics_storage:       g(categories.analytics),
-    ad_storage:              g(categories.marketing),
-    ad_user_data:            g(categories.marketing),
-    ad_personalization:      g(categories.marketing),
+    analytics_storage: g(categories.analytics),
+    ad_storage: g(categories.marketing),
+    ad_user_data: g(categories.marketing),
+    ad_personalization: g(categories.marketing),
   }
 }
 

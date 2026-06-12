@@ -99,7 +99,8 @@
       "localStorage": [],
       "requestPatterns": [
         "linkedin.com/*",
-        "snap.licdn.com/*"
+        "snap.licdn.com/*",
+        "px.ads.linkedin.com/collect"
       ],
       "stubScript": null,
       "stubCookies": []
@@ -269,7 +270,8 @@
       "localStorage": [],
       "requestPatterns": [
         "static.ads-twitter.com/*",
-        "analytics.twitter.com/*"
+        "analytics.twitter.com/*",
+        "analytics.twitter.com/i/adsct"
       ],
       "stubScript": null,
       "stubCookies": []
@@ -331,7 +333,8 @@
       "localStorage": [],
       "requestPatterns": [
         "analytics.tiktok.com/*",
-        "tiktok.com/*"
+        "tiktok.com/*",
+        "analytics.tiktok.com/i18n/pixel/"
       ],
       "stubScript": null,
       "stubCookies": []
@@ -379,7 +382,8 @@
       "requestPatterns": [
         "sc-analytics.appspot.com/*",
         "tr.snapchat.com/*",
-        "static.ads.snapchat.com/*"
+        "static.ads.snapchat.com/*",
+        "tr.snapchat.com/p"
       ],
       "stubScript": null,
       "stubCookies": []
@@ -396,7 +400,8 @@
       "localStorage": [],
       "requestPatterns": [
         "ct.pinterest.com/*",
-        "s.pinimg.com/*"
+        "s.pinimg.com/*",
+        "ct.pinterest.com/v3/"
       ],
       "stubScript": null,
       "stubCookies": []
@@ -411,7 +416,8 @@
       "localStorage": [],
       "requestPatterns": [
         "alb.reddit.com/*",
-        "www.redditstatic.com/*"
+        "www.redditstatic.com/*",
+        "alb.reddit.com/rp.gif"
       ],
       "stubScript": null,
       "stubCookies": []
@@ -426,7 +432,8 @@
       "localStorage": [],
       "requestPatterns": [
         "q.quora.com/*",
-        "s.quora.com/*"
+        "s.quora.com/*",
+        "q.quora.com/qe"
       ],
       "stubScript": null,
       "stubCookies": []

@@ -15,7 +15,14 @@
 import type { CategoryId } from './consent/index.js'
 import { CATEGORY_IDS, readConsent } from './consent/index.js'
 import { grant } from './blocking.js'
-import { _getConfig, _getStrings, _hasSeenThisSession, _recordConsent, _registerUI, openPreferences } from './api.js'
+import {
+  _getConfig,
+  _getStrings,
+  _hasSeenThisSession,
+  _recordConsent,
+  _registerUI,
+  openPreferences,
+} from './api.js'
 
 // ---------------------------------------------------------------------------
 // Constants

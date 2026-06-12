@@ -30,7 +30,13 @@ export interface EmittedService {
   /** Classification metadata — not consumed by Cookyay at runtime. */
   _meta: {
     confidence: Confidence
-    matchedBy: 'cookie' | 'request-host' | 'localStorage' | 'script-host' | 'iframe-host' | 'declared-category'
+    matchedBy:
+      | 'cookie'
+      | 'request-host'
+      | 'localStorage'
+      | 'script-host'
+      | 'iframe-host'
+      | 'declared-category'
     serviceId: string
     pages: string[]
   }
@@ -226,7 +232,11 @@ export function deriveBlockingHost(svc: ServiceDefinition): string | null {
  * simplified to the most specific known URL. When no glob is available,
  * `https://<host>` is used as a placeholder the site owner can refine.
  */
-export function renderSnippet(svc: ServiceDefinition, host: string, category: ServiceCategory): string {
+export function renderSnippet(
+  svc: ServiceDefinition,
+  host: string,
+  category: ServiceCategory,
+): string {
   // Prefer iframe snippet when iframeSrcGlobs is populated
   if (svc.iframeSrcGlobs && svc.iframeSrcGlobs.length > 0) {
     const url = svc.iframeSrcGlobs[0].replace(/\*$/, '').replace(/^\*\./, 'https://')
@@ -240,8 +250,8 @@ export function renderSnippet(svc: ServiceDefinition, host: string, category: Se
     const glob = svc.scriptUrlGlobs[0]
     // Convert glob to usable URL: strip leading "*." prefix-wildcard, strip trailing "*"
     const cleaned = glob
-      .replace(/^\*\./, '')   // "*.example.com/..." → "example.com/..."
-      .replace(/\*$/, '')      // "example.com/gtm.js*" → "example.com/gtm.js"
+      .replace(/^\*\./, '') // "*.example.com/..." → "example.com/..."
+      .replace(/\*$/, '') // "example.com/gtm.js*" → "example.com/gtm.js"
     url = cleaned.startsWith('http') ? cleaned : `https://${cleaned}`
   } else {
     url = `https://${host}`
@@ -318,7 +328,10 @@ function allBlockingHosts(svc: ServiceDefinition): string[] {
  */
 function buildSuggestedBlocking(findings: ClassifiedFindings): SuggestedBlockingEntry[] {
   // Collect unique (serviceId → {ServiceDefinition, max confidence}) entries
-  const serviceMap = new Map<string, { svc: ServiceDefinition; confidence: Confidence; category: ServiceCategory }>()
+  const serviceMap = new Map<
+    string,
+    { svc: ServiceDefinition; confidence: Confidence; category: ServiceCategory }
+  >()
 
   function addService(svc: ServiceDefinition, confidence: Confidence): void {
     const cat = svc.category
@@ -345,12 +358,15 @@ function buildSuggestedBlocking(findings: ClassifiedFindings): SuggestedBlocking
   // Each service may block on multiple hosts; enumerate all to ensure correct dedup
   // (services sharing a host — e.g. GA4 + GTM on googletagmanager.com — merge into one entry).
   // Map<host, { services: string[], category, confidence, primarySvc }>
-  const hostMap = new Map<string, {
-    services: string[]
-    category: ServiceCategory
-    confidence: Confidence
-    primarySvc: ServiceDefinition
-  }>()
+  const hostMap = new Map<
+    string,
+    {
+      services: string[]
+      category: ServiceCategory
+      confidence: Confidence
+      primarySvc: ServiceDefinition
+    }
+  >()
 
   for (const { svc, confidence, category } of serviceMap.values()) {
     const hosts = allBlockingHosts(svc)
@@ -397,10 +413,7 @@ function buildSuggestedBlocking(findings: ClassifiedFindings): SuggestedBlocking
 export function emitConfig(findings: ClassifiedFindings): EmittedConfig {
   // Collect all services into per-category buckets
   // Key = `${category}@@${serviceId}`
-  const servicesByCategory = new Map<
-    ServiceCategory,
-    Map<string, EmittedService>
-  >()
+  const servicesByCategory = new Map<ServiceCategory, Map<string, EmittedService>>()
 
   // Extra unclassified entries generated during script/iframe processing
   // (e.g. necessary-category scripts — not blocking-relevant but surfaced for awareness)
@@ -532,7 +545,8 @@ export function emitConfig(findings: ClassifiedFindings): EmittedConfig {
           name: script.service?.name ?? script.src,
           detail: 'category: necessary (always allowed — no blocking required)',
           pages: [...script.pages],
-          _note: 'This script is classified as necessary and does not need to be blocked. No action required.',
+          _note:
+            'This script is classified as necessary and does not need to be blocked. No action required.',
         })
       }
       continue
@@ -544,7 +558,9 @@ export function emitConfig(findings: ClassifiedFindings): EmittedConfig {
     if (!existing) {
       b.set(serviceId, {
         name: script.service?.name ?? script.src,
-        cookies: script.service ? script.service.cookies.map((c) => (c.wildcard ? c.name + '*' : c.name)) : [],
+        cookies: script.service
+          ? script.service.cookies.map((c) => (c.wildcard ? c.name + '*' : c.name))
+          : [],
         _meta: {
           confidence: script.confidence ?? 'low',
           matchedBy: script.declaredCategory ? 'declared-category' : 'script-host',
@@ -577,7 +593,8 @@ export function emitConfig(findings: ClassifiedFindings): EmittedConfig {
           name: iframe.service?.name ?? iframe.src,
           detail: 'category: necessary (always allowed — no blocking required)',
           pages: [...iframe.pages],
-          _note: 'This iframe is classified as necessary and does not need to be blocked. No action required.',
+          _note:
+            'This iframe is classified as necessary and does not need to be blocked. No action required.',
         })
       }
       continue
@@ -589,7 +606,9 @@ export function emitConfig(findings: ClassifiedFindings): EmittedConfig {
     if (!existing) {
       b.set(serviceId, {
         name: iframe.service?.name ?? iframe.src,
-        cookies: iframe.service ? iframe.service.cookies.map((c) => (c.wildcard ? c.name + '*' : c.name)) : [],
+        cookies: iframe.service
+          ? iframe.service.cookies.map((c) => (c.wildcard ? c.name + '*' : c.name))
+          : [],
         _meta: {
           confidence: iframe.confidence ?? 'low',
           matchedBy: iframe.declaredCategory ? 'declared-category' : 'iframe-host',
@@ -673,10 +692,15 @@ export function emitConfig(findings: ClassifiedFindings): EmittedConfig {
 
 export interface CookyayReadyConfig {
   policyVersion: string
-  categories: Partial<Record<ServiceCategory, {
-    label?: string
-    services: { name: string; cookies?: string[]; localStorage?: string[] }[]
-  }>>
+  categories: Partial<
+    Record<
+      ServiceCategory,
+      {
+        label?: string
+        services: { name: string; cookies?: string[]; localStorage?: string[] }[]
+      }
+    >
+  >
 }
 
 /**
@@ -687,14 +711,19 @@ export interface CookyayReadyConfig {
 export function toCookyayConfig(emitted: EmittedConfig): CookyayReadyConfig {
   const categories: CookyayReadyConfig['categories'] = {}
 
-  for (const [cat, catData] of Object.entries(emitted.categories) as [ServiceCategory, EmittedCategory | undefined][]) {
+  for (const [cat, catData] of Object.entries(emitted.categories) as [
+    ServiceCategory,
+    EmittedCategory | undefined,
+  ][]) {
     if (!catData) continue
     categories[cat] = {
       label: catData.label,
       services: catData.services.map((svc) => ({
         name: svc.name,
         ...(svc.cookies.length > 0 ? { cookies: svc.cookies } : {}),
-        ...(svc.localStorage && svc.localStorage.length > 0 ? { localStorage: svc.localStorage } : {}),
+        ...(svc.localStorage && svc.localStorage.length > 0
+          ? { localStorage: svc.localStorage }
+          : {}),
       })),
     }
   }

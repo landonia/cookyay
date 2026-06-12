@@ -189,7 +189,14 @@ describe('applyBootstrap — returning visitor (stored consent)', () => {
   })
 
   it('ignores a cookie with an unknown schema version', () => {
-    const payload = { sv: 99, t: 0, pv: '1.0', bv: '0.1.0', c: { n: true, f: true, a: true, m: true }, gpc: false }
+    const payload = {
+      sv: 99,
+      t: 0,
+      pv: '1.0',
+      bv: '0.1.0',
+      c: { n: true, f: true, a: true, m: true },
+      gpc: false,
+    }
     document.cookie = `cookyay_consent=${encodeURIComponent(JSON.stringify(payload))}; Path=/`
     applyBootstrap()
     const defaults = firstDataLayerEntry()[2] as Record<string, unknown>
@@ -302,7 +309,9 @@ describe('ordering — consent default precedes simulated gtag.js load', () => {
   it('INLINE_SNIPPET_JS consent defaults include all seven signals', () => {
     // Safe: same as above — compile-time constant, not user input.
     eval(INLINE_SNIPPET_JS)
-    const defaults = Array.from((window.dataLayer as unknown[])[0] as ArrayLike<unknown>)[2] as Record<string, unknown>
+    const defaults = Array.from(
+      (window.dataLayer as unknown[])[0] as ArrayLike<unknown>,
+    )[2] as Record<string, unknown>
     for (const signal of [
       'ad_storage',
       'analytics_storage',

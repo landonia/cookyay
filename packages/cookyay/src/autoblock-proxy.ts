@@ -58,12 +58,12 @@ export const ATTR_AUTO_DETECTED = 'data-cookyay-auto'
 
 /**
  * A held element pending consent.
- * The proxy populates this when it intercepts a matched script/iframe;
+ * The proxy populates this when it intercepts a matched script/iframe/img;
  * task 005 drains it to wire into the grant/inject path.
  */
 export interface HeldElement {
   /** The element that was intercepted. */
-  el: HTMLScriptElement | HTMLIFrameElement
+  el: HTMLScriptElement | HTMLIFrameElement | HTMLImageElement
   /** The original src URL that was being set (may differ from el.src if held inert). */
   src: string
   /** The consent category this service requires. */
@@ -80,7 +80,7 @@ const _held: HeldElement[] = []
 // ---------------------------------------------------------------------------
 
 interface StagedElement {
-  el: HTMLScriptElement | HTMLIFrameElement
+  el: HTMLScriptElement | HTMLIFrameElement | HTMLImageElement
   src: string
   /** The original prototype setter to call when releasing a non-matched element. */
   origProtoSetter: ((v: string) => void) | null
@@ -103,6 +103,9 @@ let _origCreateElement: typeof document.createElement | null = null
 
 /** Saved reference to the original setAttribute before any override. */
 let _origSetAttribute: typeof Element.prototype.setAttribute | null = null
+
+/** Saved reference to the original window.Image constructor before any override. */
+let _origImage: typeof Image | null = null
 
 /**
  * The real matcher, injected by `activateMatcher()` after the DB chunk loads.
@@ -140,7 +143,7 @@ let _debug: ((msg: string, ...args: unknown[]) => void) | null = null
  *          or already executed).
  */
 export function _holdElement(
-  el: HTMLScriptElement | HTMLIFrameElement,
+  el: HTMLScriptElement | HTMLIFrameElement | HTMLImageElement,
   src: string,
   match: AutoBlockMatch,
 ): boolean {
@@ -206,9 +209,7 @@ export function isProxyInstalled(): boolean {
  *
  * @internal Exported for api.ts and tests only.
  */
-export function activateMatcher(
-  matcher: (url: string) => AutoBlockMatch | null,
-): void {
+export function activateMatcher(matcher: (url: string) => AutoBlockMatch | null): void {
   if (_matcher !== null) {
     _log('activateMatcher() called more than once — skipped.')
     return
@@ -267,15 +268,21 @@ export function activateMatcher(
  * (non-matched → src forwarded). New intercepts are classified inline.
  *
  * ## Override details:
- *   1. Wraps `document.createElement` — for `<script>` and `<iframe>`, wraps
- *      the returned element so that setting its `src` triggers the shim/matcher.
+ *   1. Wraps `document.createElement` — for `<script>`, `<iframe>`, and `<img>`,
+ *      wraps the returned element so that setting its `src` triggers the shim/matcher.
  *   2. Wraps `Element.prototype.setAttribute` — catches `setAttribute('src', …)`
- *      calls (the HTML parser's `src` assignment path).
+ *      calls (the HTML parser's `src` assignment path) for script/iframe/img.
+ *   3. Wraps `window.Image` constructor — closes the `new Image()` gap (canonical
+ *      Meta Pixel pattern that bypasses `document.createElement` entirely).
  *
  * Google-owned services always pass through (the matcher never returns a hit
  * for Google hosts, so `match` is null and the element is not held).
  *
- * `<img>` pixels and `document.write` are intentionally NOT intercepted.
+ * `<img>` interception is scoped to curated tracking-pixel endpoints only
+ * (host + requestPaths in the DB). Content images on non-curated hosts/paths
+ * pass through untouched.
+ *
+ * `document.write` is intentionally NOT intercepted.
  *
  * @param debugLog Optional debug logger; when provided, auto-block intercepts
  *                 are logged at `[Cookyay debug]` level.
@@ -293,6 +300,7 @@ export function installAutoBlockProxy(
   // Save originals before any override so we can call through and restore.
   _origCreateElement = document.createElement.bind(document)
   _origSetAttribute = Element.prototype.setAttribute
+  _origImage = window.Image
 
   const origSetAttribute = _origSetAttribute
 
@@ -304,17 +312,14 @@ export function installAutoBlockProxy(
   // elements that use setAttribute instead of the src property.
   //
   // We wrap the prototype so ALL elements benefit without needing to patch each
-  // newly created element individually. However we only act on <script>/<iframe>
+  // newly created element individually. However we only act on <script>/<iframe>/<img>
   // for `src`; all other attribute mutations pass through immediately.
-  Element.prototype.setAttribute = function patchedSetAttribute(
-    name: string,
-    value: string,
-  ): void {
+  Element.prototype.setAttribute = function patchedSetAttribute(name: string, value: string): void {
     if (
       name === 'src' &&
-      (this.tagName === 'SCRIPT' || this.tagName === 'IFRAME')
+      (this.tagName === 'SCRIPT' || this.tagName === 'IFRAME' || this.tagName === 'IMG')
     ) {
-      const el = this as HTMLScriptElement | HTMLIFrameElement
+      const el = this as HTMLScriptElement | HTMLIFrameElement | HTMLImageElement
 
       if (_matcher !== null) {
         // Phase 2: real matcher available — classify inline.
@@ -369,11 +374,11 @@ export function installAutoBlockProxy(
     const el = origCreate(tagName as K, options) as HTMLElement
 
     const tag = typeof tagName === 'string' ? tagName.toLowerCase() : tagName
-    if (tag !== 'script' && tag !== 'iframe') {
-      return el // non-script/iframe: pass through immediately (no overhead)
+    if (tag !== 'script' && tag !== 'iframe' && tag !== 'img') {
+      return el // non-script/iframe/img: pass through immediately (no overhead)
     }
 
-    const targetEl = el as HTMLScriptElement | HTMLIFrameElement
+    const targetEl = el as HTMLScriptElement | HTMLIFrameElement | HTMLImageElement
 
     // Save the prototype src setter for use in the trap below.
     const protoDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(targetEl), 'src')
@@ -386,10 +391,7 @@ export function installAutoBlockProxy(
       enumerable: true,
       get(): string {
         // Delegate to the prototype getter to read the real current src.
-        const desc = Object.getOwnPropertyDescriptor(
-          Object.getPrototypeOf(targetEl),
-          'src',
-        )
+        const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(targetEl), 'src')
         return desc?.get?.call(targetEl) ?? ''
       },
       set(value: string): void {
@@ -416,7 +418,12 @@ export function installAutoBlockProxy(
             targetEl.getAttribute(ATTR_STATE) !== STATE_BLOCKED &&
             targetEl.getAttribute(ATTR_STATE) !== 'executed'
           ) {
-            _staged.push({ el: targetEl, src: value, origProtoSetter: protoSetter, viaSetAttribute: false })
+            _staged.push({
+              el: targetEl,
+              src: value,
+              origProtoSetter: protoSetter,
+              viaSetAttribute: false,
+            })
             return // hold inert — do NOT assign src yet
           }
         }
@@ -431,12 +438,83 @@ export function installAutoBlockProxy(
     return targetEl
   }
 
+  // -------------------------------------------------------------------------
+  // Override: window.Image constructor
+  // -------------------------------------------------------------------------
+  // `new Image()` bypasses document.createElement entirely — it calls the
+  // HTMLImageElement constructor directly. This is the canonical Meta Pixel
+  // pattern (`var img = new Image(); img.src = url`) and must be patched
+  // synchronously in the same bootstrap tick as the other overrides.
+  //
+  // Shape per runtime SME §1: capture original as _origImage (already saved
+  // above), install a PatchedImage constructor that creates the real element
+  // via _origImage and installs the same one-shot src trap.
+  // [research/runtime-interception-domain-expert.md §Findings 1, §Gotchas 1]
+  const origImg = _origImage!
+  window.Image = function PatchedImage(
+    this: HTMLImageElement,
+    width?: number,
+    height?: number,
+  ): HTMLImageElement {
+    const img = new origImg(width, height)
+
+    // Save prototype src setter for the trap.
+    const protoDesc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(img), 'src')
+    const protoSetter = protoDesc?.set ?? null
+
+    // Install the same one-shot src trap used by the createElement path.
+    Object.defineProperty(img, 'src', {
+      configurable: true,
+      enumerable: true,
+      get(): string {
+        const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(img), 'src')
+        return desc?.get?.call(img) ?? ''
+      },
+      set(value: string): void {
+        // Remove the instance-level trap first (prevents re-entry).
+        delete (img as unknown as Record<string, unknown>).src
+
+        if (_matcher !== null) {
+          // Phase 2: real matcher — classify inline.
+          const match = _matcher(value)
+          if (match) {
+            const held = _holdElement(img, value, match)
+            if (held) return // suppress src — element stays inert
+          }
+        } else {
+          // Phase 1: stage the element (hold inert until matcher resolves).
+          if (
+            !img.getAttribute(ATTR_AUTO_DETECTED) &&
+            img.getAttribute(ATTR_STATE) !== STATE_BLOCKED &&
+            img.getAttribute(ATTR_STATE) !== 'executed'
+          ) {
+            _staged.push({
+              el: img,
+              src: value,
+              origProtoSetter: protoSetter,
+              viaSetAttribute: false,
+            })
+            return // hold inert — do NOT assign src yet
+          }
+        }
+
+        // Not held/staged: forward to prototype setter.
+        if (protoSetter) {
+          protoSetter.call(img, value)
+        }
+      },
+    })
+
+    return img
+  } as unknown as typeof Image
+  window.Image.prototype = origImg.prototype
+
   _installed = true
-  _debug?.('auto-block proxy installed (createElement + setAttribute overrides active)')
+  _debug?.('auto-block proxy installed (createElement + setAttribute + Image overrides active)')
 }
 
 /**
- * Uninstall the proxy overrides and restore native createElement/setAttribute.
+ * Uninstall the proxy overrides and restore native createElement/setAttribute/Image.
  *
  * Exported for test teardown only — not part of the public API.
  */
@@ -460,6 +538,11 @@ export function _resetAutoBlockProxy(): void {
   if (_origCreateElement !== null) {
     document.createElement = _origCreateElement
     _origCreateElement = null
+  }
+
+  if (_origImage !== null) {
+    window.Image = _origImage
+    _origImage = null
   }
 
   _installed = false

@@ -114,7 +114,12 @@ describe('keyboard walkthrough (real browser)', () => {
     first.focus()
     await wait()
 
-    const evt = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })
+    const evt = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
     let prevented = false
     evt.preventDefault = () => {
       prevented = true

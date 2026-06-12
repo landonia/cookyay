@@ -144,7 +144,9 @@ function _mountToast(): void {
 // ---------------------------------------------------------------------------
 
 function _runGpc(): void {
-  const gpcActive = typeof window !== 'undefined' && !!(window as typeof window & { __COOKYAY?: { gpc: boolean } }).__COOKYAY?.gpc
+  const gpcActive =
+    typeof window !== 'undefined' &&
+    !!(window as typeof window & { __COOKYAY?: { gpc: boolean } }).__COOKYAY?.gpc
   if (!gpcActive) return
 
   const config = _getConfig()!
@@ -160,10 +162,7 @@ function _runGpc(): void {
   }
 
   // Write denied record with gpc:true, overriding any stale stored grant.
-  _recordConsent(
-    { necessary: true, functional: false, analytics: false, marketing: false },
-    true,
-  )
+  _recordConsent({ necessary: true, functional: false, analytics: false, marketing: false }, true)
 
   // Mount toast once DOM is ready
   if (!document.body) {

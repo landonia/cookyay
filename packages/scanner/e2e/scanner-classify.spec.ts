@@ -92,7 +92,7 @@ test('round-trip: emitted config has analytics category with GA4 stub entry', as
     (s) =>
       s.name.includes('ga4') ||
       s._meta.serviceId.includes('ga4') ||
-      s._meta.matchedBy === 'declared-category' && s._meta.serviceId.includes('ga4'),
+      (s._meta.matchedBy === 'declared-category' && s._meta.serviceId.includes('ga4')),
   )
   expect(ga4Entry).toBeDefined()
   expect(ga4Entry!._meta.matchedBy).toBe('declared-category')
@@ -114,10 +114,14 @@ test('round-trip: emitted config has marketing category with Pixel and YouTube e
   const marketingServices = config.categories.marketing!.services
   expect(marketingServices.length).toBeGreaterThanOrEqual(2)
 
-  const pixelEntry = marketingServices.find((s) => s.name.includes('pixel') || s._meta.serviceId.includes('pixel'))
+  const pixelEntry = marketingServices.find(
+    (s) => s.name.includes('pixel') || s._meta.serviceId.includes('pixel'),
+  )
   expect(pixelEntry).toBeDefined()
 
-  const ytEntry = marketingServices.find((s) => s.name.includes('ytplayer') || s._meta.serviceId.includes('ytplayer'))
+  const ytEntry = marketingServices.find(
+    (s) => s.name.includes('ytplayer') || s._meta.serviceId.includes('ytplayer'),
+  )
   expect(ytEntry).toBeDefined()
 })
 
@@ -208,15 +212,18 @@ test('round-trip: config metadata is populated correctly', async () => {
 // ---------------------------------------------------------------------------
 
 // Synthetic window flags set by stub scripts
-type StubWindow = Window & typeof globalThis & {
-  __ga4Ran?: boolean
-  __pixelRan?: boolean
-  __cookyayConfig?: unknown
-}
+type StubWindow = Window &
+  typeof globalThis & {
+    __ga4Ran?: boolean
+    __pixelRan?: boolean
+    __cookyayConfig?: unknown
+  }
 
 const ROUND_TRIP_PAGE = '/fixtures/blocking/round-trip.html'
 
-test('round-trip blocking: emitted config (applied to fixture) blocks GA4 and Pixel stubs pre-consent', async ({ page }) => {
+test('round-trip blocking: emitted config (applied to fixture) blocks GA4 and Pixel stubs pre-consent', async ({
+  page,
+}) => {
   // Step 1: produce config from crawler
   const findings = await crawl({
     url: `${FIXTURE_BASE}/fixtures/blocking/all.html`,
@@ -253,7 +260,9 @@ test('round-trip blocking: emitted config (applied to fixture) blocks GA4 and Pi
   expect(iframeDataSrc).toBeTruthy()
 })
 
-test('round-trip blocking: after accept-all, GA4 and Pixel stubs execute and iframe gets src', async ({ page }) => {
+test('round-trip blocking: after accept-all, GA4 and Pixel stubs execute and iframe gets src', async ({
+  page,
+}) => {
   // Step 1: produce config from crawler
   const findings = await crawl({
     url: `${FIXTURE_BASE}/fixtures/blocking/all.html`,

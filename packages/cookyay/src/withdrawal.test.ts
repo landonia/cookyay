@@ -13,12 +13,7 @@ import { _resetApi, _hasSeenThisSession, _recordConsent, init } from './api.js'
 import { _resetBanner, mountBanner } from './banner.js'
 import { _resetPreferences, mountPreferences } from './preferences.js'
 import { _resetWithdrawal } from './withdrawal.js'
-import {
-  buildConsentRecord,
-  clearConsent,
-  readConsent,
-  writeConsent,
-} from './consent/index.js'
+import { buildConsentRecord, clearConsent, readConsent, writeConsent } from './consent/index.js'
 import type { CategoryId } from './consent/index.js'
 
 // ---------------------------------------------------------------------------
@@ -166,7 +161,9 @@ describe('AC1: Withdrawal — "reload recommended" prompt', () => {
     getSwitch('analytics')!.click()
     getSaveBtn()!.click()
 
-    const reloadBtn = getWithdrawalToast()!.querySelector<HTMLElement>('[data-cookyay-withdrawal-reload]')!
+    const reloadBtn = getWithdrawalToast()!.querySelector<HTMLElement>(
+      '[data-cookyay-withdrawal-reload]',
+    )!
     reloadBtn.click()
 
     expect(reloadSpy).toHaveBeenCalledOnce()
@@ -231,8 +228,9 @@ describe('AC1: Withdrawal — "reload recommended" prompt', () => {
     getSwitch('analytics')!.click()
     getSaveBtn()!.click()
 
-    expect(getWithdrawalToast()?.querySelector('.cookyay-withdrawal__msg')?.textContent)
-      .toBe('Custom withdrawal message')
+    expect(getWithdrawalToast()?.querySelector('.cookyay-withdrawal__msg')?.textContent).toBe(
+      'Custom withdrawal message',
+    )
   })
 
   it('reload button label is configurable via strings.reloadLabel', () => {
@@ -280,8 +278,8 @@ describe('AC1 addendum: clearOnWithdraw config hook', () => {
     const hook = vi.fn()
     init({ ...BASE_CONFIG, clearOnWithdraw: hook })
     mountPreferences(null)
-    getSwitch('analytics')!.click()  // revoke analytics
-    getSwitch('marketing')!.click()  // revoke marketing
+    getSwitch('analytics')!.click() // revoke analytics
+    getSwitch('marketing')!.click() // revoke marketing
     getSaveBtn()!.click()
 
     expect(hook).toHaveBeenCalledWith(expect.arrayContaining(['analytics', 'marketing']))
@@ -295,7 +293,7 @@ describe('AC1 addendum: clearOnWithdraw config hook', () => {
     const hook = vi.fn()
     init({ ...BASE_CONFIG, clearOnWithdraw: hook })
     mountPreferences(null)
-    getSwitch('analytics')!.click()  // grant analytics (not a revocation)
+    getSwitch('analytics')!.click() // grant analytics (not a revocation)
     getSaveBtn()!.click()
 
     expect(hook).not.toHaveBeenCalled()

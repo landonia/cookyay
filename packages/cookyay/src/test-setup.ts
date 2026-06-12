@@ -13,9 +13,7 @@ class MemoryStorage implements Storage {
   }
 
   getItem(key: string): string | null {
-    return Object.prototype.hasOwnProperty.call(this.store, key)
-      ? this.store[key]
-      : null
+    return Object.prototype.hasOwnProperty.call(this.store, key) ? this.store[key] : null
   }
 
   setItem(key: string, value: string): void {

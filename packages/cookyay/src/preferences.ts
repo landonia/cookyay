@@ -484,7 +484,7 @@ function _closeModal(): void {
   _openerEl = null
   // Return focus to the invoking element, or document.body when opened on load
   if (openerEl) {
-    (openerEl as HTMLElement).focus?.()
+    ;(openerEl as HTMLElement).focus?.()
   } else {
     document.body.focus()
   }

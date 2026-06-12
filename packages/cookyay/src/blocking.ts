@@ -35,7 +35,7 @@ export interface BlockerOptions {
 }
 
 interface QueueEntry {
-  el: HTMLScriptElement | HTMLIFrameElement
+  el: HTMLScriptElement | HTMLIFrameElement | HTMLImageElement
   placeholder: HTMLElement | null
 }
 
@@ -99,11 +99,7 @@ function _registerScript(el: HTMLScriptElement, known: readonly CategoryId[]): v
   _enqueue(cat, { el, placeholder: null })
 }
 
-function _registerIframe(
-  el: HTMLIFrameElement,
-  known: readonly CategoryId[],
-  label: string,
-): void {
+function _registerIframe(el: HTMLIFrameElement, known: readonly CategoryId[], label: string): void {
   if (el.getAttribute(ATTR_STATE) === STATE_EXECUTED) return
 
   const cat = el.getAttribute(ATTR_CATEGORY)
@@ -190,6 +186,10 @@ export function grant(
     if (el.tagName === 'SCRIPT') {
       const script = el as HTMLScriptElement
       setTimeout(() => _injectScript(script), 0)
+    } else if (el.tagName === 'IMG') {
+      const img = el as HTMLImageElement
+      // Pixels fire synchronously on grant (analytics accuracy — research E)
+      setTimeout(() => _injectImg(img), 0)
     } else {
       const iframe = el as HTMLIFrameElement
       setTimeout(() => _injectIframe(iframe, placeholder), 0)
@@ -223,7 +223,13 @@ function _injectScript(original: HTMLScriptElement): void {
   //                   HTML attribute, so skip it (we assign src directly below)
   //   • data-cookyay-auto — observability marker; not needed on the live clone
   for (const { name, value } of original.attributes) {
-    if (name === 'type' || name === ATTR_STATE || name === 'data-src' || name === ATTR_AUTO_DETECTED) continue
+    if (
+      name === 'type' ||
+      name === ATTR_STATE ||
+      name === 'data-src' ||
+      name === ATTR_AUTO_DETECTED
+    )
+      continue
     clone.setAttribute(name, value)
   }
 
@@ -260,6 +266,32 @@ function _injectIframe(original: HTMLIFrameElement, placeholder: HTMLElement | n
 }
 
 /**
+ * Fire a held pixel `<img>` by assigning its stored src URL.
+ *
+ * Pixels are fire-and-forget GET requests: no cloning or re-insertion is
+ * needed. On grant, we simply assign the captured URL to `el.src`. The
+ * element must be marked STATE_EXECUTED BEFORE assigning src — after v6 the
+ * auto-block proxy intercepts `<img>` src assignments, and the proxy's
+ * _holdElement() checks data-cookyay-state="executed" to skip re-interception
+ * of the injection path (same defensive pattern as _injectScript).
+ *
+ * [research/existing-codebase-archaeologist.md §Findings 3, §Gotchas]
+ * [research/runtime-interception-domain-expert.md §Findings 2]
+ */
+function _injectImg(original: HTMLImageElement): void {
+  if (original.getAttribute(ATTR_STATE) === STATE_EXECUTED) return
+
+  // Mark executed BEFORE assigning src to prevent re-interception by the proxy.
+  original.setAttribute(ATTR_STATE, STATE_EXECUTED)
+
+  const dataSrc = original.getAttribute('data-src')
+  if (dataSrc) {
+    original.removeAttribute('data-src')
+    original.src = dataSrc
+  }
+}
+
+/**
  * Enqueue an auto-detected (runtime-intercepted) element for consent-gated injection.
  *
  * Called by api.ts after the auto-block matcher resolves and classifies held elements
@@ -287,7 +319,7 @@ function _injectIframe(original: HTMLIFrameElement, placeholder: HTMLElement | n
  * [architecture.md §3 Sync vs async work — injection staggered via setTimeout(fn,0)]
  */
 export function enqueueAutoDetected(
-  el: HTMLScriptElement | HTMLIFrameElement,
+  el: HTMLScriptElement | HTMLIFrameElement | HTMLImageElement,
   src: string,
   category: string,
   knownCategories: readonly CategoryId[] = CATEGORY_IDS,

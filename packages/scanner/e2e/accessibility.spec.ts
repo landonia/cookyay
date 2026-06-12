@@ -143,11 +143,13 @@ test.describe('keyboard navigation', () => {
 
     // After `count` Tabs, focus should have cycled back to (or be inside) the modal
     const activeId = await page.evaluate(() => document.activeElement?.id ?? '')
-    const activeDataAttr = await page.evaluate(() =>
-      document.activeElement?.getAttribute('data-cookyay-switch') ??
-      document.activeElement?.getAttribute('data-cookyay-save') ??
-      document.activeElement?.getAttribute('data-cookyay-prefs-close') ??
-      document.activeElement?.getAttribute('aria-label') ?? '',
+    const activeDataAttr = await page.evaluate(
+      () =>
+        document.activeElement?.getAttribute('data-cookyay-switch') ??
+        document.activeElement?.getAttribute('data-cookyay-save') ??
+        document.activeElement?.getAttribute('data-cookyay-prefs-close') ??
+        document.activeElement?.getAttribute('aria-label') ??
+        '',
     )
 
     // Focus must still be inside the modal (not on body or banner elements)
@@ -167,16 +169,16 @@ test.describe('keyboard navigation', () => {
     await expect(page.locator('#cookyay-preferences')).toBeVisible()
 
     // Focus is on the close button (first focusable) — Shift+Tab should wrap to last (Save)
-    const closeBtnFocused = await page.evaluate(() =>
-      document.activeElement?.getAttribute('data-cookyay-prefs-close') !== null,
+    const closeBtnFocused = await page.evaluate(
+      () => document.activeElement?.getAttribute('data-cookyay-prefs-close') !== null,
     )
     expect(closeBtnFocused).toBe(true)
 
     await page.keyboard.press('Shift+Tab')
 
     // After Shift+Tab from first element, focus should be on the last focusable (Save button)
-    const saveIsFocused = await page.evaluate(() =>
-      document.activeElement?.getAttribute('data-cookyay-save') !== null,
+    const saveIsFocused = await page.evaluate(
+      () => document.activeElement?.getAttribute('data-cookyay-save') !== null,
     )
     expect(saveIsFocused).toBe(true)
   })
@@ -256,7 +258,9 @@ test.describe('equal prominence (CNIL / EDPB compliance)', () => {
    * compliance research): same font size, same color contrast, same visual weight.
    * We check computed styles to make this mechanical and CI-gated.
    */
-  test('Accept-all and Reject-all have identical computed styles in the default theme', async ({ page }) => {
+  test('Accept-all and Reject-all have identical computed styles in the default theme', async ({
+    page,
+  }) => {
     await page.goto(INDEX)
     await expect(page.locator('#cookyay-banner')).toBeVisible()
 
