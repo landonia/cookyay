@@ -1,5 +1,11 @@
 # cookyay
 
+## 0.3.0
+
+### Minor Changes
+
+- da00dde: Runtime auto-blocking now covers the transport layer: `fetch` and `navigator.sendBeacon` calls to curated tracking endpoints are held until consent, then replayed (same page session). A matched `fetch` resolves immediately to a benign `204 No Content` stub — no hangs, no throws for calling code. A matched `sendBeacon` returns `true` synchronously and is queued for same-session delivery on grant. Pre-consent `sendBeacon` calls fired at page unload (`pagehide`/`visibilitychange`) are dropped, not deferred — no `sessionStorage` persistence in v7; this is the legally correct no-consent-no-send outcome. The `fetch`/`sendBeacon` wrappers live in the lazy `autoblock-loader` chunk, not the synchronous bootstrap, so there is an intrinsic few-ms pre-chunk-load async escape window — the same bootstrap-first limit documented for DOM interception since v5/v6. Non-matching calls (app API traffic) pass through untouched. Google endpoints pass through to Consent Mode v2 (skip-Google rule unchanged). `XMLHttpRequest` and `document.write` interception remain deferred; auto-block stays opt-in.
+
 ## 0.2.0
 
 ### Minor Changes
