@@ -12,9 +12,9 @@
     "gzip": true
   },
   {
-    "name": "cookyay ESM main (auto-block OFF — signature DB tree-shaken to zero, measured ~12.6 kB v6)",
+    "name": "cookyay ESM main (auto-block OFF — signature DB tree-shaken to zero, measured ~12.92 kB v7 post-transport-reclaim; firm v7 floor gate)",
     "path": "packages/cookyay/dist/index.js",
-    "limit": "13 kB",
+    "limit": "13.1 kB",
     "gzip": true
   },
   {

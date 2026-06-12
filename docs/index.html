@@ -156,7 +156,7 @@
           </li>
           <li>
             <a href="#autoblock">Runtime auto-block</a> — <code>autoBlock: true</code>, pixel
-            coverage (v6), honest limits, Google tags
+            coverage (v6), transport-layer coverage (v7), honest limits, Google tags
           </li>
           <li><a href="#gtm">GTM integration</a></li>
           <li><a href="#gpc">GPC behavior</a></li>
@@ -523,15 +523,14 @@ const bootstrapSnippet = readFileSync(
               <td>
                 Enable runtime auto-block (v5+). When <code>true</code>, the banner intercepts known
                 third-party <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, and (v6+)
-                <code>&lt;img&gt;</code> beacon pixel insertions, holding them inert until the
-                visitor grants consent to the matching category — without requiring any HTML
-                changes. Declared rules always win over auto-detected ones. Google tags (GTM/GA4)
-                are excluded (handled via Consent Mode v2 instead). <code>fetch()</code>/<code
-                  >sendBeacon()</code
-                >
-                beacons are not intercepted (DOM-level limitation). See
-                <a href="#autoblock">Runtime auto-block</a> for pixel coverage details, honest
-                limits, and the hard install requirement.
+                <code>&lt;img&gt;</code> beacon pixel insertions, and (v7+)
+                <code>fetch()</code>/<code>sendBeacon()</code> calls to curated tracking endpoints,
+                holding them until the visitor grants consent — without requiring HTML changes.
+                Declared rules always win. Google tags (GTM/GA4) are excluded (Consent Mode v2
+                instead). <code>XMLHttpRequest</code> and <code>document.write</code> remain
+                deferred. Pre-consent <code>sendBeacon</code> calls at page unload are dropped, not
+                deferred. See <a href="#autoblock">Runtime auto-block</a> for full coverage details,
+                honest limits, and the hard install requirement.
               </td>
             </tr>
             <tr>
@@ -1092,13 +1091,15 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
         <h3>What auto-block does</h3>
 
         <p>
-          When <code>autoBlock: true</code>, the bootstrap's proxy matches every outgoing
-          <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, and — new in v6 —
-          <strong><code>&lt;img&gt;</code> beacon pixel</strong> insertion against a bundled
-          database of curated third-party services. Matches are held inert until the visitor grants
-          consent to the matching category, then released using the same grant/inject queue as
-          declarative blocking. Declared rules always take precedence — elements already carrying
-          <code>data-cookyay-state="blocked"</code> are skipped by the auto-block path entirely.
+          When <code>autoBlock: true</code>, the banner's proxy matches every outgoing
+          <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>,
+          <strong><code>&lt;img&gt;</code> beacon pixel</strong> (v6), and — new in v7 —
+          <strong><code>fetch</code> and <code>navigator.sendBeacon</code> calls</strong> against a
+          bundled database of curated third-party services. Matches are held until the visitor
+          grants consent to the matching category, then released (scripts/iframes re-executed,
+          pixels fired once, transport calls replayed/sent). Declared rules always take precedence —
+          elements already carrying <code>data-cookyay-state="blocked"</code> are skipped by the
+          auto-block path entirely.
         </p>
 
         <p>
@@ -1134,25 +1135,79 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
           never touched.
         </p>
 
-        <h3>Honest limits of DOM-level interception</h3>
+        <h3>v7 — <code>fetch</code> and <code>navigator.sendBeacon</code> transport coverage</h3>
 
         <p>
-          <code>autoBlock</code> works by intercepting DOM API calls
-          (<code>document.createElement</code>, <code>Element.prototype.setAttribute</code>,
-          <code>window.Image</code>). Some tracking techniques are architecturally invisible to this
-          approach:
+          v7 extends auto-block to the network transport layer. In addition to DOM interception, the
+          lazy <code>autoblock-loader</code> chunk also wraps <code>window.fetch</code> and
+          <code>navigator.sendBeacon</code>:
         </p>
 
         <ul>
           <li>
-            <strong><code>fetch()</code> and <code>navigator.sendBeacon()</code> beacons</strong>
-            — Modern SDKs (Meta Pixel Advanced Matching, TikTok Events API) increasingly use
-            <code>fetch</code> with <code>keepalive: true</code> instead of
-            <code>&lt;img&gt;</code>. These requests bypass all DOM-level interception entirely.
-            Closing this gap would require a Service Worker or a
-            <code>window.fetch</code> monkey-patch, which carries significantly higher breakage risk
-            and is deferred to a future version. This is a <strong>known gap</strong> in v6's pixel
-            coverage.
+            <strong><code>fetch</code> to a curated tracking endpoint</strong> — the caller's
+            <code>Promise&lt;Response&gt;</code> resolves immediately with a benign
+            <code>204 No Content</code> stub (preventing hangs and timeouts in calling code). A
+            clone of the original request is queued and replayed via the saved original
+            <code>fetch</code> reference when consent is granted within the same page session.
+          </li>
+          <li>
+            <strong><code>navigator.sendBeacon</code> to a curated endpoint</strong> — the call
+            returns <code>true</code> synchronously (preserving caller retry expectations) and the
+            payload is queued for same-session delivery on grant.
+          </li>
+          <li>
+            <strong>Non-matching calls pass through untouched.</strong> Your own API traffic, CDN
+            requests, and any <code>fetch</code>/<code>sendBeacon</code> URL that is not in the
+            curated signature database is forwarded synchronously to the original function without
+            any staging.
+          </li>
+          <li>
+            <strong>Google endpoints pass through to Consent Mode v2.</strong> The skip-Google rule
+            that excludes GTM/GA4 from DOM auto-block applies equally to the transport interceptors
+            — <code>region1.google-analytics.com/g/collect</code> is never network-blocked.
+          </li>
+        </ul>
+
+        <p>
+          <strong>Unload-drop behavior (documented honestly):</strong>
+          <code>sendBeacon</code> calls fired at page unload (<code>pagehide</code> /
+          <code>visibilitychange</code>) are <strong>dropped, not deferred</strong>, when the user
+          has not yet consented. There is no page session to replay into and no
+          <code>sessionStorage</code> persistence in v7. This is the legally correct outcome — no
+          consent, no send.
+        </p>
+
+        <p>
+          <strong>Phase-2 async escape window (bootstrap-first limit, v7):</strong>
+          The <code>fetch</code>/<code>sendBeacon</code> wrappers live in the lazy
+          <code>autoblock-loader</code> chunk, not the synchronous bootstrap snippet. A tracker that
+          fires an async transport call in the short window between page load and the chunk
+          finishing its load may escape interception. This is the same intrinsic bootstrap-first
+          limit documented for DOM interception since v5 — extended honestly to the transport layer.
+          The install-order diagnostic (set <code>debug: true</code>) can help surface this.
+        </p>
+
+        <h3>Honest limits of auto-block interception</h3>
+
+        <p>
+          <code>autoBlock</code> works by intercepting DOM API calls
+          (<code>document.createElement</code>, <code>Element.prototype.setAttribute</code>,
+          <code>window.Image</code>) and — from v7 — <code>window.fetch</code> and
+          <code>navigator.sendBeacon</code>. The following remain outside its reach:
+        </p>
+
+        <ul>
+          <li>
+            <strong>Transport-layer coverage is curated-endpoint-only (v7).</strong>
+            <code>fetch</code> and <code>sendBeacon</code> calls are intercepted only when the
+            destination URL matches a curated tracking endpoint in the signature database. Your own
+            API traffic is never touched.
+          </li>
+          <li>
+            <strong><code>XMLHttpRequest</code> interception</strong> — Older transport; deferred to
+            a later version. No curated tracker in the v7 DB is XHR-only; declare XHR-based scripts
+            manually if needed.
           </li>
           <li>
             <strong><code>srcset</code> attribute</strong> — The override filters on
@@ -1162,19 +1217,23 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
           <li>
             <strong><code>innerHTML</code>-injected <code>&lt;img src&gt;</code></strong>
             — HTML injected via <code>innerHTML</code> or <code>insertAdjacentHTML</code> bypasses
-            the <code>createElement</code> wrapper; the native HTML parser does not route through
-            <code>Element.prototype.setAttribute</code>. In practice, any script that injects pixels
-            this way is itself blocked first by the script-level proxy — so the pixel injection
-            never runs. The gap is limited to scripts that loaded before the bootstrap.
+            the <code>createElement</code> wrapper. In practice, any script that injects pixels this
+            way is itself blocked first by the script-level proxy — so the pixel injection never
+            runs.
           </li>
           <li>
-            <strong>Scripts and pixels loaded before the bootstrap</strong> — Any resource placed in
-            the HTML before the bootstrap snippet has already been fetched. Enable
+            <strong>Scripts and resources loaded before the bootstrap</strong> — Any resource placed
+            in the HTML before the bootstrap snippet has already been fetched. Enable
             <code>debug: true</code> to surface these in the console.
           </li>
           <li>
             <strong><code>document.write</code> ad injection</strong> — Legacy DoubleClick / old
             AdSense. Deferred (high page-rendering breakage risk).
+          </li>
+          <li>
+            <strong>Auto-block remains opt-in.</strong> The <code>autoBlock</code> flag defaults to
+            <code>false</code>. There is no default-on mode in v7 — enabling it is an explicit site
+            owner decision.
           </li>
         </ul>
 
@@ -1227,12 +1286,15 @@ cookyay-scan scan https://yoursite.com --config-out cookyay.config.json</code></
               <td>Most explicit; zero runtime overhead; works back to v1</td>
             </tr>
             <tr>
-              <td><code>autoBlock: true</code> (v6)</td>
+              <td><code>autoBlock: true</code> (v7)</td>
               <td>No</td>
               <td>Yes (intercepted at <code>createElement</code>)</td>
               <td>
-                Scripts, iframes, and <code>&lt;img&gt;</code> pixels; Google tags excluded;
-                <code>fetch</code>/<code>sendBeacon</code> beacons not covered
+                Scripts, iframes, <code>&lt;img&gt;</code> pixels, and (v7) <code>fetch</code>/<code
+                  >sendBeacon</code
+                >
+                to curated endpoints; Google tags excluded; <code>XMLHttpRequest</code> and
+                <code>document.write</code> deferred; auto-block stays opt-in
               </td>
             </tr>
           </tbody>

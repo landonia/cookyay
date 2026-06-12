@@ -1,5 +1,5 @@
 /**
- * Runtime auto-block interception proxy — synchronous createElement/setAttribute override.
+ * Runtime auto-block interception proxy — synchronous createElement/setAttribute/fetch/sendBeacon override.
  *
  * ## Two-phase install
  *
@@ -7,35 +7,53 @@
  * and the tree-shake-to-zero contract:
  *
  * **Phase 1 — synchronous trapping shim (installed immediately in `init()`)**
- * A tiny, always-synchronous shim overrides `document.createElement` and
- * `Element.prototype.setAttribute` at the moment `init({ autoBlock: true })` is
- * called — BEFORE any third-party code can run. The shim captures every
- * `<script>`/`<iframe>` `src` assignment into a staging queue, holding each
- * element inert (src never forwarded to the browser). No match logic runs yet.
+ * A tiny, always-synchronous shim overrides `document.createElement`,
+ * `Element.prototype.setAttribute`, `window.Image`, `window.fetch`, and
+ * `navigator.sendBeacon` at the moment `init({ autoBlock: true })` is
+ * called — BEFORE any third-party code can run.
+ *
+ * For DOM elements: the shim captures every `<script>`/`<iframe>`/`<img>` `src`
+ * assignment into a staging queue, holding each element inert. No match logic runs yet.
+ *
+ * For transport (fetch/sendBeacon): per the resolved install-timing decision
+ * (research/_index.md §Update Q2), the wrappers pass through in Phase 1 (before the
+ * matcher loads). This avoids staging first-party API calls hostage and keeps
+ * first-party traffic clean. The accepted trade-off is a brief pre-chunk-load window
+ * where async tracking calls could escape — the same intrinsic bootstrap-first limit
+ * v6 already documents.
  *
  * **Phase 2 — classify-and-release (runs after lazy-loaded matcher resolves)**
  * A conditional `import()` loads the auto-block matcher (DB + index) in parallel.
- * Once loaded, `classifyAndRelease()` drains the staging queue: matched elements
- * stay held (added to `_held` for task 005); non-matched elements have their src
- * forwarded immediately (released to the browser).  From this point the shim
- * upgrades to use the real matcher inline, so new intercepts are classified without
- * queuing.
+ * Once loaded:
+ * - DOM elements: `activateMatcher()` drains the staging queue: matched elements
+ *   stay held; non-matched elements have their src forwarded immediately.
+ * - Transport: `activateTransportClassifiers()` wires function-pointer classifiers
+ *   into the thin stubs installed in Phase 1.
+ *   - Matched `fetch` calls: the caller's Promise is immediately resolved with a
+ *     benign `new Response(null, { status: 204 })` stub (hybrid stub+queue). A clone
+ *     of the original request (`request.clone()`) is queued in `_heldFetches` for
+ *     best-effort replay via `_origFetch` when `grant(category)` fires. `keepalive`
+ *     fetches are dropped (page is ending). `AbortSignal`-aborted held calls are
+ *     discarded before replay. [task 003]
+ *   - Matched `sendBeacon` calls: queued in `_queuedBeacons`; on grant, delivered
+ *     via `_origSendBeacon`. [task 004]
+ *   The full classify logic lives in `autoblock-transport-classifier.ts` (lazy chunk)
+ *   to keep the always-on ESM-OFF bundle lean. [task 006 §Bundle-budget gate]
  *
  * **Why this satisfies AC1/AC5 and the tree-shake contract simultaneously:**
- * - The shim is installed synchronously inside the same microtask as `init()` —
- *   no async gap, no network fetch required. A script created immediately after
- *   `init()` returns is already intercepted.
+ * - All shims are installed synchronously inside the same microtask as `init()` —
+ *   no async gap, no network fetch required.
  * - The DB (`db-autoblock.generated.ts`) and matcher (`autoblock-matcher.ts`) are
  *   never statically imported by any always-on module; they only load when
  *   `autoBlock: true` via a conditional `import()` expression (tree-shake to zero
  *   for opt-out installs).
- * - Non-matched scripts are released as soon as the matcher resolves — a same-origin
- *   module chunk is available in sub-milliseconds; this is orders of magnitude faster
- *   than a CDN fetch (100–300ms) and never blocks page rendering for first-party
- *   scripts.
+ * - The synchronous stub for fetch/sendBeacon is kept ≤20 lines / well under 0.3 kB
+ *   gzip to stay within the ESM-OFF budget; full classify logic is lazy-loaded.
  *
- * [goals.md §What ships in v5, §Interception mechanism, §Auto-block is opt-in]
+ * [goals.md §What ships in v5, v7, §Interception mechanism, §Auto-block is opt-in]
  * [research/runtime-interception-domain-expert.md §Findings 1, §Gotchas]
+ * [research/performance-engineer.md §Recommendations 1, 4]
+ * [research/_index.md §Update Q2 (Phase 2 lazy install timing)]
  * [architecture.md §3 Sync vs async work, §Amendments 2026-06-10]
  * [prd.md §3.2, §5]
  */
@@ -76,6 +94,85 @@ export interface HeldElement {
 const _held: HeldElement[] = []
 
 // ---------------------------------------------------------------------------
+// Transport held stores — parallel to _held/_staged for fetch/sendBeacon (v7)
+// ---------------------------------------------------------------------------
+
+/**
+ * A held fetch call pending consent — hybrid stub+queue semantics (task 003).
+ *
+ * When the fetch shim matches a curated tracking endpoint in Phase 2, the caller's
+ * Promise is **immediately resolved** with a benign `new Response(null, { status: 204 })`
+ * stub (no hang, no timeout, survives `await`). Separately, a clone of the original
+ * request (or the original string/URL input) is stored here for **best-effort replay**
+ * via `_origFetch` when `grant(category)` fires.
+ *
+ * Key properties:
+ * - `replayInput` — the input forwarded to `_origFetch` at replay time. When the
+ *   original was a `Request` object, this is `request.clone()` (cloned at intercept
+ *   time, not grant time — the body stream is a one-read `ReadableStream` that may
+ *   already be GC'd by grant time). For string/URL inputs this is the original value.
+ * - `signal` — the `AbortSignal` from the original request or init, if any. If the
+ *   signal fires before grant, the held entry is discarded (not replayed).
+ * - No `resolve`/`reject` fields — the caller's Promise was already settled at
+ *   intercept time; the replay is a fire-and-forget side-effect.
+ *
+ * `keepalive` fetches captured during page unload are NOT stored here — they are
+ * dropped at intercept time (page is ending; no meaningful context to replay into).
+ *
+ * [task 003 AC1 (204 stub), AC2 (clone at intercept time, replay on grant),
+ *  AC6 (AbortSignal discard), AC7 (replay in lazy chunk)]
+ * [research/existing-codebase-archaeologist.md §Findings 3, §Gotchas]
+ * [research/runtime-interception-domain-expert.md §Findings 3, §Recommendations 1–3]
+ * [research/performance-engineer.md §Findings 3 (clone deferred past URL check)]
+ */
+export interface HeldFetch {
+  /** The extracted URL string (from string | URL | Request input). */
+  url: string
+  /**
+   * The input forwarded to `_origFetch` at replay time.
+   * - `Request` input → `request.clone()` (cloned at intercept time)
+   * - `string` / `URL` input → the original value (no clone needed)
+   */
+  replayInput: string | URL | Request
+  /** The original init options (may be undefined). Not passed when replayInput is a Request. */
+  init: RequestInit | undefined
+  /** The consent category this tracking endpoint requires. */
+  category: string
+  /** The service slug for debug logging. */
+  serviceId: string
+  /**
+   * The AbortSignal from the original request or init, if any.
+   * If this signal fires before grant, the held entry must be discarded.
+   * [task 003 AC6; research/runtime-interception-domain-expert.md §Gotchas (AbortSignal)]
+   */
+  signal: AbortSignal | null
+}
+
+/**
+ * A queued sendBeacon call pending consent.
+ * Stored when the sendBeacon shim matches a curated tracking endpoint in Phase 2.
+ * The shim returns `true` to the caller immediately. On grant, `_origSendBeacon`
+ * is called to deliver the queued payload.
+ *
+ * [research/runtime-interception-domain-expert.md §Findings 4]
+ */
+export interface QueuedBeacon {
+  /** The target URL. */
+  url: string
+  /** The beacon payload (string, Blob, FormData, URLSearchParams, or null). */
+  data: BodyInit | null | undefined
+  /** The consent category this tracking endpoint requires. */
+  category: string
+  /** The service slug for debug logging. */
+  serviceId: string
+}
+
+/** Module-level store of held fetch calls pending consent. */
+const _heldFetches: HeldFetch[] = []
+/** Module-level store of queued beacon calls pending consent. */
+const _queuedBeacons: QueuedBeacon[] = []
+
+// ---------------------------------------------------------------------------
 // Staging queue — elements captured before the matcher is available (Phase 1)
 // ---------------------------------------------------------------------------
 
@@ -108,6 +205,77 @@ let _origSetAttribute: typeof Element.prototype.setAttribute | null = null
 let _origImage: typeof Image | null = null
 
 /**
+ * Saved reference to the native `Response` constructor, captured before any
+ * third-party override. The 204 benign stub (`new Response(null, { status: 204 })`)
+ * is constructed through this saved reference so it is always the real browser
+ * `Response`, not a potential third-party shim.
+ * [task 003 AC1; research/existing-codebase-archaeologist.md §Gotchas (benign stub)]
+ */
+let _origResponse: typeof Response | null = null
+
+/**
+ * Saved reference to the original window.fetch before any override.
+ * Replay paths MUST call through this, never `window.fetch`, to prevent
+ * circular re-interception.
+ * [research/runtime-interception-domain-expert.md §Gotchas (circular re-interception)]
+ */
+let _origFetch: typeof window.fetch | null = null
+
+/**
+ * Saved reference to the original navigator.sendBeacon before any override.
+ * Wrapped via instance-property shadow (`navigator.sendBeacon = wrapped`), NOT
+ * `Navigator.prototype.sendBeacon` — frozen-prototype environments do not throw.
+ * [task 002 AC2; research/runtime-interception-domain-expert.md §Gotchas (prototype-chain)]
+ */
+let _origSendBeacon: typeof navigator.sendBeacon | null = null
+
+/**
+ * True when the page is in the process of unloading (after `pagehide` or
+ * `visibilitychange` to `hidden`). When true, any matched pre-consent
+ * `sendBeacon` call is **dropped** rather than queued — there is no future
+ * page context to replay into, so queueing is meaningless.
+ *
+ * This flag is set by `_handleUnload` (installed alongside the sendBeacon shim)
+ * and cleared by `_resetAutoBlockProxy()` for test hygiene.
+ *
+ * [task 004 AC5; research/runtime-interception-domain-expert.md §Findings 4;
+ *  research/_index.md §Update Q3 (drop, not defer)]
+ */
+let _isUnloading = false
+
+/**
+ * Event listener installed on `pagehide` (window) to detect page unload.
+ * The `document.hidden` check in `patchedSendBeacon` covers the `visibilitychange`
+ * (tab-background) case without a second listener reference.
+ * Saved so it can be removed in `_resetAutoBlockProxy()` for test hygiene.
+ *
+ * [task 004 AC5]
+ */
+let _pageLifecycleHandler: (() => void) | null = null
+
+/**
+ * Phase-2 fetch classifier — set by `activateTransportClassifiers()` when the
+ * lazy auto-block chunk loads. `null` during Phase 1 (matcher not yet loaded).
+ *
+ * Contains the full classify+hold logic (AbortSignal handling, keepalive drop,
+ * declared-wins check, Request clone, 204 stub) factored out of the always-on
+ * bundle into the lazy `autoblock-loader` chunk for ESM-OFF budget reclamation.
+ *
+ * [task 006 §Bundle-budget gate; research/performance-engineer.md §Rec1]
+ */
+let _fetchClassifierFn:
+  | ((input: RequestInfo | URL, init?: RequestInit) => Promise<Response>)
+  | null = null
+
+/**
+ * Phase-2 beacon classifier — set by `activateTransportClassifiers()` when the
+ * lazy chunk loads. `null` during Phase 1.
+ *
+ * [task 006 §Bundle-budget gate]
+ */
+let _beaconClassifierFn: ((url: string, data?: BodyInit | null) => boolean) | null = null
+
+/**
  * The real matcher, injected by `activateMatcher()` after the DB chunk loads.
  * `null` during Phase 1 (shim-only); non-null once Phase 2 begins.
  */
@@ -122,6 +290,45 @@ function _log(msg: string, ...args: unknown[]): void {
 }
 
 let _debug: ((msg: string, ...args: unknown[]) => void) | null = null
+
+/**
+ * Extract a URL string from a fetch input argument with zero allocation for the
+ * common absolute-string case.
+ *
+ * `fetch(input, init)` accepts three input shapes:
+ * - `string`  — returned as-is (no allocation)
+ * - `URL`     — `.href` read directly (no allocation)
+ * - `Request` — `.url` read directly (already absolute, no allocation)
+ *
+ * The same logic is reused by the sendBeacon wrapper (which only receives a string
+ * URL, but shares the type signature for consistency and future-proofing).
+ *
+ * [research/performance-engineer.md §Findings 1, §Recommendations 2, 4]
+ * [research/existing-codebase-archaeologist.md §Recommendations 6]
+ */
+export function _extractUrl(input: string | URL | Request): string {
+  if (typeof input === 'string') return input
+  if (input instanceof URL) return input.href
+  return input.url
+}
+
+/**
+ * Check if a fetch/sendBeacon URL is already covered by a declared `data-category`
+ * element in the DOM (declared-wins / no-double-queue guard).
+ *
+ * Mirrors the `ATTR_STATE === STATE_BLOCKED` check in `_holdElement` for DOM elements,
+ * but for the transport layer where there is no intercepted element to inspect.
+ * Called only after a curated-DB match (Phase 2) — non-matching URLs never reach this.
+ *
+ * [task 005 AC6 — declared-wins; research/test-strategist.md §F4 item 4]
+ */
+export function _isDeclaredCovered(url: string): boolean {
+  const nodes = document.querySelectorAll('[type="text/plain"][data-category][data-src]')
+  for (let i = 0; i < nodes.length; i++) {
+    if ((nodes[i] as HTMLElement).getAttribute('data-src') === url) return true
+  }
+  return false
+}
 
 /**
  * Hold an element inert (no src fetch) and register it for later grant/inject.
@@ -185,6 +392,107 @@ export function _holdElement(
  */
 export function getHeldElements(): HeldElement[] {
   return _held
+}
+
+/**
+ * Return the live `_heldFetches` array.
+ * Exported so `api.ts` can drain it when wiring transport into the grant path.
+ * Callers should splice from it to clear entries.
+ *
+ * [task 002 AC3; research/existing-codebase-archaeologist.md §Recommendations 3]
+ */
+export function getHeldFetches(): HeldFetch[] {
+  return _heldFetches
+}
+
+/**
+ * Return the live `_queuedBeacons` array.
+ * Exported so `api.ts` can drain it when wiring transport into the grant path.
+ * Callers should splice from it to clear entries.
+ *
+ * [task 002 AC3; research/existing-codebase-archaeologist.md §Recommendations 3]
+ */
+export function getQueuedBeacons(): QueuedBeacon[] {
+  return _queuedBeacons
+}
+
+/**
+ * Expose the saved original `window.fetch` for replay-path callers.
+ * Replay paths MUST call through this, not `window.fetch`, to prevent circular
+ * re-interception.
+ *
+ * Returns `null` if the proxy is not installed (no override is active).
+ *
+ * [task 002 AC6; research/runtime-interception-domain-expert.md §Recommendations 3]
+ */
+export function getOrigFetch(): typeof window.fetch | null {
+  return _origFetch
+}
+
+/**
+ * Expose the saved original `navigator.sendBeacon` for replay-path callers.
+ * Replay paths MUST call through this, not `navigator.sendBeacon`, to prevent
+ * circular re-interception.
+ *
+ * Returns `null` if the proxy is not installed (no override is active).
+ *
+ * [task 002 AC6; research/runtime-interception-domain-expert.md §Recommendations 3]
+ */
+export function getOrigSendBeacon(): typeof navigator.sendBeacon | null {
+  return _origSendBeacon
+}
+
+/**
+ * Expose the saved native `Response` constructor so the lazy transport-classifier
+ * chunk can construct benign 204 stubs using the real Response, not a third-party shim.
+ *
+ * [task 003 AC1; task 006 §Bundle-budget reclamation]
+ */
+export function getOrigResponse(): typeof Response | null {
+  return _origResponse
+}
+
+/**
+ * Return the current `_isUnloading` flag so the lazy transport-classifier
+ * chunk can check whether the page is unloading before queuing a beacon.
+ *
+ * [task 004 AC5; task 006 §Bundle-budget reclamation]
+ */
+export function isUnloading(): boolean {
+  return _isUnloading
+}
+
+/**
+ * Activate the Phase-2 transport classifiers.
+ *
+ * Called by `api.ts` after the lazy `autoblock-loader` chunk resolves.
+ * Installs the `_fetchClassifierFn` and `_beaconClassifierFn` function pointers
+ * that the thin shims in `installAutoBlockProxy()` delegate to once the matcher
+ * is available (Phase 2). Also registers the `pagehide` lifecycle listener that
+ * sets `_isUnloading` for the sendBeacon drop guard.
+ *
+ * Must be called AFTER `activateMatcher()` so the `_matcher` is non-null when
+ * the classifiers run their first call.
+ *
+ * [task 006 §Bundle-budget gate; research/performance-engineer.md §Rec1]
+ */
+export function activateTransportClassifiers(
+  fetchFn: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
+  beaconFn: (url: string, data?: BodyInit | null) => boolean,
+): void {
+  _fetchClassifierFn = fetchFn
+  _beaconClassifierFn = beaconFn
+
+  // Register the unload listener now (not in Phase 1) so it coexists with
+  // the beacon classifier that checks _isUnloading. Clearing happens in
+  // _resetAutoBlockProxy().
+  if (_origSendBeacon !== null && _pageLifecycleHandler === null) {
+    _isUnloading = false
+    _pageLifecycleHandler = (): void => {
+      _isUnloading = true
+    }
+    window.addEventListener('pagehide', _pageLifecycleHandler, { capture: true })
+  }
 }
 
 /**
@@ -298,9 +606,23 @@ export function installAutoBlockProxy(
   _debug = debugLog ?? null
 
   // Save originals before any override so we can call through and restore.
+  // Transport globals are saved here, in the same synchronous call as the DOM
+  // overrides, so they are captured before any third-party code can replace them.
+  // [task 002 AC1; research/existing-codebase-archaeologist.md §Recommendations 1]
   _origCreateElement = document.createElement.bind(document)
   _origSetAttribute = Element.prototype.setAttribute
   _origImage = window.Image
+  // Save the native Response constructor before any override so the 204 benign
+  // stub is constructed with the real Response, not a potential third-party shim.
+  // [task 003 AC1; research/existing-codebase-archaeologist.md §Gotchas (benign stub)]
+  _origResponse = typeof Response !== 'undefined' ? Response : null
+  // Save the raw function references (no .bind()) so callers can compare
+  // them byte-for-byte (Object.is equality) against the pre-install globals.
+  // The shims call through them with explicit context (.call) where needed.
+  _origFetch = window.fetch ?? null
+  // navigator.sendBeacon may be absent in older environments and test environments
+  // (jsdom does not implement it). Guard to avoid TypeError.
+  _origSendBeacon = navigator.sendBeacon ?? null
 
   const origSetAttribute = _origSetAttribute
 
@@ -509,24 +831,104 @@ export function installAutoBlockProxy(
   } as unknown as typeof Image
   window.Image.prototype = origImg.prototype
 
+  // -------------------------------------------------------------------------
+  // Override: window.fetch
+  // -------------------------------------------------------------------------
+  // Minimal synchronous stub — installs the wrapper that routes through to the
+  // Phase-2 classifier once `activateTransportClassifiers()` is called.
+  //
+  // **Phase 1** (before the lazy DB chunk loads): `_fetchClassifierFn` is null;
+  // the shim passes every call through to `_origFetch` unchanged. First-party
+  // API calls are never staged/held.
+  //
+  // **Phase 2** (after `activateTransportClassifiers()` fires): `_fetchClassifierFn`
+  // is set to the full classify+hold logic that lives in the lazy chunk
+  // (`autoblock-transport-classifier.ts`). The stub delegates to it.
+  //
+  // The full classify logic (AbortSignal handling, keepalive drop, declared-wins
+  // check, Request clone, 204 stub) is factored into the lazy chunk to keep the
+  // always-on ESM-OFF bundle lean.
+  //
+  // Anti-circular-re-interception: the shim calls `_origFetch`, never `window.fetch`.
+  //
+  // [task 003 AC1, AC2, AC6, AC7; task 002 AC1; task 006 §Bundle-budget gate]
+  // [research/performance-engineer.md §Rec1 (minimal synchronous stub, ≤80 lines)]
+  // [research/_index.md §Update Q2 (Phase 2 lazy install timing)]
+  if (_origFetch !== null) {
+    const origFetch = _origFetch
+    window.fetch = function patchedFetch(
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ): Promise<Response> {
+      // Phase 1 or classifier not yet loaded: pass through immediately.
+      if (_matcher === null || _fetchClassifierFn === null) {
+        return origFetch.call(window, input, init)
+      }
+      // Phase 2: delegate to the full classify+hold logic in the lazy chunk.
+      return _fetchClassifierFn(input, init)
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Override: navigator.sendBeacon
+  // -------------------------------------------------------------------------
+  // Minimal synchronous stub — same delegation pattern as patchedFetch above.
+  //
+  // Wrapped via instance-property shadow (`navigator.sendBeacon = wrapped`), NOT
+  // `Navigator.prototype.sendBeacon` — frozen-prototype environments must not throw.
+  // [task 002 AC2; research/runtime-interception-domain-expert.md §Gotchas (prototype-chain)]
+  //
+  // The full classify+queue+unload-drop logic (task 004) lives in the lazy chunk.
+  // The `pagehide` lifecycle listener is registered by `activateTransportClassifiers()`
+  // (not here) so it only fires while the classifier is active.
+  //
+  // [task 004 AC1–AC5; task 006 §Bundle-budget gate]
+  if (_origSendBeacon !== null) {
+    const origBeacon = _origSendBeacon
+    navigator.sendBeacon = function patchedSendBeacon(
+      url: string,
+      data?: BodyInit | null,
+    ): boolean {
+      // Phase 1 or classifier not yet loaded: pass through immediately.
+      if (_matcher === null || _beaconClassifierFn === null) {
+        return origBeacon.call(navigator, url, data)
+      }
+      // Phase 2: delegate to the full classify+queue+unload-drop logic in the lazy chunk.
+      return _beaconClassifierFn(url, data)
+    }
+  }
+
   _installed = true
-  _debug?.('auto-block proxy installed (createElement + setAttribute + Image overrides active)')
+  _debug?.(
+    'auto-block proxy installed (createElement + setAttribute + Image + fetch + sendBeacon overrides active)',
+  )
 }
 
 /**
- * Uninstall the proxy overrides and restore native createElement/setAttribute/Image.
+ * Uninstall the proxy overrides and restore all native globals.
+ *
+ * Restores: `document.createElement`, `Element.prototype.setAttribute`,
+ * `window.Image`, `window.fetch`, and `navigator.sendBeacon`.
+ * Clears all held/staged/transport stores to prevent cross-test pollution.
  *
  * Exported for test teardown only — not part of the public API.
+ *
+ * [task 002 AC5; research/existing-codebase-archaeologist.md §Findings 7]
  */
 export function _resetAutoBlockProxy(): void {
-  // Always clear the held and staged queues, regardless of whether the proxy
-  // is installed, so direct _holdElement() calls in tests are cleaned up.
+  // Always clear ALL queues, regardless of whether the proxy is installed,
+  // so direct _holdElement() calls in tests are cleaned up.
   _held.length = 0
   _staged.length = 0
+  _heldFetches.length = 0
+  _queuedBeacons.length = 0
 
   if (!_installed) {
-    // Also clear the matcher in case it was set outside the install path in tests
+    // Also clear the matcher and classifiers in case they were set outside the
+    // install path in tests.
     _matcher = null
+    _fetchClassifierFn = null
+    _beaconClassifierFn = null
     return
   }
 
@@ -544,6 +946,32 @@ export function _resetAutoBlockProxy(): void {
     window.Image = _origImage
     _origImage = null
   }
+
+  if (_origFetch !== null) {
+    window.fetch = _origFetch
+    _origFetch = null
+  }
+
+  // Clear the saved Response constructor (no global to restore — it was saved, not replaced).
+  _origResponse = null
+
+  if (_origSendBeacon !== null) {
+    navigator.sendBeacon = _origSendBeacon
+    _origSendBeacon = null
+  }
+
+  // Remove the pagehide listener registered by activateTransportClassifiers()
+  // (task 004 AC5 — unload-drop guard cleanup; moved from installAutoBlockProxy
+  // in task 006 for ESM-OFF budget reclamation).
+  if (_pageLifecycleHandler !== null) {
+    window.removeEventListener('pagehide', _pageLifecycleHandler, { capture: true })
+    _pageLifecycleHandler = null
+  }
+  _isUnloading = false
+
+  // Clear Phase-2 transport classifier function pointers (task 006).
+  _fetchClassifierFn = null
+  _beaconClassifierFn = null
 
   _installed = false
   _matcher = null

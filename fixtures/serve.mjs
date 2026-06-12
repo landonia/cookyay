@@ -51,6 +51,16 @@ const server = createServer(async (req, res) => {
     return
   }
 
+  // Transport test sink — POST /fixtures/transport/collect
+  // Returns 204 No Content so transport fixture pages can fire same-origin
+  // fetch()/sendBeacon() calls without external network access.
+  // [task 005 research/test-strategist.md §F5 — optional server-side counter endpoint]
+  if (req.method === 'POST' && pathname === '/fixtures/transport/collect') {
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*' })
+    res.end()
+    return
+  }
+
   // CORS preflight for the beacon sink
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {

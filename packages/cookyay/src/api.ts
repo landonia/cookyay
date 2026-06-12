@@ -3,7 +3,13 @@ import { CATEGORY_IDS, buildConsentRecord, readConsent, writeConsent } from './c
 import type { CookyayConfig } from './config.js'
 import { resolveStrings, validateConfig } from './config.js'
 import { dispatchChangeEvent, dispatchConsentEvent } from './events.js'
-import { _resetBlocker, enqueueAutoDetected, grant, scanBlocked } from './blocking.js'
+import {
+  _registerTransportReleaseHook,
+  _resetBlocker,
+  enqueueAutoDetected,
+  grant,
+  scanBlocked,
+} from './blocking.js'
 import { VERSION } from './version.js'
 // Static import of the proxy shim — this module has NO dependency on the
 // auto-block DB (no import of autoblock-matcher.ts or db-autoblock.generated.ts).
@@ -13,15 +19,27 @@ import { VERSION } from './version.js'
 // [goals.md §Interception mechanism, §Auto-block is opt-in]
 import {
   activateMatcher,
+  activateTransportClassifiers,
   getHeldElements,
+  getHeldFetches,
+  getQueuedBeacons,
+  getOrigFetch,
+  getOrigResponse,
+  getOrigSendBeacon,
   installAutoBlockProxy,
+  isUnloading,
   _resetAutoBlockProxy,
 } from './autoblock-proxy.js'
-// Bootstrap-first diagnostic — dev-only, DCE-stripped from production builds.
-// Imported statically (it has no DB dependency); the function body itself is
-// guarded by `process.env.NODE_ENV !== 'production'` for zero production cost.
-// [task 004, goals.md §What's new in v6 — bootstrap-first diagnostic]
-import { runBootstrapDiagnostic } from './autoblock-diagnostic.js'
+// NOTE: runBootstrapDiagnostic is no longer statically imported here.
+// It is re-exported from autoblock-loader.ts and obtained from the same
+// dynamic import('./autoblock-loader.js') that provides getAutoBlockMatcher.
+// This removes ~0.59 kB gzip from the always-on ESM-OFF bundle (index.js).
+// [task 001 §Bundle-budget reclamation, research/performance-engineer.md §Rec3]
+// NOTE: makeFetchClassifier / makeBeaconClassifier are NOT statically imported;
+// they are obtained from the same dynamic import('./autoblock-loader.js') below.
+// This keeps the full transport classify logic (AbortSignal handling, keepalive
+// drop, declared-wins check, Request clone, 204 stub) OUT of the always-on
+// ESM-OFF bundle. [task 006 §Bundle-budget gate]
 
 type ConsentCallback = (granted: boolean) => void
 
@@ -288,30 +306,73 @@ export function init(config: CookyayConfig): void {
     //      category is already consented, exactly as it does for declared elements.
     //
     // [task 005 AC1 — reuse blocking.ts queue; AC5 — INP-staggered via grant()]
-    void import('./autoblock-loader.js').then(({ getAutoBlockMatcher }) => {
-      const matcher = getAutoBlockMatcher(config)
-      if (!matcher) return
-      activateMatcher(matcher)
-      _debug('auto-block matcher activated — staged elements classified and released')
-      // Wire all newly-classified (held) elements into the blocking queue.
-      _enqueueHeldElements()
-      // Replay grants for any category the visitor already consented to, so
-      // auto-detected elements whose category was previously granted execute now.
-      _replayStoredGrants()
-      // Bootstrap-first diagnostic: warn about known trackers that loaded before
-      // the Cookyay bootstrap (debug-only, zero bytes in production via DCE).
-      // Runs after activateMatcher() so the real matcher is available.
-      // The outer NODE_ENV guard lets esbuild DCE this entire block in the IIFE
-      // production build (define: 'process.env.NODE_ENV' → '"production"' in
-      // tsup.config.ts), removing the call, the import reference, and both
-      // exported functions from the minified IIFE. The inner config.debug guard
-      // is the runtime gate for non-production (ESM bundler) builds.
-      // `process` is typed via src/env.d.ts (minimal shim, no @types/node).
-      // [task 004, task 006, goals.md §Bootstrap-first mitigation, perf §3]
-      if (process.env.NODE_ENV !== 'production' && config.debug) {
-        runBootstrapDiagnostic(matcher)
-      }
-    })
+    void import('./autoblock-loader.js').then(
+      ({
+        getAutoBlockMatcher,
+        runBootstrapDiagnostic,
+        makeFetchClassifier,
+        makeBeaconClassifier,
+        makeTransportDrainHook,
+      }) => {
+        const matcher = getAutoBlockMatcher(config)
+        if (!matcher) return
+        activateMatcher(matcher)
+        _debug('auto-block matcher activated — staged elements classified and released')
+        // Wire all newly-classified (held) DOM elements into the blocking queue.
+        _enqueueHeldElements()
+        // Activate Phase-2 transport classifiers. The full classify+hold logic
+        // (AbortSignal handling, keepalive drop, declared-wins check, Request clone,
+        // 204 stub) lives in the lazy chunk (autoblock-transport-classifier.ts) and
+        // is wired here into the thin stubs installed in Phase 1. Must come AFTER
+        // activateMatcher() so the stubs see the matcher from their first call.
+        // Also registers the pagehide unload-drop listener.
+        // [task 006 §Bundle-budget gate; task 002–004 transport semantics]
+        const debugFn = config.debug
+          ? (msg: string, ...args: unknown[]) => console.log(`[Cookyay debug] ${msg}`, ...args)
+          : null
+        // Build the context bag forwarding proxy state to the classifier factories.
+        // This avoids a static import of autoblock-proxy.ts from the lazy chunk,
+        // which would create a shared chunk loaded by ALL users (including ESM-OFF).
+        const classifierCtx = {
+          origFetch: getOrigFetch()!,
+          nativeResponse: getOrigResponse()!,
+          origSendBeacon: getOrigSendBeacon(),
+          heldFetches: getHeldFetches(),
+          queuedBeacons: getQueuedBeacons(),
+          isUnloading,
+        }
+        activateTransportClassifiers(
+          makeFetchClassifier(matcher, debugFn, classifierCtx),
+          makeBeaconClassifier(matcher, debugFn, classifierCtx),
+        )
+        _debug('transport classifiers activated — fetch/sendBeacon intercepts active')
+        // Register the transport release hook so grant() drains held fetches
+        // and queued beacons. Must be registered AFTER activateMatcher() so the
+        // shims are in Phase 2 before any consent replay fires.
+        // makeTransportDrainHook comes from the lazy chunk (same import as
+        // makeFetchClassifier) — keeps drain logic OUT of the ESM-OFF bundle.
+        // [task 002 AC4; task 006 §Bundle-budget gate]
+        _registerTransportReleaseHook(makeTransportDrainHook(classifierCtx, debugFn))
+        // Replay grants for any category the visitor already consented to, so
+        // auto-detected elements whose category was previously granted execute now.
+        _replayStoredGrants()
+        // Bootstrap-first diagnostic: warn about known trackers that loaded before
+        // the Cookyay bootstrap (debug-only, zero bytes in production via DCE).
+        // Runs after activateMatcher() so the real matcher is available.
+        // runBootstrapDiagnostic is obtained from the same lazy chunk (autoblock-loader)
+        // rather than statically imported, so it does NOT appear in the ESM-OFF bundle.
+        // The outer NODE_ENV guard lets esbuild DCE this entire block in the IIFE
+        // production build (define: 'process.env.NODE_ENV' → '"production"' in
+        // tsup.config.ts), removing the call and both exported functions from the
+        // minified IIFE. The inner config.debug guard is the runtime gate for
+        // non-production (ESM bundler) builds.
+        // `process` is typed via src/env.d.ts (minimal shim, no @types/node).
+        // [task 001 §Bundle-budget reclamation, task 004, goals.md §Bootstrap-first mitigation]
+        if (process.env.NODE_ENV !== 'production' && config.debug) {
+          runBootstrapDiagnostic(matcher)
+        }
+      },
+    )
   }
 
   // Wire data-cookyay-open click delegation

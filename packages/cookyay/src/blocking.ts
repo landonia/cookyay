@@ -42,6 +42,35 @@ interface QueueEntry {
 // Module-level queue keyed by category. Cleared on _resetBlocker().
 const _q = new Map<string, QueueEntry[]>()
 
+// ---------------------------------------------------------------------------
+// Transport release hook — IoC pattern (parallel to _registerUI/_registerGpcUI)
+// ---------------------------------------------------------------------------
+//
+// `blocking.ts` has no knowledge of fetch/sendBeacon internals. The transport
+// drain logic (in api.ts, populated by tasks 002–004) registers a callback here
+// that `grant()` invokes after draining the DOM element queue.
+//
+// This keeps the transport store and replay logic encapsulated in api.ts /
+// autoblock-proxy.ts and out of blocking.ts.
+//
+// [task 002 AC4; research/existing-codebase-archaeologist.md §Recommendations 4]
+
+/** Registered transport-drain hook. Null until registered by api.ts. */
+let _transportReleaseHook: ((category: string) => void) | null = null
+
+/**
+ * Register the transport-drain callback. Called once by api.ts after the
+ * lazy chunk resolves (same IoC pattern as `_registerUI` / `_registerGpcUI`).
+ *
+ * On each `grant(category)` call, the registered hook receives the category
+ * string so it can drain matching held fetches and queued beacons.
+ *
+ * @internal Not part of the public API.
+ */
+export function _registerTransportReleaseHook(hook: (category: string) => void): void {
+  _transportReleaseHook = hook
+}
+
 function _warn(msg: string, ...args: unknown[]): void {
   console.warn(`[Cookyay] ${msg}`, ...args)
 }
@@ -195,6 +224,11 @@ export function grant(
       setTimeout(() => _injectIframe(iframe, placeholder), 0)
     }
   }
+
+  // Drain held transport calls (fetch/sendBeacon) for the granted category.
+  // The hook is registered by api.ts once the lazy chunk resolves; null until then.
+  // [task 002 AC4; research/existing-codebase-archaeologist.md §Recommendations 4]
+  _transportReleaseHook?.(category)
 }
 
 function _injectScript(original: HTMLScriptElement): void {
@@ -346,4 +380,5 @@ export function enqueueAutoDetected(
  */
 export function _resetBlocker(): void {
   _q.clear()
+  _transportReleaseHook = null
 }

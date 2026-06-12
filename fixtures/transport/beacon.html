@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: transport sendBeacon auto-block lifecycle</title>
+    <!--
+      Bootstrap MUST be first in <head>.
+      [goals.md §Interception mechanism: "Cookyay first in <head>" is a hard install requirement]
+
+      WARNING: Do NOT reorder <head> children — the bootstrap must load before any
+      third-party content to ensure the proxy is installed before sendBeacon calls fire.
+      [research/test-strategist.md §Gotchas]
+    -->
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Auto-block fixture — sendBeacon transport lifecycle (v7)</h1>
+    <p>
+      Proves the <code>navigator.sendBeacon</code> transport auto-block lifecycle:
+      block-until-consent then replay-once on grant, with same-origin passthrough.
+    </p>
+
+    <h2>1. Meta Pixel sendBeacon (auto-blocked — network proof)</h2>
+    <!--
+      A pre-consent sendBeacon to the Meta Pixel endpoint must be queued (not sent).
+      The wrapper returns true synchronously (queued-for-delivery semantics).
+      Fired via window.__fireTrackingBeacon() after Phase 2 loads.
+    -->
+    <div id="fb-beacon-status" class="status-box status-blocked">
+      Meta Pixel beacon: waiting for Phase 2…
+    </div>
+
+    <h2>2. Same-origin sendBeacon — NOT held (passthrough guard)</h2>
+    <!--
+      A sendBeacon to /fixtures/transport/collect (same-origin, non-curated) must
+      pass through immediately and return the real boolean.
+    -->
+    <div id="same-origin-beacon-status" class="status-box status-blocked">
+      Same-origin beacon: checking…
+    </div>
+
+    <h2>3. Skip-Google sendBeacon — NOT held (Consent Mode v2 passthrough)</h2>
+    <!--
+      A pre-consent sendBeacon to a Google Analytics endpoint must pass through.
+      Status updated by inspection of the beacon return value + queue state.
+    -->
+    <div id="google-beacon-status" class="status-box status-blocked">
+      Google beacon: checking…
+    </div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      // ---------------------------------------------------------------------------
+      // Step 1: Initialise with autoBlock:true BEFORE any sendBeacon calls fire.
+      // [autoblock-proxy.ts §installAutoBlockProxy, api.ts §init() autoBlock path]
+      // ---------------------------------------------------------------------------
+      init({
+        policyVersion: 'transport-beacon-fixture-v7',
+        debug: true,
+        autoBlock: true,
+        categories: {
+          marketing: {
+            label: 'Marketing',
+            services: [{ name: 'Meta Pixel', cookies: ['_fbp'] }],
+          },
+        },
+      })
+
+      // ---------------------------------------------------------------------------
+      // Phase 2 note: sendBeacon wrapping starts in Phase 1 but ONLY intercepts
+      // curated URLs after Phase 2 (the lazy autoblock-loader chunk) activates the
+      // real matcher. The Playwright test calls window.__fireTrackingBeacon() only
+      // AFTER waitForTimeout(300) gives Phase 2 time to load.
+      //
+      // Same-origin and Google beacons are fired at page load (their pass-through
+      // behavior is independent of Phase 2 status).
+      //
+      // [research/_index.md §Update Q2 — Phase 2 lazy install timing]
+      // ---------------------------------------------------------------------------
+
+      // Exposed to Playwright — called AFTER Phase 2 is active
+      window.__fireTrackingBeacon = function () {
+        const trackingUrl = 'https://www.facebook.com/tr?id=FIXTURE&ev=PageView'
+        const retval = navigator.sendBeacon(trackingUrl, JSON.stringify({ ev: 'PageView' }))
+
+        const statusEl = document.getElementById('fb-beacon-status')
+        if (statusEl) {
+          statusEl.textContent =
+            'Meta Pixel beacon: queued pre-consent (retval=' + String(retval) + ') ✓'
+          statusEl.className = 'status-box status-blocked'
+        }
+        window.__beaconTest.beaconRetval = retval
+        return retval
+      }
+
+      // ---------------------------------------------------------------------------
+      // Same-origin sendBeacon (fires at page load — passes through in both phases)
+      // [task 005 AC3; research/test-strategist.md §F4 item 1]
+      // ---------------------------------------------------------------------------
+      const sameOriginResult = navigator.sendBeacon(
+        '/fixtures/transport/collect',
+        JSON.stringify({ event: 'page_view' }),
+      )
+      const sameOriginStatusEl = document.getElementById('same-origin-beacon-status')
+      if (sameOriginStatusEl) {
+        sameOriginStatusEl.textContent =
+          'Same-origin beacon: result=' + String(sameOriginResult) + ' (passed through) ✓'
+        sameOriginStatusEl.className = 'status-box status-granted'
+      }
+
+      // ---------------------------------------------------------------------------
+      // Skip-Google (fires at page load — Google endpoints pass through in all phases)
+      // [task 005 AC5; goals.md §Consent Mode v2]
+      // ---------------------------------------------------------------------------
+      const googleBeaconResult = navigator.sendBeacon(
+        'https://region1.google-analytics.com/g/collect',
+        JSON.stringify({ v: '2', tid: 'G-FIXTURE' }),
+      )
+      const googleStatusEl = document.getElementById('google-beacon-status')
+      if (googleStatusEl) {
+        googleStatusEl.textContent =
+          'Google beacon: passed through (result=' +
+          String(googleBeaconResult) +
+          ') ✓ — not held'
+        googleStatusEl.className = 'status-box status-granted'
+      }
+
+      // ---------------------------------------------------------------------------
+      // Expose state to Playwright via window globals for assertions
+      // ---------------------------------------------------------------------------
+      window.__beaconTest = {
+        beaconRetval: null,
+        sameOriginResult,
+        googleBeaconResult,
+        get beaconReplayed() {
+          return window.__beaconReplayed === true
+        },
+      }
+
+      // ---------------------------------------------------------------------------
+      // Wire onConsent — on marketing grant, the queued beacon is replayed.
+      // [task 004 AC2; api.ts §_registerTransportHook sendBeacon drain]
+      // ---------------------------------------------------------------------------
+      onConsent('marketing', (granted) => {
+        if (!granted) return
+        setTimeout(() => {
+          const statusEl = document.getElementById('fb-beacon-status')
+          if (statusEl) {
+            statusEl.textContent = 'Meta Pixel beacon: replayed ✓'
+            statusEl.className = 'status-box status-granted'
+          }
+          window.__beaconReplayed = true
+        }, 150)
+      })
+    </script>
+  </body>
+</html>
