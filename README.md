@@ -19,7 +19,7 @@ Free, self-hosted cookie consent — zero-dependency banner library.
 - **Zero runtime dependencies** — vanilla TypeScript, no framework required
 - **< 20 KB min+gzip** — combined IIFE + inline bootstrap snippet
 - **Declarative script/iframe blocking** — block analytics/marketing until consented
-- **Runtime auto-block (`autoBlock: true`, v5+)** — intercepts known third-party scripts, iframes, and (v6) `<img>` beacon pixels at runtime from a bundled signature database; no HTML changes needed; `fetch`/`sendBeacon` beacons are a known gap (DOM-level limit)
+- **Runtime auto-block (`autoBlock: true`, v5+)** — intercepts known third-party scripts, iframes, `<img>` beacon pixels (v6), and (v7) `fetch`/`navigator.sendBeacon` transport calls to curated tracking endpoints; no HTML changes needed; `XMLHttpRequest` and `document.write` interception remain deferred
 - **Google Consent Mode v2** — fires default + update signals automatically
 - **GPC (Global Privacy Control)** — detected and honored with a visible toast
 - **Consent withdrawal** — surfaces a "reload required" prompt
@@ -293,29 +293,52 @@ Cookyay.init({
 
 ### What it does
 
-When `autoBlock: true`, the banner's proxy (installed in the synchronous
-bootstrap snippet) matches outgoing `<script>`, `<iframe>`, and **`<img>`
-beacon pixel** insertions against a bundled signature database of curated
-third-party services. Any match is held inert until the visitor grants consent
-to the matching category, then re-executed (scripts/iframes) or fired once
-(pixels) using the same grant/inject queue as declarative blocking.
+When `autoBlock: true`, the banner's proxy matches outgoing `<script>`,
+`<iframe>`, **`<img>` beacon pixel** insertions, and — new in v7 — **`fetch`
+and `navigator.sendBeacon` calls** against a bundled signature database of
+curated third-party services. Any match is held until the visitor grants
+consent to the matching category, then released (scripts/iframes re-executed,
+pixels fired once, fetch/beacon replayed or sent).
 
-**v6 adds `<img>` beacon pixel coverage.** The proxy now also intercepts
-`new Image()` constructor calls and `<img>` `src` assignments for known
-tracking-pixel endpoints (Meta Pixel `facebook.com/tr`, LinkedIn Insight Tag,
-Pinterest Tag, Snapchat Pixel, TikTok Pixel, Reddit Pixel, and others in the
-curated DB). Pixel blocking is scoped strictly to curated host+path endpoints
-in the signature database — first-party images and image CDNs are never touched.
+**v6 adds `<img>` beacon pixel coverage.** The proxy intercepts `new Image()`
+constructor calls and `<img>` `src` assignments for known tracking-pixel
+endpoints (Meta Pixel `facebook.com/tr`, LinkedIn Insight Tag, Pinterest Tag,
+Snapchat Pixel, TikTok Pixel, Reddit Pixel, and others in the curated DB).
+Pixel blocking is scoped strictly to curated host+path endpoints — first-party
+images and image CDNs are never touched.
+
+**v7 adds `fetch` and `navigator.sendBeacon` transport-layer coverage.** The
+proxy also wraps `window.fetch` and `navigator.sendBeacon` in the lazy
+auto-block chunk. A matched pre-consent `fetch` call resolves immediately to a
+benign `204 No Content` stub (preventing hangs) while a clone of the original
+request is queued for replay when consent is granted. A matched `sendBeacon`
+returns `true` synchronously (preserving caller expectations) and is similarly
+queued for same-session delivery on grant. Non-matching calls (your own API
+traffic) pass through synchronously and untouched.
+
+**Unload-drop behavior (v7, documented honestly):** `sendBeacon` calls fired at
+page unload (`pagehide` / `visibilitychange`) are **dropped, not deferred**,
+when the user has not yet consented. There is no page session to replay into, no
+`sessionStorage` persistence in v7, and — critically — no consent. This is the
+legally correct outcome: no consent = no send.
+
+**Phase-2 async escape window (bootstrap-first limit):** The `fetch` and
+`sendBeacon` wrappers live in the lazy `autoblock-loader` chunk, not the
+synchronous bootstrap. This means there is a short window (a few milliseconds,
+while the chunk loads) during which an async tracker that fires immediately on
+page load can escape interception. This is the same intrinsic bootstrap-first
+limit documented for DOM interception since v5/v6 — extended honestly to the
+transport layer.
 
 Effective combinations:
 
 - **`autoBlock: false` (default)** — declarative-only: the banner blocks exactly
-  what you declare with `type="text/plain" data-category="..."`. Unchanged from
-  v4. The signature database tree-shakes to zero in this mode (no bundle cost).
+  what you declare with `type="text/plain" data-category="..."`. The signature
+  database tree-shakes to zero (no bundle cost).
 - **`autoBlock: true`** — declarative + runtime: declared rules are applied first
-  (they always win); then any script, iframe, or `<img>` pixel not already
-  declared is matched against the signature database and auto-blocked if a known
-  service is recognised.
+  (they always win); then any script, iframe, `<img>` pixel, `fetch`, or
+  `sendBeacon` call not already declared is matched against the signature database
+  and auto-blocked if a known service is recognised.
 
 ### The non-negotiable install requirement
 
@@ -339,24 +362,34 @@ you can fix the install order. Example:
 This warning fires only when `debug: true` and costs zero bytes in production
 builds (dead-code-eliminated).
 
-### Honest limits of DOM-level interception
+### Honest limits of auto-block interception
 
-`autoBlock` works by intercepting DOM API calls (`document.createElement`,
-`Element.prototype.setAttribute`, `window.Image`). Some tracking techniques are
-architecturally invisible to DOM-level interception:
+`autoBlock` intercepts DOM API calls (`document.createElement`,
+`Element.prototype.setAttribute`, `window.Image`) and — from v7 — `window.fetch`
+and `navigator.sendBeacon`. Some tracking techniques remain outside its reach:
 
-- **`fetch()` and `navigator.sendBeacon()` beacons** — Modern SDKs (Meta Pixel
-  Advanced Matching, TikTok Events API) use `fetch` with `keepalive: true`
-  instead of `<img>`. These network requests do not go through any DOM element
-  creation path and cannot be intercepted by `autoBlock`. This is a known gap;
-  closing it would require a Service Worker or a `window.fetch` monkey-patch
-  (high-risk scope creep, deferred).
+- **Transport-layer coverage is curated-endpoint-only (v7).** `fetch` and
+  `sendBeacon` calls are intercepted only when the destination URL matches a
+  curated tracking endpoint in the signature database. Your own API traffic is
+  never touched.
+- **Pre-consent unload beacons are dropped, not deferred (v7).** A
+  `sendBeacon` call fired at page unload (`pagehide` / `visibilitychange`)
+  before the user grants consent is silently dropped — there is no session to
+  replay into. No `sessionStorage` persistence in v7. This is the legally
+  correct outcome.
+- **Phase-2 async escape window (v7).** The `fetch`/`sendBeacon` wrappers are
+  loaded in the lazy auto-block chunk, not the synchronous bootstrap. A tracker
+  that fires an async `fetch` call in the few milliseconds before that chunk
+  finishes loading may escape interception. This is the same intrinsic
+  bootstrap-first limit that applies to DOM interception.
+- **`XMLHttpRequest` interception** — Deferred to a later version. No curated
+  tracker in the v7 signature database is XHR-only; if your site uses an older
+  SDK that sends XHR beacons, declare those scripts manually.
 - **`srcset` attribute** — The `setAttribute` override filters on the `src`
   attribute only; `srcset`-based image requests are not intercepted. No known
   major tracker uses `srcset` for pixel firing.
 - **`innerHTML`-injected `<img src>`** — HTML injected via `innerHTML` or
-  `insertAdjacentHTML` bypasses the `createElement` wrapper; the native parser
-  does not route through `Element.prototype.setAttribute`. In practice, any
+  `insertAdjacentHTML` bypasses the `createElement` wrapper. In practice, any
   script that injects pixels via `innerHTML` is itself blocked by the
   script-level proxy — so the pixel injection never runs.
 - **Scripts and pixels loaded before the bootstrap** — See the install
@@ -388,10 +421,10 @@ copy-paste blocking snippets — one per detected third-party host.
 scanner tells you what it found; `autoBlock` blocks it at runtime without the
 HTML edits. They are complementary:
 
-| Approach               | HTML changes required        | Works with GTM-injected tags       | Notes                                                                                    |
-| ---------------------- | ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| Declarative (v1+)      | Yes — paste scanner snippets | No (GTM fires dynamically)         | Most explicit; zero runtime overhead                                                     |
-| `autoBlock: true` (v6) | No                           | Yes (intercepted at createElement) | Scripts, iframes, and `<img>` pixels; Google tags excluded; fetch/sendBeacon not covered |
+| Approach               | HTML changes required        | Works with GTM-injected tags       | Notes                                                                                                                          |
+| ---------------------- | ---------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Declarative (v1+)      | Yes — paste scanner snippets | No (GTM fires dynamically)         | Most explicit; zero runtime overhead                                                                                           |
+| `autoBlock: true` (v7) | No                           | Yes (intercepted at createElement) | Scripts, iframes, `<img>` pixels, `fetch`/`sendBeacon` to curated endpoints; Google tags excluded; XHR/document.write deferred |
 
 For best coverage on sites with GTM, use both: paste declarative rules from the
 scanner for scripts in your static HTML, and enable `autoBlock: true` to catch

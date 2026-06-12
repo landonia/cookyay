@@ -201,7 +201,7 @@
         <h2 id="feature-table-heading">Feature-by-feature comparison</h2>
 
         <p>
-          The table below compares Cookyay v6 against CookieYes's free plan and paid plans (Basic /
+          The table below compares Cookyay v7 against CookieYes's free plan and paid plans (Basic /
           Pro, as of June 2026). CookieYes plan labels vary — "Free" is the no-credit-card tier;
           paid tiers unlock the features marked below.
         </p>
@@ -211,7 +211,7 @@
             <thead>
               <tr>
                 <th scope="col">Feature</th>
-                <th scope="col" class="col-cookyay">Cookyay (v6 / free/self-hosted)</th>
+                <th scope="col" class="col-cookyay">Cookyay (v7 / free/self-hosted)</th>
                 <th scope="col" class="col-cookieyesfree">CookieYes Free</th>
                 <th scope="col" class="col-cookieyespro">CookieYes Paid</th>
               </tr>
@@ -383,14 +383,17 @@
                 <td><span class="tick">✓</span></td>
               </tr>
               <tr>
-                <td>Auto-detection of known third-party scripts and pixels</td>
+                <td>Auto-detection of known third-party scripts, pixels, and transport beacons</td>
                 <td class="col-cookyay">
                   <span class="tick">✓</span> <code>autoBlock: true</code> intercepts known
-                  third-party scripts, iframes, and (v6) <code>&lt;img&gt;</code> beacon pixels at
-                  runtime without HTML changes; scanner CLI also emits copy-paste blocking snippets.
-                  Caveats: Google tags (GTM/GA4) excluded (Consent Mode v2 instead);
-                  <code>fetch()</code>/<code>sendBeacon()</code> beacons not intercepted (DOM-level
-                  limit).
+                  third-party scripts, iframes, <code>&lt;img&gt;</code> beacon pixels (v6), and
+                  (v7) <code>fetch()</code>/<code>sendBeacon()</code> calls to curated tracking
+                  endpoints — at runtime without HTML changes; scanner CLI also emits copy-paste
+                  blocking snippets. Caveats: Google tags (GTM/GA4) excluded (Consent Mode v2
+                  instead); pre-consent <code>sendBeacon</code> at page unload is
+                  <em>dropped, not deferred</em>; <code>XMLHttpRequest</code> and
+                  <code>document.write</code>
+                  deferred; auto-block remains opt-in.
                 </td>
                 <td>
                   <span class="tick">✓</span> Scans and auto-blocks known trackers without HTML
@@ -400,26 +403,27 @@
               </tr>
               <tr class="note-row">
                 <td colspan="4">
-                  As of v6, the <code>cookyay</code> banner includes runtime auto-block via the
-                  <code>autoBlock: true</code>
-                  config flag. When enabled, the banner installs a synchronous proxy that intercepts
-                  script, iframe, and
-                  <strong><code>&lt;img&gt;</code> beacon pixel</strong> insertions and holds known
-                  third-party services inert until the visitor consents — no changes to your page
-                  HTML required. The proxy is installed in the &lt;1 KB bootstrap snippet (which
-                  must remain the first <code>&lt;script&gt;</code> in <code>&lt;head&gt;</code>).
-                  <strong>Google tags (GTM, GA4) are intentionally not DOM-blocked</strong>; they
+                  As of v7, the <code>cookyay</code> banner includes runtime auto-block via the
+                  <code>autoBlock: true</code> config flag. When enabled, the banner intercepts
+                  script, iframe, <strong><code>&lt;img&gt;</code> beacon pixel</strong>, and (v7)
+                  <strong><code>fetch</code>/<code>sendBeacon</code></strong> insertions and holds
+                  known third-party services until the visitor consents — no changes to your page
+                  HTML required.
+                  <strong>Google tags (GTM, GA4) are intentionally not blocked</strong>; they
                   degrade gracefully under Consent Mode v2 denied defaults instead.
-                  <strong>Known gap:</strong> <code>fetch()</code> and
-                  <code>navigator.sendBeacon()</code> beacons (used by modern Meta Pixel Advanced
-                  Matching, TikTok, etc.) are not intercepted by DOM-level auto-block — these
-                  network requests are architecturally invisible to this approach. Blocking them
-                  would require a Service Worker or <code>window.fetch</code> monkey-patch
-                  (deferred). The <code>@cookyay/scanner</code> CLI auto-detects known third parties
-                  and emits a <code>suggestedBlocking[]</code> array for declarative use
-                  (paste-ready HTML snippets, one per blocking host, with host-deduplication). The
-                  scanner and runtime auto-block share the same signature database — scan-time and
-                  run-time verdicts match. See
+                  <strong>Honest limits in v7:</strong> pre-consent <code>sendBeacon</code> calls
+                  fired at page unload (<code>pagehide</code>/<code>visibilitychange</code>) are
+                  <strong>dropped</strong> — no <code>sessionStorage</code> persistence, no future
+                  replay; this is the legally correct no-consent-no-send outcome. There is also a
+                  short Phase-2 async escape window (a few ms while the lazy auto-block chunk loads)
+                  where an async tracking call can escape — the same intrinsic bootstrap-first limit
+                  as DOM interception, extended honestly to the transport layer.
+                  <code>XMLHttpRequest</code> and <code>document.write</code> interception remain
+                  deferred; auto-block stays opt-in. The <code>@cookyay/scanner</code> CLI
+                  auto-detects known third parties and emits a
+                  <code>suggestedBlocking[]</code> array for declarative use (paste-ready HTML
+                  snippets, one per blocking host). The scanner and runtime auto-block share the
+                  same signature database — scan-time and run-time verdicts match. See
                   <a href="index.html#scanner-auto-detection">auto-detection workflow</a> and the
                   <a href="index.html#autoblock">runtime auto-block docs</a>.
                 </td>
@@ -888,25 +892,33 @@
           </li>
 
           <li>
-            <strong>Runtime auto-block has known coverage gaps.</strong>
-            The v6 <code>autoBlock: true</code> flag intercepts known third-party
-            <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, and
-            <code>&lt;img&gt;</code> beacon pixel insertions. The following are explicitly out of
-            scope:
-            <strong><code>fetch()</code> and <code>navigator.sendBeacon()</code> beacons</strong> —
-            modern SDKs (Meta Pixel Advanced Matching, TikTok Events API) use
-            <code>fetch</code> with <code>keepalive: true</code> instead of
-            <code>&lt;img&gt;</code>, and these requests bypass DOM-level interception entirely;
-            closing this gap requires a Service Worker or fetch monkey-patch (deferred). Also
-            excluded: <strong><code>srcset</code>-based image requests</strong> (no major tracker
-            uses <code>srcset</code> for pixel firing),
+            <strong
+              >Runtime auto-block has known coverage gaps and deliberate non-goals (v7).</strong
+            >
+            The v7 <code>autoBlock: true</code> flag intercepts known third-party
+            <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>,
+            <code>&lt;img&gt;</code> beacon pixels, and <code>fetch</code>/<code>sendBeacon</code>
+            calls to curated tracking endpoints. The following remain deliberately out of scope:
+            <strong
+              >Pre-consent <code>sendBeacon</code> calls at page unload are dropped, not
+              deferred</strong
+            >
+            — if the user has never granted consent in this page session, a beacon fired at
+            <code>pagehide</code>/<code>visibilitychange</code> is silently dropped; there is no
+            <code>sessionStorage</code> persistence or cross-session replay in v7 (legally correct:
+            no consent = no send). <strong>Phase-2 async escape window:</strong> a short window (a
+            few ms while the lazy auto-block chunk loads) exists where an async tracker call can
+            escape — the intrinsic bootstrap-first limit extended to the transport layer.
+            <strong><code>XMLHttpRequest</code> interception</strong> — deferred to a later version.
+            <strong><code>srcset</code>-based image requests</strong> — no major tracker uses
+            <code>srcset</code> for pixel firing.
             <strong><code>innerHTML</code>-injected <code>&lt;img src&gt;</code></strong>
-            (the parser path bypasses the proxy, but the injecting script is blocked first), and
+            — parser path bypasses the proxy, but the injecting script is blocked first.
             <strong><code>document.write</code> ad injection</strong>
-            (legacy DoubleClick/old AdSense — high page-breakage risk, deferred). Additionally,
-            <strong>Google tags (GTM/GA4) are intentionally not DOM-blocked</strong> — Consent Mode
-            v2 degrades them gracefully instead; DOM-blocking GTM would prevent consent update
-            signals from firing.
+            — legacy DoubleClick/old AdSense, high page-breakage risk, deferred.
+            <strong>Auto-block stays opt-in</strong> — no default flip in v7. Additionally,
+            <strong>Google tags (GTM/GA4) are intentionally not blocked</strong> — Consent Mode v2
+            degrades them gracefully instead.
           </li>
 
           <li>
@@ -1016,11 +1028,13 @@
           bootstrap (Consent Mode ordering handled automatically), GPC detection and honoring
           (unique among these three as of June 2026), the local CLI scanner (runs against localhost
           and authenticated pages, with auto-detection of ~50 known third parties and copy-paste
-          blocking snippets), runtime auto-block via <code>autoBlock: true</code> (v6 — intercepts
-          known third-party scripts, iframes, and <code>&lt;img&gt;</code> beacon pixels without
-          HTML changes; same signature database as the scanner; honest about
-          <code>fetch</code>/<code>sendBeacon</code> gaps), and the strictest-everywhere posture as
-          an explicit design principle rather than an option.
+          blocking snippets), runtime auto-block via <code>autoBlock: true</code> (v7 — intercepts
+          known third-party scripts, iframes, <code>&lt;img&gt;</code> beacon pixels, and
+          <code>fetch</code>/<code>sendBeacon</code> transport calls to curated endpoints without
+          HTML changes; same signature database as the scanner; honest about unload-drop behavior
+          and the Phase-2 async escape window; <code>XMLHttpRequest</code> and
+          <code>document.write</code> still deferred; auto-block opt-in), and the
+          strictest-everywhere posture as an explicit design principle rather than an option.
         </p>
       </section>
 
@@ -1035,11 +1049,14 @@
           <li>You are a developer comfortable editing HTML and running CLI tools.</li>
           <li>
             You want runtime auto-block without HTML changes: enable
-            <code>autoBlock: true</code> (v6) and known third-party scripts, iframes, and
-            <code>&lt;img&gt;</code> beacon pixels are intercepted automatically. The bootstrap
-            snippet must be first in <code>&lt;head&gt;</code> — the same requirement that already
-            exists for Consent Mode v2 ordering. Set <code>debug: true</code> to get a console
-            warning if any known tracker loaded before the bootstrap (v6 install-order diagnostic).
+            <code>autoBlock: true</code> (v7) and known third-party scripts, iframes,
+            <code>&lt;img&gt;</code> beacon pixels, and <code>fetch</code>/<code>sendBeacon</code>
+            calls to curated tracking endpoints are intercepted automatically. The bootstrap snippet
+            must be first in <code>&lt;head&gt;</code> — the same requirement that already exists
+            for Consent Mode v2 ordering. Set <code>debug: true</code> to get a console warning if
+            any known tracker loaded before the bootstrap (v6 install-order diagnostic). Note:
+            pre-consent <code>sendBeacon</code> calls at page unload are dropped, not deferred —
+            this is the legally correct outcome.
           </li>
           <li>
             You want declarative blocking as well: run the scanner to auto-detect third parties and

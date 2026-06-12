@@ -41,6 +41,25 @@
 import type { CookyayConfig } from './config.js'
 import type { AutoBlockMatch } from './autoblock-matcher.js'
 import { matchAutoBlock } from './autoblock-matcher.js'
+// Diagnostic is co-located in this lazy chunk so it is NOT included in the
+// always-on ESM-OFF bundle (index.js). api.ts obtains runBootstrapDiagnostic
+// via the same dynamic import('./autoblock-loader.js') it already uses for
+// getAutoBlockMatcher — the diagnostic rides in the same lazy chunk at zero
+// extra ESM-OFF cost.
+// [task 001 §Bundle-budget reclamation, research/performance-engineer.md §Rec3]
+export { runBootstrapDiagnostic } from './autoblock-diagnostic.js'
+// Transport classifier factories and drain hook are exported from this lazy chunk
+// so they are NOT included in the always-on ESM-OFF bundle. api.ts obtains them
+// via the same dynamic import('./autoblock-loader.js') that provides
+// getAutoBlockMatcher, then calls activateTransportClassifiers() to wire the
+// Phase-2 classify logic and registers the drain hook via
+// _registerTransportReleaseHook().
+// [task 006 §Bundle-budget gate; research/performance-engineer.md §Rec1]
+export {
+  makeFetchClassifier,
+  makeBeaconClassifier,
+  makeTransportDrainHook,
+} from './autoblock-transport-classifier.js'
 
 /**
  * Return the `matchAutoBlock` function when `config.autoBlock` is `true`,

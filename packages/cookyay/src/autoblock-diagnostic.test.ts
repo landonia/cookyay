@@ -354,3 +354,38 @@ describe('_formatDiagnosticWarning', () => {
     expect(msg).toContain('Move Cookyay first in <head>')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Lazy-path assertion — task 001 AC4
+//
+// Verifies that autoblock-loader.ts re-exports runBootstrapDiagnostic so the
+// diagnostic is obtained from the same lazy import('./autoblock-loader.js') that
+// provides getAutoBlockMatcher (bundle-budget reclamation: diagnostic NOT present
+// in the ESM-OFF bundle when this re-export path is used).
+// ---------------------------------------------------------------------------
+
+describe('runBootstrapDiagnostic re-exported from autoblock-loader (task 001 lazy-path AC)', () => {
+  it('is the same function reference re-exported from autoblock-loader.ts', async () => {
+    // Dynamic import of the lazy chunk mirrors the runtime path in api.ts:
+    //   void import('./autoblock-loader.js').then(({ runBootstrapDiagnostic }) => …)
+    // The same function object must be importable from both the direct source
+    // and through the autoblock-loader re-export.
+    const { runBootstrapDiagnostic: diagFromLoader } = await import('./autoblock-loader.js')
+
+    // Both imports must refer to the same function.
+    expect(diagFromLoader).toBe(runBootstrapDiagnostic)
+  })
+
+  it('produces identical warnings whether called via direct import or loader re-export', async () => {
+    const { runBootstrapDiagnostic: diagFromLoader } = await import('./autoblock-loader.js')
+
+    const trackerUrl = 'https://connect.facebook.net/en_US/fbevents.js'
+    stubPerfEntries([trackerUrl])
+
+    // Call via the loader re-export (the path api.ts uses).
+    diagFromLoader(makeFbMatcher(), fbLabel)
+
+    expect(warnSpy).toHaveBeenCalledOnce()
+    expect(warnSpy).toHaveBeenCalledWith(_formatDiagnosticWarning('Meta Pixel', trackerUrl))
+  })
+})

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fixture: transport fetch auto-block lifecycle</title>
+    <!--
+      Bootstrap MUST be first in <head>.
+      [goals.md §Interception mechanism: "Cookyay first in <head>" is a hard install requirement]
+
+      WARNING: Do NOT reorder <head> children — the bootstrap must load before any
+      third-party content to ensure the proxy is installed before fetch calls fire.
+      [research/test-strategist.md §Gotchas]
+    -->
+    <script src="/packages/cookyay/dist/bootstrap.js"></script>
+    <link rel="stylesheet" href="/fixtures/styles.css" />
+  </head>
+  <body>
+    <h1>Auto-block fixture — fetch transport lifecycle (v7)</h1>
+    <p>
+      Proves the <code>window.fetch</code> transport auto-block lifecycle:
+      block-until-consent then replay-once on grant, with same-origin passthrough.
+    </p>
+
+    <h2>1. Meta Pixel fetch (auto-blocked — network proof)</h2>
+    <!--
+      Status updated by window.__fireTrackingFetch() + onConsent callback.
+      "held (pre-consent)" = fetch was matched and returned 204 stub
+      "replayed ✓" = on grant, the held fetch was replayed to the network
+    -->
+    <div id="fb-fetch-status" class="status-box status-blocked">
+      Meta Pixel fetch: waiting for Phase 2…
+    </div>
+
+    <h2>2. Same-origin fetch — NOT held (passthrough guard)</h2>
+    <!--
+      A fetch to /fixtures/transport/collect (same-origin, non-curated) must pass
+      through immediately. Status updated by the fetch promise resolution.
+    -->
+    <div id="same-origin-status" class="status-box status-blocked">
+      Same-origin fetch: pending…
+    </div>
+
+    <h2>3. Skip-Google fetch — NOT held (Consent Mode v2 passthrough)</h2>
+    <!--
+      A pre-consent fetch to a Google endpoint must pass through (not held).
+      Status box updated by the fetch result.
+    -->
+    <div id="google-fetch-status" class="status-box status-blocked">
+      Google fetch: checking…
+    </div>
+
+    <h2>4. Declared-wins — fetch to declared data-src URL passes through</h2>
+    <!--
+      A <script type="text/plain" data-category="marketing" data-src="URL"> is declared.
+      A fetch to the same URL must NOT be queued by the transport proxy
+      (the declarative engine already covers it — no double-queue).
+    -->
+    <script
+      type="text/plain"
+      data-category="marketing"
+      data-src="https://www.facebook.com/tr?id=DECLARED&ev=PageView"
+      id="declared-script"
+    ></script>
+    <div id="declared-wins-status" class="status-box status-blocked">
+      Declared-wins: checking…
+    </div>
+
+    <script type="module">
+      import { init, onConsent } from '/packages/cookyay/dist/index.js'
+
+      // ---------------------------------------------------------------------------
+      // Step 1: Initialise with autoBlock:true BEFORE any fetch calls fire.
+      // The transport proxy (fetch shim) is installed synchronously by init().
+      // [autoblock-proxy.ts §installAutoBlockProxy, api.ts §init() autoBlock path]
+      // ---------------------------------------------------------------------------
+      init({
+        policyVersion: 'transport-fetch-fixture-v7',
+        debug: true,
+        autoBlock: true,
+        categories: {
+          marketing: {
+            label: 'Marketing',
+            services: [{ name: 'Meta Pixel', cookies: ['_fbp'] }],
+          },
+        },
+      })
+
+      // ---------------------------------------------------------------------------
+      // Phase 2 note: window.fetch wrapping starts in Phase 1 but ONLY intercepts
+      // curated URLs after Phase 2 (the lazy autoblock-loader chunk) activates the
+      // real matcher. Tracking fetch calls must be fired AFTER Phase 2 loads.
+      //
+      // The Playwright test calls window.__fireTrackingFetch() only AFTER
+      // waitForTimeout(300) gives Phase 2 time to load. Same-origin and Google
+      // fetches are fired at page load (their pass-through behavior is independent
+      // of Phase 2 status — they pass through in both phases).
+      //
+      // [research/_index.md §Update Q2 — Phase 2 lazy install timing]
+      // [research/test-strategist.md §F3 — timing flake risks]
+      // ---------------------------------------------------------------------------
+
+      let fbFetchHeld = false
+
+      // Exposed to Playwright — called AFTER Phase 2 is active (waitForTimeout(300))
+      // to ensure the matcher is live before the tracking fetch fires.
+      window.__fireTrackingFetch = async function () {
+        const trackingUrl = 'https://www.facebook.com/tr?id=FIXTURE&ev=PageView'
+        try {
+          const response = await fetch(trackingUrl)
+          if (response.status === 204) {
+            // 204 stub = held by transport proxy (Phase 2 active, matched, no consent)
+            fbFetchHeld = true
+            const statusEl = document.getElementById('fb-fetch-status')
+            if (statusEl) {
+              statusEl.textContent = 'Meta Pixel fetch: held (stub=204) ✓ — waiting for grant…'
+              statusEl.className = 'status-box status-blocked'
+            }
+          } else {
+            // Non-204 = passed through (Phase 1 or non-matched)
+            fbFetchHeld = false
+            const statusEl = document.getElementById('fb-fetch-status')
+            if (statusEl) {
+              statusEl.textContent =
+                'Meta Pixel fetch: PASSED THROUGH (status=' + response.status + ') — proxy not active?'
+              statusEl.className = 'status-box status-blocked'
+            }
+          }
+        } catch {
+          fbFetchHeld = false
+        }
+        window.__transportTest.fbFetchHeld = fbFetchHeld
+      }
+
+      // ---------------------------------------------------------------------------
+      // Same-origin fetch (non-curated — fires at page load, pass-through in both phases)
+      // [task 005 AC3; research/test-strategist.md §F4 item 1]
+      // ---------------------------------------------------------------------------
+      fetch('/fixtures/transport/collect', {
+        method: 'POST',
+        body: JSON.stringify({ event: 'page_view' }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+        .then((response) => {
+          const statusEl = document.getElementById('same-origin-status')
+          if (!statusEl) return
+          if (response.ok || response.status === 204 || response.status === 200) {
+            statusEl.textContent =
+              'Same-origin fetch: passed through ✓ (status=' + response.status + ')'
+            statusEl.className = 'status-box status-granted'
+          } else {
+            statusEl.textContent = 'Same-origin fetch: unexpected status ' + response.status
+            statusEl.className = 'status-box status-blocked'
+          }
+        })
+        .catch((err) => {
+          const statusEl = document.getElementById('same-origin-status')
+          if (statusEl) {
+            statusEl.textContent =
+              'Same-origin fetch: network error (not held) — ' + err.message
+            statusEl.className = 'status-box status-granted'
+          }
+        })
+
+      // ---------------------------------------------------------------------------
+      // Skip-Google (fires at page load — Google endpoints pass through in all phases)
+      // [task 005 AC5; goals.md §Consent Mode v2]
+      // ---------------------------------------------------------------------------
+      fetch('https://region1.google-analytics.com/g/collect?v=2&tid=G-FIXTURE')
+        .then(() => {
+          const statusEl = document.getElementById('google-fetch-status')
+          if (statusEl) {
+            statusEl.textContent = 'Google fetch: passed through ✓ (not held)'
+            statusEl.className = 'status-box status-granted'
+          }
+        })
+        .catch(() => {
+          // Network abort is OK (page.route aborts Google) — still proves not held
+          const statusEl = document.getElementById('google-fetch-status')
+          if (statusEl) {
+            statusEl.textContent = 'Google fetch: network aborted (not held) ✓'
+            statusEl.className = 'status-box status-granted'
+          }
+        })
+
+      // ---------------------------------------------------------------------------
+      // Declared-wins (fires via __fireDeclaredFetch AFTER Phase 2)
+      // [task 005 AC6; research/test-strategist.md §F4 item 4]
+      // ---------------------------------------------------------------------------
+      window.__fireDeclaredFetch = async function () {
+        const declaredUrl = 'https://www.facebook.com/tr?id=DECLARED&ev=PageView'
+        let passed = false
+        try {
+          const response = await fetch(declaredUrl)
+          // Not a 204 stub → declared-wins check worked (proxy passed through)
+          passed = response.status !== 204
+        } catch {
+          // Network abort from page.route() = passed through (not a 204 stub)
+          passed = true
+        }
+        const statusEl = document.getElementById('declared-wins-status')
+        if (statusEl) {
+          const outcome = passed
+            ? 'declared-wins ✓ (passed through — not double-queued)'
+            : 'FAIL — transport proxy queued it (double-queue)'
+          statusEl.textContent = 'Declared-wins: ' + outcome
+          statusEl.className = 'status-box ' + (passed ? 'status-granted' : 'status-blocked')
+        }
+        window.__transportTest.declaredFetchPassedThrough = passed
+      }
+
+      // ---------------------------------------------------------------------------
+      // Expose state to Playwright via window globals for assertions
+      // ---------------------------------------------------------------------------
+      window.__transportTest = {
+        fbFetchHeld: false,
+        declaredFetchPassedThrough: false,
+      }
+
+      // ---------------------------------------------------------------------------
+      // Wire onConsent — on marketing grant, the held fetch is replayed.
+      // [task 003 AC2; api.ts §_registerTransportHook]
+      // ---------------------------------------------------------------------------
+      onConsent('marketing', (granted) => {
+        if (!granted) return
+        // The transport replay fires automatically via the grant drain hook.
+        // Update the status box after a small delay to let the replay complete.
+        setTimeout(() => {
+          const statusEl = document.getElementById('fb-fetch-status')
+          if (statusEl && fbFetchHeld) {
+            statusEl.textContent = 'Meta Pixel fetch: replayed ✓'
+            statusEl.className = 'status-box status-granted'
+          }
+        }, 150)
+      })
+    </script>
+  </body>
+</html>
